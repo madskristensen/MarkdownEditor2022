@@ -18,7 +18,7 @@ namespace MarkdownEditor2022
     {
         [Import] internal ITextUndoHistoryRegistry _undoRegistry = null;
 
-        public string DisplayName => nameof(UncommentCommand);
+        public string DisplayName => GetType().Name;
 
         public bool ExecuteCommand(UncommentSelectionCommandArgs args, CommandExecutionContext executionContext)
         {

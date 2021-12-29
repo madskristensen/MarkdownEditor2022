@@ -19,13 +19,17 @@ namespace MarkdownEditor2022
     [ProvideLanguageExtension(typeof(MarkdownEditor), Constants.FileExtension)]
     [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 50)]
     [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
-    [ProvideEditorFactory(typeof(MarkdownEditor), 0, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+    [ProvideEditorFactory(typeof(MarkdownEditor), 0, false, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorLogicalView(typeof(MarkdownEditor), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
     {
+        internal static MarkdownEditor MarkdownEditor { get; private set; }
+
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
-            RegisterEditorFactory(new MarkdownEditor(this));
+            MarkdownEditor = new(this);
+            RegisterEditorFactory(MarkdownEditor);
+
             await this.RegisterCommandsAsync();
         }
     }

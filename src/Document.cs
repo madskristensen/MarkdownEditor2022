@@ -8,7 +8,7 @@ namespace MarkdownEditor2022
     {
         private readonly ITextBuffer _buffer;
 
-        public MarkdownPipeline Pipeline { get; } = new MarkdownPipelineBuilder()
+        public static MarkdownPipeline Pipeline { get; } = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
             .UsePragmaLines()
             .UsePreciseSourceLocation()
@@ -51,18 +51,5 @@ namespace MarkdownEditor2022
         }
 
         public event EventHandler Parsed;
-    }
-
-    public static class DocumentExtensions
-    {
-        public static Document GetDocument(this ITextBuffer buffer)
-        {
-            return buffer.Properties.GetOrCreateSingletonProperty(() => new Document(buffer));
-        }
-
-        public static Span ToSpan(this MarkdownObject item)
-        {
-            return new Span(item.Span.Start, item.Span.Length);
-        }
     }
 }

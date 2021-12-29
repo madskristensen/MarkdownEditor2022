@@ -18,13 +18,13 @@ namespace MarkdownEditor2022
 
         public override void SetDefaultPreferences(LanguagePreferences preferences)
         {
-            preferences.EnableCodeSense = true;
+            preferences.EnableCodeSense = false;
             preferences.EnableMatchBraces = true;
             preferences.EnableMatchBracesAtCaret = true;
             preferences.EnableShowMatchingBrace = true;
-            preferences.EnableCommenting = true;
+            preferences.EnableCommenting = false;
             preferences.HighlightMatchingBraceFlags = _HighlightMatchingBraceFlags.HMB_USERECTANGLEBRACES;
-            preferences.LineNumbers = true;
+            preferences.LineNumbers = false;
             preferences.MaxErrorMessages = 100;
             preferences.AutoOutlining = false;
             preferences.MaxRegionTime = 2000;

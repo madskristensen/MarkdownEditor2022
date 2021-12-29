@@ -229,7 +229,7 @@ namespace MarkdownEditor2022
                     htmlWriter.GetStringBuilder().Clear();
 
                     var htmlRenderer = new HtmlRenderer(htmlWriter);
-                    _document.Pipeline.Setup(htmlRenderer);
+                    Document.Pipeline.Setup(htmlRenderer);
                     htmlRenderer.UseNonAsciiNoEscape = true;
                     htmlRenderer.Render(_document.Markdown);
 

@@ -1,62 +1,42 @@
-﻿using System.Drawing;
+﻿using System.ComponentModel.Composition;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.OLE.Interop;
+using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.TextManager.Interop;
+using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
+using Microsoft.VisualStudio.Utilities;
 
-namespace MarkdownEditor2022.Commands
+namespace MarkdownEditor2022
 {
-    public class PasteImageCommand : IOleCommandTarget
+    [Export(typeof(ICommandHandler))]
+    [Name(nameof(PasteImageCommand))]
+    [ContentType(Constants.LanguageName)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
+    public class PasteImageCommand : ICommandHandler<PasteCommandArgs>
     {
-        private readonly IOleCommandTarget _next;
         private string _lastPath;
-        private readonly IWpfTextView _view;
-        private readonly string _fileName;
+        private ITextView _view;
+        private string _fileName;
         private const string _format = "![{1}]({0})";
 
-        public PasteImageCommand(IVsTextView adapter, IWpfTextView textView)
+        public string DisplayName => GetType().Name;
+
+        public bool ExecuteCommand(PasteCommandArgs args, CommandExecutionContext executionContext)
         {
-            _view = textView;
-            _fileName = textView.TextBuffer.GetFileName();
-            ErrorHandler.ThrowOnFailure(adapter.AddCommandFilter(this, out _next));
+            _view = args.TextView;
+            _fileName = args.TextView.TextBuffer.GetFileName();
+
+            return HandlePaste();
         }
 
-        public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
+        public CommandState GetCommandState(PasteCommandArgs args)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            if (pguidCmdGroup == typeof(VSConstants.VSStd97CmdID).GUID && nCmdID == (uint)VSConstants.VSStd97CmdID.Paste)
-            {
-                if (HandlePaste())
-                {
-                    return VSConstants.S_OK;
-                }
-            }
-
-            return _next.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
-        }
-
-        public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            for (var i = 0; i < cCmds; i++)
-            {
-                if (pguidCmdGroup == typeof(VSConstants.VSStd97CmdID).GUID && prgCmds[i].cmdID == (uint)VSConstants.VSStd97CmdID.Paste)
-                {
-                    prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
-                    return VSConstants.S_OK;
-                }
-
-            }
-
-            return _next.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText);
+            return CommandState.Available;
         }
 
         protected bool HandlePaste()
@@ -182,7 +162,6 @@ namespace MarkdownEditor2022.Commands
             {
                 return "wmf";
             }
-
             return "png";
         }
 
@@ -190,7 +169,7 @@ namespace MarkdownEditor2022.Commands
         {
             var position = _view.Caret.Position.BufferPosition.Position;
             var relative = PackageUtilities.MakeRelative(relativeTo, fileName)
-                                          .Replace("\\", "/");
+.Replace("\\", "/");
 
             var altText = MarkdownDropHandler.ToFriendlyName(fileName);
             var image = string.Format(CultureInfo.InvariantCulture, _format, relative, altText);
