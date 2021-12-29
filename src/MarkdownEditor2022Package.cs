@@ -14,9 +14,10 @@ namespace MarkdownEditor2022
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.MarkdownEditor2022String)]
 
-    [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = true, DefaultToNonHotURLs = false, EnableLineNumbers = true, EnableAsyncCompletion = true, EnableCommenting = true, ShowCompletion = true)]
+    [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = false, EnableLineNumbers = true, EnableAsyncCompletion = true, EnableCommenting = true, ShowCompletion = true)]
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, 0)]
     [ProvideLanguageExtension(typeof(MarkdownEditor), Constants.FileExtension)]
+    [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 50)]
     [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
     [ProvideEditorFactory(typeof(MarkdownEditor), 0, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorLogicalView(typeof(MarkdownEditor), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]

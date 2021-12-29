@@ -7,6 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownEditor2022", "src\M
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5DA1FF8-4D7C-433C-B14B-12BE00766739}"
 	ProjectSection(SolutionItems) = preProject
+		.github\workflows\build.yaml = .github\workflows\build.yaml
 		README.md = README.md
 		vs-publish.json = vs-publish.json
 	EndProjectSection

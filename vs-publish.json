@@ -1,32 +1,33 @@
 {
   "$schema": "http://json.schemastore.org/vsix-publish",
-  "categories": [ "extension sdk", "coding" ],
+  "categories": [ "documentation", "coding" ],
   "identity": {
-    "internalName": "PkgdefLanguage"
+    "internalName": "MarkdownEditor2",
+    "tags": [ "markdown" ]
   },
   "assetFiles": [
     {
-      "pathOnDisk": "art/colorization.png",
-      "targetPath": "art/colorization.png"
+      "pathOnDisk": "art/font-options.png",
+      "targetPath": "art/font-options.png"
     },
     {
-      "pathOnDisk": "art/formatting.png",
-      "targetPath": "art/formatting.png"
+      "pathOnDisk": "art/options.png",
+      "targetPath": "art/options.png"
     },
     {
-      "pathOnDisk": "art/intellisense.gif",
-      "targetPath": "art/intellisense.gif"
+      "pathOnDisk": "art/outlining-collapsed.png",
+      "targetPath": "art/outlining-collapsed.png"
     },
     {
-      "pathOnDisk": "art/outlining.png",
-      "targetPath": "art/outlining.png"
+      "pathOnDisk": "art/outlining-expanded.png",
+      "targetPath": "art/outlining-expanded.png"
     },
     {
-      "pathOnDisk": "art/validation.png",
-      "targetPath": "art/validation.png"
+      "pathOnDisk": "art/preview-window.png",
+      "targetPath": "art/preview-window.png"
     }
   ],
   "overview": "README.md",
-  "publisher": "MadsKristensen", 
-  "repo": "https://github.com/MadsKristensen/PkgdefLanguage"
+  "publisher": "MadsKristensen",
+  "repo": "https://github.com/MadsKristensen/MarkdownEditor2022"
 }

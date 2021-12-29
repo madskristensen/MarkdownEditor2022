@@ -128,13 +128,14 @@ namespace MarkdownEditor2022
     [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownLink)]
     [Name(MarkdownClassificationTypes.MarkdownLink)]
     [UserVisible(true)]
+    [Order(After = Priority.High)]
     internal sealed class MarkdownLinkFormatDefinition : ClassificationFormatDefinition
     {
         public MarkdownLinkFormatDefinition()
         {
             TextDecorations = new TextDecorationCollection()
             {
-                new TextDecoration(){ Location = TextDecorationLocation.Underline, PenOffset = 4 }
+                new TextDecoration(){ Location = TextDecorationLocation.Underline}
             };
             DisplayName = "Markdown Link";
         }
