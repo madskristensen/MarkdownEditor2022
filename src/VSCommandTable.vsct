@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Include href="KnownImageIds.vsct"/>
+  <Include href="VSGlobals.vsct"/>
+
+  <Commands package="MarkdownEditor2022">
+    <Groups>
+      <Group guid="MarkdownEditor2022" id="EditorGroup" priority="100">
+        <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="MarkdownEditor2022" id="ToggleSync" priority="100" type="Button">
+        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Enable Preview Sync</ButtonText>
+          <LocCanonicalName>.Markdown.EnablePreviewSync</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeBold" priority="100" type="Button">
+        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <CommandFlag>CommandWellOnly</CommandFlag>
+        <Strings>
+          <ButtonText>Make Bold</ButtonText>
+          <LocCanonicalName>.Markdown.MakeBold</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeItalic" priority="100" type="Button">
+        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <CommandFlag>CommandWellOnly</CommandFlag>
+        <Strings>
+          <ButtonText>Make Italic</ButtonText>
+          <LocCanonicalName>.Markdown.MakeItalic</LocCanonicalName>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <VisibilityConstraints>
+    <VisibilityItem guid="MarkdownEditor2022" id="ToggleSync" context="EditorFactory" />
+  </VisibilityConstraints>
+
+  <KeyBindings>
+    <KeyBinding guid="MarkdownEditor2022" id="MakeBold" editor="EditorFactory" key1="B" mod1="Control" />
+    <KeyBinding guid="MarkdownEditor2022" id="MakeItalic" editor="EditorFactory" key1="I" mod1="Control" />
+  </KeyBindings>
+
+  <Symbols>
+    <GuidSymbol name="EditorFactory" value="{24510b54-a648-4d69-a6c5-f68cbdf07546}" />
+    <GuidSymbol name="MarkdownEditor2022" value="{0b1dfe17-2eb2-4fcc-8054-b6ab002a579d}">
+      <IDSymbol name="EditorGroup" value="0x0001"/>
+      <IDSymbol name="ToggleSync" value="0x1000"/>
+      <IDSymbol name="MakeBold" value="0x1010"/>
+      <IDSymbol name="MakeItalic" value="0x1020"/>
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

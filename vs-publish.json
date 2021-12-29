@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json.schemastore.org/vsix-publish",
+  "categories": [ "extension sdk", "coding" ],
+  "identity": {
+    "internalName": "PkgdefLanguage"
+  },
+  "assetFiles": [
+    {
+      "pathOnDisk": "art/colorization.png",
+      "targetPath": "art/colorization.png"
+    },
+    {
+      "pathOnDisk": "art/formatting.png",
+      "targetPath": "art/formatting.png"
+    },
+    {
+      "pathOnDisk": "art/intellisense.gif",
+      "targetPath": "art/intellisense.gif"
+    },
+    {
+      "pathOnDisk": "art/outlining.png",
+      "targetPath": "art/outlining.png"
+    },
+    {
+      "pathOnDisk": "art/validation.png",
+      "targetPath": "art/validation.png"
+    }
+  ],
+  "overview": "README.md",
+  "publisher": "MadsKristensen", 
+  "repo": "https://github.com/MadsKristensen/PkgdefLanguage"
+}
