@@ -23,44 +23,32 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Lightning fast
 
 ### Live Preview Window
-The preview window opens up on the right side of the document when
-it opens.
+The preview window opens up on the right side of the document when it opens.
 
 ![Preview window](art/preview-window.png)
 
-Every time the markdown document is modified, the preview window
-will update.
+Every time the markdown document is modified, the preview window will update.
 
-The preview window is automatically scrolled to match the scroll
-position of the document. As the document is scrolled up and down,
-the preview window will follow.
+The preview window is automatically scrolled to match the scroll position of the document. As the document is scrolled up and down, the preview window will follow.
 
 Live preview can be disabled in the [settings](#settings).
 
 ### Syntax highlighting
-All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Colors**
-dialog.
+All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Colors** dialog.
 
 ![Font Options](art/font-options.png)
 
 #### GitHub and other flavors
-Advanced markdown extensions are supported to give more features to
-the syntax. This includes pipe tables, emoji, mathematics and a lot
+Advanced markdown extensions are supported to give more features to the syntax. This includes pipe tables, emoji, mathematics and a lot
 more.
 
 ### Drag 'n drop images
-Drag an image directly from Solution Explorer onto the document to
-insert the appropriate markdown that will render the image.
+Drag an image directly from Solution Explorer onto the document to insert the appropriate markdown that will render the image.
 
 ### Paste images
-This is really helpful for copying images from a browser or for
-inserting screen shots. Simply copy an image into the clipboard and
-paste it directly into the document. This will prompt you for a file
-name relative to the document and then it inserts the appropriate
-markdown.
+This is really helpful for copying images from a browser or for inserting screen shots. Simply copy an image into the clipboard and paste it directly into the document. This will prompt you for a file name relative to the document and then it inserts the appropriate markdown.
 
-It will even parse the file name and make a friendly name to use
-for the alt text.
+It will even parse the file name and make a friendly name to use for the alt text.
 
 ### Outlining
 Any fenced code and HTML blocks can be collapsed, so that this:

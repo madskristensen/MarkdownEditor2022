@@ -135,7 +135,7 @@ namespace MarkdownEditor2022
         {
             TextDecorations = new TextDecorationCollection()
             {
-                new TextDecoration(){ Location = TextDecorationLocation.Underline}
+                new TextDecoration(){ Location = TextDecorationLocation.Underline, PenOffset = 4 }
             };
             DisplayName = "Markdown Link";
         }
