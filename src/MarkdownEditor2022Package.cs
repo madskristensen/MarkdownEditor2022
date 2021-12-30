@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.Win32;
 
 namespace MarkdownEditor2022
 {
@@ -30,7 +31,26 @@ namespace MarkdownEditor2022
             MarkdownEditor = new(this);
             RegisterEditorFactory(MarkdownEditor);
 
+            SetInternetExplorerRegistryKey();
+
             await this.RegisterCommandsAsync();
+        }
+
+        // This is to enable DPI scaling in the preview browser instance
+        private static void SetInternetExplorerRegistryKey()
+        {
+            try
+            {
+                using (RegistryKey featureControl = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Internet Explorer\\Main\\FeatureControl", true))
+                using (RegistryKey pixel = featureControl.CreateSubKey("FEATURE_96DPI_PIXEL", true, RegistryOptions.Volatile))
+                {
+                    pixel.SetValue("devenv.exe", 1, RegistryValueKind.DWord);
+                }
+            }
+            catch (Exception ex)
+            {
+                ex.Log();
+            }
         }
     }
 }

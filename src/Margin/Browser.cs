@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -16,7 +15,6 @@ namespace MarkdownEditor2022
         private readonly string _file;
         private readonly Document _document;
         private HTMLDocument _htmlDocument;
-        private readonly int _zoomFactor;
         private int _currentViewLine;
         private double _cachedPosition = 0,
                        _cachedHeight = 0,
@@ -28,7 +26,6 @@ namespace MarkdownEditor2022
 
         public Browser(string file, Document document)
         {
-            _zoomFactor = GetZoomFactor();
             _file = file;
             _document = document;
             _currentViewLine = -1;
@@ -89,7 +86,6 @@ namespace MarkdownEditor2022
 
         private void BrowserLoadCompleted(object sender, System.Windows.Navigation.NavigationEventArgs e)
         {
-            Zoom(_zoomFactor);
             _htmlDocument = (HTMLDocument)_browser.Document;
 
             _cachedHeight = _htmlDocument.body.offsetHeight;
@@ -149,26 +145,6 @@ namespace MarkdownEditor2022
             catch
             {
                 // Ignore exceptions
-            }
-        }
-
-        private static int GetZoomFactor()
-        {
-            using (Graphics g = Graphics.FromHwnd(Process.GetCurrentProcess().MainWindowHandle))
-            {
-                int baseLine = 96;
-                float dpi = g.DpiX;
-
-                if (baseLine == dpi)
-                {
-                    return 100;
-                }
-
-                // 150% scaling => 225
-                // 250% scaling => 400
-
-                double scale = dpi * ((dpi - baseLine) / baseLine + 1);
-                return Convert.ToInt32(Math.Ceiling(scale / 25)) * 25; // round up to nearest 25
             }
         }
 
@@ -312,37 +288,6 @@ namespace MarkdownEditor2022
                 .Replace("<head>", defaultHeadBeg)
                 .Replace("[content]", defaultContent)
                 .Replace("[title]", "Markdown Preview");
-        }
-
-        private void Zoom(int zoomFactor)
-        {
-            if (zoomFactor == 100)
-            {
-                return;
-            }
-
-            dynamic OLECMDEXECOPT_DODEFAULT = 0;
-            dynamic OLECMDID_OPTICAL_ZOOM = 63;
-            FieldInfo fiComWebBrowser = typeof(WebBrowser).GetField("_axIWebBrowser2", BindingFlags.Instance | BindingFlags.NonPublic);
-
-            if (fiComWebBrowser == null)
-            {
-                return;
-            }
-
-            object objComWebBrowser = fiComWebBrowser.GetValue(_browser);
-
-            if (objComWebBrowser == null)
-            {
-                return;
-            }
-
-            objComWebBrowser.GetType().InvokeMember("ExecWB", BindingFlags.InvokeMethod, null, objComWebBrowser, new object[] {
-                OLECMDID_OPTICAL_ZOOM,
-                OLECMDEXECOPT_DODEFAULT,
-                zoomFactor,
-                IntPtr.Zero
-            });
         }
 
         public void Dispose()
