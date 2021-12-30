@@ -19,15 +19,15 @@ namespace MarkdownEditor2022
 
         public bool ExecuteCommand(CommitUniqueCompletionListItemCommandArgs args, CommandExecutionContext executionContext)
         {
-            var position = args.TextView.Caret.Position.BufferPosition.Position;
+            int position = args.TextView.Caret.Position.BufferPosition.Position;
             ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
 
-            var lineText = line.GetText();
+            string lineText = line.GetText();
             Match match = _regex.Match(lineText);
 
             if (match.Success)
             {
-                var span = new Span(line.Start + match.Index, match.Length);
+                Span span = new(line.Start + match.Index, match.Length);
 
                 if (match.Value.Contains("[ ]"))
                 {

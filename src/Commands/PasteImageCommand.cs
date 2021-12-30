@@ -41,14 +41,14 @@ namespace MarkdownEditor2022
 
         protected bool HandlePaste()
         {
-            System.Windows.Forms.IDataObject data = Clipboard.GetDataObject();
+            IDataObject data = Clipboard.GetDataObject();
 
             if (data == null)
             {
                 return false;
             }
 
-            var formats = data.GetFormats();
+            string[] formats = data.GetFormats();
 
             if (formats == null)
             {
@@ -56,9 +56,9 @@ namespace MarkdownEditor2022
             }
 
             // This is to check if the image is text copied from PowerPoint etc.
-            var trueBitmap = formats.Any(x => new[] { "DeviceIndependentBitmap", "PNG", "JPG", "System.Drawing.Bitmap" }.Contains(x));
-            var textFormat = formats.Any(x => new[] { "Text", "Rich Text Format" }.Contains(x));
-            var hasBitmap = data.GetDataPresent("System.Drawing.Bitmap") || data.GetDataPresent(DataFormats.FileDrop);
+            bool trueBitmap = formats.Any(x => new[] { "DeviceIndependentBitmap", "PNG", "JPG", "System.Drawing.Bitmap" }.Contains(x));
+            bool textFormat = formats.Any(x => new[] { "Text", "Rich Text Format" }.Contains(x));
+            bool hasBitmap = data.GetDataPresent("System.Drawing.Bitmap") || data.GetDataPresent(DataFormats.FileDrop);
 
             if (!hasBitmap && !trueBitmap || textFormat)
             {
@@ -87,14 +87,14 @@ namespace MarkdownEditor2022
             return true;
         }
 
-        private bool GetPastedFileName(System.Windows.Forms.IDataObject data, out string fileName)
+        private bool GetPastedFileName(IDataObject data, out string fileName)
         {
             string extension;
             fileName = "file";
 
             if (data.GetDataPresent(DataFormats.FileDrop))
             {
-                var fullpath = ((string[])data.GetData(DataFormats.FileDrop))[0];
+                string fullpath = ((string[])data.GetData(DataFormats.FileDrop))[0];
                 fileName = Path.GetFileName(fullpath);
                 extension = Path.GetExtension(fileName).TrimStart('.');
             }
@@ -103,7 +103,7 @@ namespace MarkdownEditor2022
                 extension = GetMimeType((Bitmap)data.GetData("System.Drawing.Bitmap"));
             }
 
-            var dialog = new SaveFileDialog
+            SaveFileDialog dialog = new()
             {
                 FileName = fileName,
                 DefaultExt = "." + extension,
@@ -167,12 +167,12 @@ namespace MarkdownEditor2022
 
         private void UpdateTextBuffer(string fileName, string relativeTo)
         {
-            var position = _view.Caret.Position.BufferPosition.Position;
-            var relative = PackageUtilities.MakeRelative(relativeTo, fileName)
+            int position = _view.Caret.Position.BufferPosition.Position;
+            string relative = PackageUtilities.MakeRelative(relativeTo, fileName)
 .Replace("\\", "/");
 
-            var altText = MarkdownDropHandler.ToFriendlyName(fileName);
-            var image = string.Format(CultureInfo.InvariantCulture, _format, relative, altText);
+            string altText = MarkdownDropHandler.ToFriendlyName(fileName);
+            string image = string.Format(CultureInfo.InvariantCulture, _format, relative, altText);
 
             using (ITextEdit edit = _view.TextBuffer.CreateEdit())
             {
@@ -181,11 +181,11 @@ namespace MarkdownEditor2022
             }
         }
 
-        public void SaveClipboardImageToFile(System.Windows.Forms.IDataObject data, string existingFile)
+        public void SaveClipboardImageToFile(IDataObject data, string existingFile)
         {
             if (data.GetDataPresent(DataFormats.FileDrop))
             {
-                var original = ((string[])data.GetData(DataFormats.FileDrop))[0];
+                string original = ((string[])data.GetData(DataFormats.FileDrop))[0];
 
                 if (File.Exists(original))
                 {
@@ -194,8 +194,8 @@ namespace MarkdownEditor2022
             }
             else
             {
-                using (var image = (Bitmap)data.GetData("System.Drawing.Bitmap"))
-                using (var ms = new MemoryStream())
+                using (Bitmap image = (Bitmap)data.GetData("System.Drawing.Bitmap"))
+                using (MemoryStream ms = new())
                 {
                     image.Save(existingFile, GetImageFormat(Path.GetExtension(existingFile)));
                 }

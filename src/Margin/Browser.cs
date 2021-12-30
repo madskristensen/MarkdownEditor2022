@@ -33,77 +33,69 @@ namespace MarkdownEditor2022
             _document = document;
             _currentViewLine = -1;
 
-            InitBrowser();
+            _browser.LoadCompleted += BrowserLoadCompleted;
+            _browser.Navigating += BrowserNavigating;
         }
 
-        public WebBrowser Control { get; private set; }
+        public readonly WebBrowser _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
 
-        private void InitBrowser()
+        private void BrowserNavigating(object sender, System.Windows.Navigation.NavigatingCancelEventArgs e)
         {
-            Control = new WebBrowser
+            if (e.Uri == null)
             {
-                HorizontalAlignment = HorizontalAlignment.Stretch
-            };
+                return;
+            }
 
-            Control.LoadCompleted += (s, e) =>
+            e.Cancel = true;
+
+            // If it's a file-based anchor we converted, open the related file if possible
+            if (e.Uri.Scheme == "about")
             {
-                Zoom(_zoomFactor);
-                _htmlDocument = (HTMLDocument)Control.Document;
+                string file = e.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
 
-                _cachedHeight = _htmlDocument.body.offsetHeight;
-                _htmlDocument.documentElement.setAttribute("scrollTop", _positionPercentage * _cachedHeight / 100);
-
-                AdjustAnchors();
-            };
-
-            // Open external links in default browser
-            Control.Navigating += (s, e) =>
-            {
-                if (e.Uri == null)
+                if (file == "blank")
                 {
+                    string fragment = e.Uri.Fragment?.TrimStart('#');
+                    NavigateToFragment(fragment);
                     return;
                 }
 
-                e.Cancel = true;
-
-                // If it's a file-based anchor we converted, open the related file if possible
-                if (e.Uri.Scheme == "about")
+                if (!File.Exists(file))
                 {
-                    var file = e.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                    string ext = null;
 
-                    if (file == "blank")
+                    // If the file has no extension, see if one exists with a markdown extension.  If so,
+                    // treat it as the file to open.
+                    //if (string.IsNullOrEmpty(Path.GetExtension(file)))
+                    //{
+                    //    ext = LanguageFactory. ContentTypeDefinition.MarkdownExtensions.FirstOrDefault(fx => File.Exists(file + fx));
+                    //}
+
+                    if (ext != null)
                     {
-                        var fragment = e.Uri.Fragment?.TrimStart('#');
-                        NavigateToFragment(fragment);
-                        return;
-                    }
-
-                    if (!File.Exists(file))
-                    {
-                        string ext = null;
-
-                        // If the file has no extension, see if one exists with a markdown extension.  If so,
-                        // treat it as the file to open.
-                        //if (string.IsNullOrEmpty(Path.GetExtension(file)))
-                        //{
-                        //    ext = LanguageFactory. ContentTypeDefinition.MarkdownExtensions.FirstOrDefault(fx => File.Exists(file + fx));
-                        //}
-
-                        if (ext != null)
-                        {
-                            VS.Documents.OpenInPreviewTabAsync(file + ext).FireAndForget();
-                        }
-                    }
-                    else
-                    {
-                        VS.Documents.OpenInPreviewTabAsync(file).FireAndForget();
+                        VS.Documents.OpenInPreviewTabAsync(file + ext).FireAndForget();
                     }
                 }
-                else if (e.Uri.IsAbsoluteUri && e.Uri.Scheme.StartsWith("http"))
+                else
                 {
-                    Process.Start(e.Uri.ToString());
+                    VS.Documents.OpenInPreviewTabAsync(file).FireAndForget();
                 }
-            };
+            }
+            else if (e.Uri.IsAbsoluteUri && e.Uri.Scheme.StartsWith("http"))
+            {
+                Process.Start(e.Uri.ToString());
+            }
+        }
+
+        private void BrowserLoadCompleted(object sender, System.Windows.Navigation.NavigationEventArgs e)
+        {
+            Zoom(_zoomFactor);
+            _htmlDocument = (HTMLDocument)_browser.Document;
+
+            _cachedHeight = _htmlDocument.body.offsetHeight;
+            _htmlDocument.documentElement.setAttribute("scrollTop", _positionPercentage * _cachedHeight / 100);
+
+            AdjustAnchors();
         }
 
         private void NavigateToFragment(string fragmentId)
@@ -162,10 +154,10 @@ namespace MarkdownEditor2022
 
         private static int GetZoomFactor()
         {
-            using (var g = Graphics.FromHwnd(Process.GetCurrentProcess().MainWindowHandle))
+            using (Graphics g = Graphics.FromHwnd(Process.GetCurrentProcess().MainWindowHandle))
             {
-                var baseLine = 96;
-                var dpi = g.DpiX;
+                int baseLine = 96;
+                float dpi = g.DpiX;
 
                 if (baseLine == dpi)
                 {
@@ -228,7 +220,7 @@ namespace MarkdownEditor2022
                     htmlWriter = (_htmlWriterStatic ??= new StringWriter());
                     htmlWriter.GetStringBuilder().Clear();
 
-                    var htmlRenderer = new HtmlRenderer(htmlWriter);
+                    HtmlRenderer htmlRenderer = new(htmlWriter);
                     Document.Pipeline.Setup(htmlRenderer);
                     htmlRenderer.UseNonAsciiNoEscape = true;
                     htmlRenderer.Render(_document.Markdown);
@@ -271,10 +263,10 @@ namespace MarkdownEditor2022
                 }
                 else
                 {
-                    var htmlTemplate = GetHtmlTemplate();
+                    string htmlTemplate = GetHtmlTemplate();
                     html = string.Format(CultureInfo.InvariantCulture, "{0}", html);
                     html = htmlTemplate.Replace("[content]", html);
-                    Control.NavigateToString(html);
+                    _browser.NavigateToString(html);
                 }
 
                 SyncNavigation();
@@ -283,39 +275,39 @@ namespace MarkdownEditor2022
 
         public static string GetFolder()
         {
-            var assembly = Assembly.GetExecutingAssembly().Location;
+            string assembly = Assembly.GetExecutingAssembly().Location;
             return Path.GetDirectoryName(assembly);
         }
 
         private static string GetHtmlTemplateFileNameFromResource()
         {
-            var assembly = Assembly.GetExecutingAssembly().Location;
-            var assemblyDir = Path.GetDirectoryName(assembly);
+            string assembly = Assembly.GetExecutingAssembly().Location;
+            string assemblyDir = Path.GetDirectoryName(assembly);
 
             return Path.Combine(assemblyDir, "Margin\\md-template.html");
         }
 
         private string GetHtmlTemplate()
         {
-            var baseHref = Path.GetDirectoryName(_file).Replace("\\", "/");
-            var folder = GetFolder();
-            var cssHighlightPath = Path.Combine(folder, "margin\\highlight.css");
+            string baseHref = Path.GetDirectoryName(_file).Replace("\\", "/");
+            string folder = GetFolder();
+            string cssHighlightPath = Path.Combine(folder, "margin\\highlight.css");
 
-            var defaultHeadBeg = $@"
+            string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
     <base href=""file:///{baseHref}/"" />
     <link rel=""stylesheet"" href=""{cssHighlightPath}"" />
 ";
-            var defaultContent = $@"
+            string defaultContent = $@"
     <div id=""___markdown-content___"" class=""markdown-body"">
         [content]
     </div>
 ";
 
-            var templateFileName = GetHtmlTemplateFileNameFromResource();
-            var template = File.ReadAllText(templateFileName);
+            string templateFileName = GetHtmlTemplateFileNameFromResource();
+            string template = File.ReadAllText(templateFileName);
             return template
                 .Replace("<head>", defaultHeadBeg)
                 .Replace("[content]", defaultContent)
@@ -338,7 +330,7 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            var objComWebBrowser = fiComWebBrowser.GetValue(Control);
+            object objComWebBrowser = fiComWebBrowser.GetValue(_browser);
 
             if (objComWebBrowser == null)
             {
@@ -355,9 +347,11 @@ namespace MarkdownEditor2022
 
         public void Dispose()
         {
-            if (Control != null)
+            if (_browser != null)
             {
-                Control.Dispose();
+                _browser.LoadCompleted -= BrowserLoadCompleted;
+                _browser.Navigating -= BrowserNavigating;
+                _browser.Dispose();
             }
 
             _htmlDocument = null;

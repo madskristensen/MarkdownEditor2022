@@ -24,7 +24,7 @@ namespace MarkdownEditor2022
             }
 
             Document document = args.TextView.TextBuffer.GetDocument();
-            var position = args.TextView.Caret.Position.BufferPosition.Position;
+            int position = args.TextView.Caret.Position.BufferPosition.Position;
             ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
             Block block = document.Markdown.FindBlockAtPosition(line.Start.Position);
 
@@ -44,18 +44,18 @@ namespace MarkdownEditor2022
                 return false;
             }
 
-            var startPosition = args.TextView.Caret.Position.BufferPosition.Position;
-            var first = args.TextView.TextBuffer.CurrentSnapshot.GetLineNumberFromPosition(startPosition);
+            int startPosition = args.TextView.Caret.Position.BufferPosition.Position;
+            int first = args.TextView.TextBuffer.CurrentSnapshot.GetLineNumberFromPosition(startPosition);
 
-            var endPosition = args.TextView.Caret.Position.BufferPosition.Position;
-            var last = args.TextView.TextBuffer.CurrentSnapshot.GetLineNumberFromPosition(endPosition);
+            int endPosition = args.TextView.Caret.Position.BufferPosition.Position;
+            int last = args.TextView.TextBuffer.CurrentSnapshot.GetLineNumberFromPosition(endPosition);
 
-            var isHandled = false;
+            bool isHandled = false;
 
-            for (var lineNumber = first; lineNumber <= last; lineNumber++)
+            for (int lineNumber = first; lineNumber <= last; lineNumber++)
             {
                 ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(lineNumber);
-                var text = line.GetText();
+                string text = line.GetText();
 
                 if (text.StartsWith("  ", StringComparison.Ordinal))
                 {

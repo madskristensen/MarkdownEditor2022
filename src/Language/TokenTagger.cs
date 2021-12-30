@@ -62,8 +62,8 @@ namespace MarkdownEditor2022
 
         private void AddTagToList(Dictionary<MarkdownObject, ITagSpan<TokenTag>> list, MarkdownObject item)
         {
-            var span = new SnapshotSpan(_buffer.CurrentSnapshot, GetApplicapleSpan(item));
-            var tag = new TokenTag(GetItemType(item), item is FencedCodeBlock)
+            SnapshotSpan span = new(_buffer.CurrentSnapshot, GetApplicapleSpan(item));
+            TokenTag tag = new(GetItemType(item), item is FencedCodeBlock)
             {
                 GetOutliningText = GetOutliningText
             };
@@ -73,8 +73,8 @@ namespace MarkdownEditor2022
 
         private static string GetOutliningText(string text)
         {
-            var firstLine = text.Split('\n').FirstOrDefault()?.Trim();
-            var language = "";
+            string firstLine = text.Split('\n').FirstOrDefault()?.Trim();
+            string language = "";
 
             if (firstLine.Length > 3)
             {

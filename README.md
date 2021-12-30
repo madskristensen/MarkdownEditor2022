@@ -19,6 +19,7 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Drag 'n drop of images supported
 - Paste image from clipboard directly onto document
 - Outlining/folding of code blocks
+- Keyboard shortcuts
 - Brace completion with type-through
 - Lightning fast
 

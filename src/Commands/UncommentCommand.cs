@@ -33,8 +33,8 @@ namespace MarkdownEditor2022
                     Block block = document.Markdown.FindBlockAtPosition(span.Start.Position);
                     if (block is HtmlBlock html && html.Type == HtmlBlockType.Comment)
                     {
-                        var openSpan = new Span(html.Span.Start, 4);
-                        var closeSpan = new Span(html.Span.End - 2, 3);
+                        Span openSpan = new(html.Span.Start, 4);
+                        Span closeSpan = new(html.Span.End - 2, 3);
                         args.TextView.TextBuffer.Delete(closeSpan);
                         args.TextView.TextBuffer.Delete(openSpan);
                     }

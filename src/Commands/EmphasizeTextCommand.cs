@@ -51,7 +51,7 @@ namespace MarkdownEditor2022
                         }
                     }
 
-                    var ss = new SnapshotSpan(span.Snapshot, Span.FromBounds(start, end));
+                    SnapshotSpan ss = new(span.Snapshot, Span.FromBounds(start, end));
 
                     docView.TextBuffer.Replace(ss, chars + ss.GetText() + chars);
                 }

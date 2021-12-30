@@ -28,11 +28,11 @@ namespace MarkdownEditor2022
             try
             {
                 SnapshotPoint position = dragDropInfo.VirtualBufferPosition.Position;
-                var relative = PackageUtilities.MakeRelative(_documentFileName, _draggedFileName)
+                string relative = PackageUtilities.MakeRelative(_documentFileName, _draggedFileName)
                                               .Replace("\\", "/");
 
-                var altText = ToFriendlyName(_draggedFileName);
-                var image = string.Format(_markdownTemplate, altText, relative);
+                string altText = ToFriendlyName(_draggedFileName);
+                string image = string.Format(_markdownTemplate, altText, relative);
 
                 _view.TextBuffer.Insert(position, image);
             }
@@ -60,7 +60,7 @@ namespace MarkdownEditor2022
         public bool IsDropEnabled(DragDropInfo dragDropInfo)
         {
             _draggedFileName = GetImageFilename(dragDropInfo);
-            var ext = Path.GetExtension(_draggedFileName);
+            string ext = Path.GetExtension(_draggedFileName);
 
             if (!_imageExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
             {
@@ -72,7 +72,7 @@ namespace MarkdownEditor2022
 
         private static string GetImageFilename(DragDropInfo info)
         {
-            var data = new DataObject(info.Data);
+            DataObject data = new(info.Data);
 
             if (info.Data.GetDataPresent("FileDrop"))
             {
@@ -95,7 +95,7 @@ namespace MarkdownEditor2022
 
         public static string ToFriendlyName(string fileName)
         {
-            var text = Path.GetFileNameWithoutExtension(fileName)
+            string text = Path.GetFileNameWithoutExtension(fileName)
                             .Replace("-", " ")
                             .Replace("_", " ");
 

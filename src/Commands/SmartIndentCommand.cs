@@ -18,7 +18,7 @@ namespace MarkdownEditor2022
 
         public bool ExecuteCommand(ReturnKeyCommandArgs args, CommandExecutionContext executionContext)
         {
-            var position = args.TextView.Caret.Position.BufferPosition.Position;
+            int position = args.TextView.Caret.Position.BufferPosition.Position;
             ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
 
             // Task lists
@@ -38,7 +38,7 @@ namespace MarkdownEditor2022
 
         private static bool Handle(ITextSnapshotLine line, Regex regex, int position)
         {
-            var lineText = line.GetText();
+            string lineText = line.GetText();
             Match match = regex.Match(lineText);
 
             if (match.Success)

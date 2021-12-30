@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.Text;
@@ -33,7 +32,7 @@ namespace BaseClasses
                 return null;
             }
 
-            var isFullParse = spans.First().Start == 0 && spans.Last().End == spans[0].Snapshot.Length;
+            bool isFullParse = spans.First().Start == 0 && spans.Last().End == spans[0].Snapshot.Length;
             return GetTags(spans, isFullParse);
         }
 

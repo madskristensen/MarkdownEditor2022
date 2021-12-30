@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
@@ -35,8 +34,8 @@ namespace BaseClasses
             foreach (IMappingTagSpan<TokenTag> tag in tags)
             {
                 NormalizedSnapshotSpanCollection tagSpans = tag.Span.GetSpans(tag.Span.AnchorBuffer.CurrentSnapshot);
-                var tooltip = string.Join(Environment.NewLine, tag.Tag.Errors);
-                var errorTag = new ErrorTag(PredefinedErrorTypeNames.SyntaxError, tooltip);
+                string tooltip = string.Join(Environment.NewLine, tag.Tag.Errors);
+                ErrorTag errorTag = new(PredefinedErrorTypeNames.SyntaxError, tooltip);
 
                 foreach (SnapshotSpan span in tagSpans)
                 {

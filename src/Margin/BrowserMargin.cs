@@ -32,7 +32,7 @@ namespace MarkdownEditor2022
 
         private void UpdatePosition(object sender, TextViewLayoutChangedEventArgs e)
         {
-            var firstLine = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
+            int firstLine = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
             Browser.UpdatePositionAsync(firstLine).FireAndForget();
         }
 
@@ -48,20 +48,20 @@ namespace MarkdownEditor2022
 
         private void CreateRightMarginControls()
         {
-            var width = AdvancedOptions.Instance.PreviewWindowWidth;
+            int width = AdvancedOptions.Instance.PreviewWindowWidth;
 
-            var grid = new Grid();
+            Grid grid = new();
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(0, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(5, GridUnitType.Pixel) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(width, GridUnitType.Pixel), MinWidth = 150 });
             grid.RowDefinitions.Add(new RowDefinition());
             Children.Add(grid);
 
-            grid.Children.Add(Browser.Control);
-            Grid.SetColumn(Browser.Control, 2);
-            Grid.SetRow(Browser.Control, 0);
+            grid.Children.Add(Browser._browser);
+            Grid.SetColumn(Browser._browser, 2);
+            Grid.SetRow(Browser._browser, 0);
 
-            var splitter = new GridSplitter
+            GridSplitter splitter = new()
             {
                 Width = 5,
                 ResizeDirection = GridResizeDirection.Columns,
@@ -74,10 +74,10 @@ namespace MarkdownEditor2022
             Grid.SetColumn(splitter, 1);
             Grid.SetRow(splitter, 0);
 
-            var fixWidth = new Action(() =>
+            Action fixWidth = new(() =>
             {
                 // previewWindow maxWidth = current total width - textView minWidth
-                var newWidth = (_textView.ViewportWidth + grid.ActualWidth) - 150;
+                double newWidth = (_textView.ViewportWidth + grid.ActualWidth) - 150;
 
                 // preveiwWindow maxWidth < previewWindow minWidth
                 if (newWidth < 150)
@@ -107,9 +107,9 @@ namespace MarkdownEditor2022
 
         private void RightDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
         {
-            if (!double.IsNaN(Browser.Control.ActualWidth))
+            if (!double.IsNaN(Browser._browser.ActualWidth))
             {
-                AdvancedOptions.Instance.PreviewWindowWidth = (int)Browser.Control.ActualWidth;
+                AdvancedOptions.Instance.PreviewWindowWidth = (int)Browser._browser.ActualWidth;
                 AdvancedOptions.Instance.Save();
             }
         }

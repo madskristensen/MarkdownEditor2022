@@ -28,7 +28,7 @@ namespace BaseClasses
         {
             _classificationMap = new();
 
-            foreach (var key in map.Keys)
+            foreach (object key in map.Keys)
             {
                 _classificationMap[key] = new ClassificationTag(registry.GetClassificationType(map[key]));
             }

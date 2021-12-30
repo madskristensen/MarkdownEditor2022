@@ -31,8 +31,8 @@ namespace BaseClasses
 
                 foreach (SnapshotSpan tagSpan in tagSpans)
                 {
-                    var text = tagSpan.GetText().TrimEnd();
-                    var span = new SnapshotSpan(tagSpan.Snapshot, tagSpan.Start, text.Length);
+                    string text = tagSpan.GetText().TrimEnd();
+                    SnapshotSpan span = new(tagSpan.Snapshot, tagSpan.Start, text.Length);
                     yield return CreateTag(span, text, tag.Tag);
                 }
             }
@@ -40,7 +40,7 @@ namespace BaseClasses
 
         private static TagSpan<IStructureTag> CreateTag(SnapshotSpan span, string text, TokenTag tag)
         {
-            var structureTag = new StructureTag(
+            StructureTag structureTag = new(
                         span.Snapshot,
                         outliningSpan: span,
                         guideLineSpan: span,

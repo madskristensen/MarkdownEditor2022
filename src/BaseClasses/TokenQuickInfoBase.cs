@@ -37,19 +37,19 @@ namespace BaseClasses
 
             if (triggerPoint.HasValue)
             {
-                var span = new SnapshotSpan(triggerPoint.Value.Snapshot, triggerPoint.Value.Position, 0);
+                SnapshotSpan span = new(triggerPoint.Value.Snapshot, triggerPoint.Value.Position, 0);
                 IMappingTagSpan<TokenTag> tag = _tags.GetTags(span).FirstOrDefault(t => t.Tag.GetTooltipAsync != null);
 
                 if (tag != null)
                 {
-                    var tooltip = await tag.Tag.GetTooltipAsync(triggerPoint.Value);
+                    object tooltip = await tag.Tag.GetTooltipAsync(triggerPoint.Value);
 
                     if (tooltip == null)
                     {
                         return null;
                     }
 
-                    var container = new ContainerElement(ContainerElementStyle.Stacked, tooltip);
+                    ContainerElement container = new(ContainerElementStyle.Stacked, tooltip);
                     ITrackingSpan applicapleTo = _buffer.CurrentSnapshot.CreateTrackingSpan(tag.Span.GetSpans(_buffer)[0], SpanTrackingMode.EdgeExclusive);
 
                     return new QuickInfoItem(applicapleTo, container);
