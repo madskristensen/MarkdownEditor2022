@@ -22,6 +22,7 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Keyboard shortcuts
 - Brace completion with type-through
 - Lightning fast
+- Validation of relative URLs
 
 ### Live Preview Window
 The preview window opens up on the right side of the document when it opens.
@@ -86,6 +87,13 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 <!--**Ctrl+PgUp** moves caret to previous heading
 
 **Ctrl+PgDown** moves caret to next heading-->
+
+## Validation
+Relative URLs are validated and will show a red squiggly when they can't be resolved.
+
+![Error](art/error.png)
+
+The errors will also be listed in the Error List.
 
 ### Settings
 Control the settings for this extension under
