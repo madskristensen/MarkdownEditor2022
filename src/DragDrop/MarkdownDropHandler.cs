@@ -29,7 +29,8 @@ namespace MarkdownEditor2022
             {
                 SnapshotPoint position = dragDropInfo.VirtualBufferPosition.Position;
                 string relative = PackageUtilities.MakeRelative(_documentFileName, _draggedFileName)
-                                              .Replace("\\", "/");
+                                              .Replace("\\", "/")
+                                              .Replace(" ", "%20");
 
                 string altText = ToFriendlyName(_draggedFileName);
                 string image = string.Format(_markdownTemplate, altText, relative);
