@@ -23,6 +23,16 @@
         </Strings>
       </Button>
 
+      <Button guid="MarkdownEditor2022" id="InsertLink" priority="200" type="Button">
+        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Icon guid="ImageCatalogGuid" id="AddLink"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Insert Link</ButtonText>
+          <LocCanonicalName>.Markdown.InsertLink</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="MarkdownEditor2022" id="MakeBold" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <CommandFlag>CommandWellOnly</CommandFlag>
@@ -50,6 +60,7 @@
   <KeyBindings>
     <KeyBinding guid="MarkdownEditor2022" id="MakeBold" editor="EditorFactory" key1="B" mod1="Control" />
     <KeyBinding guid="MarkdownEditor2022" id="MakeItalic" editor="EditorFactory" key1="I" mod1="Control" />
+    <KeyBinding guid="MarkdownEditor2022" id="InsertLink" editor="EditorFactory" key1="K" mod1="Control Alt" />
   </KeyBindings>
 
   <Symbols>
@@ -59,6 +70,7 @@
       <IDSymbol name="ToggleSync" value="0x1000"/>
       <IDSymbol name="MakeBold" value="0x1010"/>
       <IDSymbol name="MakeItalic" value="0x1020"/>
+      <IDSymbol name="InsertLink" value="0x1030"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>

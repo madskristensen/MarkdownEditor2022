@@ -51,6 +51,7 @@
     <Compile Include="BaseClasses\TokenQuickInfoBase.cs" />
     <Compile Include="BaseClasses\TokenTag.cs" />
     <Compile Include="BaseClasses\TokenTaggerBase.cs" />
+    <Compile Include="Commands\InsertLinkCommand.cs" />
     <Compile Include="Commands\IndentationCommand.cs" />
     <Compile Include="Commands\PasteImageCommand.cs" />
     <Compile Include="Commands\ToggleTaskCommand.cs" />

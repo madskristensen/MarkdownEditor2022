@@ -61,6 +61,8 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 ![Outlining Collapsed](art/outlining-collapsed.png)
 
 ### Keyboard shortcuts
+**Ctrl+Alt+K** Inserts a new link.
+
 **Ctrl+B** makes the selected text bold by wrapping it with `**`.
 
 <!--**Ctrl+I** makes the selected text italic by wrapping it with `_`.
