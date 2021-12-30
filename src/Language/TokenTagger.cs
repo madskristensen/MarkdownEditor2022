@@ -1,10 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Threading.Tasks;
 using BaseClasses;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using Microsoft.VisualStudio.Core.Imaging;
+using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
@@ -26,6 +30,7 @@ namespace MarkdownEditor2022
         private readonly ITextBuffer _buffer;
         private Dictionary<MarkdownObject, ITagSpan<TokenTag>> _tagsCache;
         private bool _isDisposed;
+        private static readonly ImageId _errorIcon = KnownMonikers.StatusWarning.ToImageId();
 
         internal TokenTagger(ITextBuffer buffer)
         {
@@ -65,6 +70,8 @@ namespace MarkdownEditor2022
             SnapshotSpan span = new(_buffer.CurrentSnapshot, GetApplicapleSpan(item));
             TokenTag tag = new(GetItemType(item), item is FencedCodeBlock)
             {
+                Errors = item.GetErrors(_document.FileName).ToList(),
+                GetTooltipAsync = GetTooltipAsync,
                 GetOutliningText = GetOutliningText
             };
 
@@ -82,6 +89,29 @@ namespace MarkdownEditor2022
             }
 
             return $"{language} Code Block ";
+        }
+
+        private Task<object> GetTooltipAsync(SnapshotPoint triggerPoint)
+        {
+            LinkInline item = _document.Markdown.Descendants()
+                .OfType<LinkInline>()
+                .Where(l => l.Span.Start <= triggerPoint.Position && l.Span.End >= triggerPoint.Position)
+                .FirstOrDefault();
+
+            // Error messages
+            IEnumerable<ErrorListItem> errors = item?.GetErrors(_document.FileName);
+            if (errors != null && errors.Any())
+            {
+                ContainerElement elm = new(
+                    ContainerElementStyle.Wrapped,
+                    new ImageElement(_errorIcon),
+                    string.Join(Environment.NewLine, errors.Select(e => e.Message))
+                );
+
+                return Task.FromResult<object>(elm);
+            }
+
+            return Task.FromResult<object>(null);
         }
 
         private static Span GetApplicapleSpan(MarkdownObject mdobj)

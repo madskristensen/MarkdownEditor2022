@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace MarkdownEditor2022
 {
-    internal partial class OptionsProvider
+    internal class OptionsProvider
     {
         [ComVisible(true)]
         public class AdvancedOptions : BaseOptionPage<MarkdownEditor2022.AdvancedOptions> { }

@@ -20,10 +20,13 @@ namespace MarkdownEditor2022
         {
             _buffer = buffer;
             _buffer.Changed += BufferChanged;
+            FileName = buffer.GetFileName();
             ParseAsync().FireAndForget();
         }
 
         public MarkdownDocument Markdown { get; private set; }
+
+        public string FileName { get; }
 
         private void BufferChanged(object sender, TextContentChangedEventArgs e)
         {
