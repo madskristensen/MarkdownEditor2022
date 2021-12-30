@@ -11,6 +11,7 @@ namespace MarkdownEditor2022
     {
         public const string MarkdownBold = "md_bold2";
         public const string MarkdownItalic = "md_italic2";
+        public const string MarkdownStrikethrough = "md_strikethrough";
         public const string MarkdownHeader = "md_header2";
         public const string MarkdownCode = "md_code2";
         public const string MarkdownQuote = "md_quote2";
@@ -25,6 +26,10 @@ namespace MarkdownEditor2022
         [Export, Name(MarkdownItalic)]
         [BaseDefinition(PredefinedClassificationTypeNames.Text)]
         public static ClassificationTypeDefinition MarkdownClassificationItalic { get; set; }
+
+        [Export, Name(MarkdownStrikethrough)]
+        [BaseDefinition(PredefinedClassificationTypeNames.Text)]
+        public static ClassificationTypeDefinition MarkdownClassificationStrikethrough { get; set; }
 
         [Export, Name(MarkdownHeader)]
         [BaseDefinition(PredefinedClassificationTypeNames.SymbolDefinition)]
@@ -72,6 +77,21 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownStrikethrough)]
+    [Name(MarkdownClassificationTypes.MarkdownStrikethrough)]
+    internal sealed class MarkdownStrikethroughFormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownStrikethroughFormatDefinition()
+        {
+            TextDecorations = new TextDecorationCollection()
+            {
+                new TextDecoration(){ Location = TextDecorationLocation.Strikethrough }
+            };
+            DisplayName = "Markdown Strikethrough";
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
     [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownHeader)]
     [Name(MarkdownClassificationTypes.MarkdownHeader)]
     [UserVisible(true)]
@@ -105,7 +125,6 @@ namespace MarkdownEditor2022
     {
         public MarkdownQuoteFormatDefinition()
         {
-            // I wish I could make the background apply block-level (to highlight the entire line)
             BackgroundColor = Colors.LightGray;
             BackgroundOpacity = .4;
             DisplayName = "Markdown Quote";
@@ -135,7 +154,7 @@ namespace MarkdownEditor2022
         {
             TextDecorations = new TextDecorationCollection()
             {
-                new TextDecoration(){ Location = TextDecorationLocation.Underline, PenOffset = 4 }
+                new TextDecoration(){ Location = TextDecorationLocation.Underline }
             };
             DisplayName = "Markdown Link";
         }

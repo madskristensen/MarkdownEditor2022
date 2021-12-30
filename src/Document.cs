@@ -7,14 +7,14 @@ namespace MarkdownEditor2022
     public class Document : IDisposable
     {
         private readonly ITextBuffer _buffer;
+        private bool _isDisposed;
 
         public static MarkdownPipeline Pipeline { get; } = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
             .UsePragmaLines()
             .UsePreciseSourceLocation()
+            .UseEmojiAndSmiley(true)
             .Build();
-
-        private bool _isDisposed;
 
         public Document(ITextBuffer buffer)
         {
@@ -29,7 +29,6 @@ namespace MarkdownEditor2022
         {
             ParseAsync().FireAndForget();
         }
-
 
         private Task ParseAsync()
         {

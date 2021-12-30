@@ -33,12 +33,12 @@ namespace BaseClasses
                 {
                     var text = tagSpan.GetText().TrimEnd();
                     var span = new SnapshotSpan(tagSpan.Snapshot, tagSpan.Start, text.Length);
-                    yield return CreateTag(span, text);
+                    yield return CreateTag(span, text, tag.Tag);
                 }
             }
         }
 
-        private static TagSpan<IStructureTag> CreateTag(SnapshotSpan span, string text)
+        private static TagSpan<IStructureTag> CreateTag(SnapshotSpan span, string text, TokenTag tag)
         {
             var structureTag = new StructureTag(
                         span.Snapshot,
@@ -47,7 +47,7 @@ namespace BaseClasses
                         guideLineHorizontalAnchor: span.Start,
                         type: PredefinedStructureTagTypes.Structural,
                         isCollapsible: true,
-                        collapsedForm: text.Split('\n').FirstOrDefault().Trim(),
+                        collapsedForm: tag.GetOutliningText(text),
                         collapsedHintForm: null);
 
             return new TagSpan<IStructureTag>(span, structureTag);

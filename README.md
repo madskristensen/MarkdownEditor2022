@@ -60,12 +60,12 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 ![Outlining Collapsed](art/outlining-collapsed.png)
 
 ### Keyboard shortcuts
-<!--**Ctrl+B** makes the selected text bold by wrapping it with `**`.
+**Ctrl+B** makes the selected text bold by wrapping it with `**`.
 
-**Ctrl+I** makes the selected text italic by wrapping it with `_`.
+<!--**Ctrl+I** makes the selected text italic by wrapping it with `_`.
 
 **Ctrl+Shift+C** wraps the selected text in a code block.
-
+-->
 **Ctrl+Space** checks and unchecks task list items.
 
 ```markdown
@@ -75,12 +75,10 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 **Tab** increases indentation of list items.
 
 **Shift+Tab** decreases indentation of list items.
--->
+
 **Ctrl+K,C** wraps the selection with HTML comments.
 
 **Ctrl+K,U** removes HTML comments surrounding the selection/caret.
-
-More shortcuts coming soon...
 
 <!--**Ctrl+PgUp** moves caret to previous heading
 

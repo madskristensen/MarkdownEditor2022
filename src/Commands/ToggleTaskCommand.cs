@@ -12,44 +12,30 @@ namespace MarkdownEditor2022
     [Name(nameof(ToggleTaskCommand))]
     [ContentType(Constants.LanguageName)]
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
-    public class ToggleTaskCommand : ICommandHandler<InvokeCompletionListCommandArgs>
+    public class ToggleTaskCommand : ICommandHandler<CommitUniqueCompletionListItemCommandArgs>
     {
+        private static readonly Regex _regex = new(@"\* \[( |x|X)\]", RegexOptions.Compiled);
         public string DisplayName => GetType().Name;
 
-        public bool ExecuteCommand(InvokeCompletionListCommandArgs args, CommandExecutionContext executionContext)
+        public bool ExecuteCommand(CommitUniqueCompletionListItemCommandArgs args, CommandExecutionContext executionContext)
         {
             var position = args.TextView.Caret.Position.BufferPosition.Position;
             ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
 
-            // Task lists
-            if (Handle(line, new Regex(@"^(\*|\d\.) \[( |x|X)\]"), position))
-            {
-                return true;
-            }
-
-            // Lists
-            if (Handle(line, new Regex(@"^\*|\d\."), position))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        private static bool Handle(ITextSnapshotLine line, Regex regex, int position)
-        {
             var lineText = line.GetText();
-            Match match = regex.Match(lineText);
+            Match match = _regex.Match(lineText);
 
             if (match.Success)
             {
-                if (lineText.Trim() == match.Value)
+                var span = new Span(line.Start + match.Index, match.Length);
+
+                if (match.Value.Contains("[ ]"))
                 {
-                    line.Snapshot.TextBuffer.Replace(line.Extent, "\r\n");
+                    line.Snapshot.TextBuffer.Replace(span, "* [x]");
                 }
                 else
                 {
-                    line.Snapshot.TextBuffer.Insert(position, $"\r\n{match.Value} ");
+                    line.Snapshot.TextBuffer.Replace(span, "* [ ]");
                 }
 
                 return true;
@@ -58,7 +44,7 @@ namespace MarkdownEditor2022
             return false;
         }
 
-        public CommandState GetCommandState(InvokeCompletionListCommandArgs args)
+        public CommandState GetCommandState(CommitUniqueCompletionListItemCommandArgs args)
         {
             return CommandState.Available;
         }

@@ -23,6 +23,7 @@ namespace MarkdownEditor2022
             { MarkdownClassificationTypes.MarkdownComment, MarkdownClassificationTypes.MarkdownComment },
             { MarkdownClassificationTypes.MarkdownLink, MarkdownClassificationTypes.MarkdownLink },
             { MarkdownClassificationTypes.MarkdownItalic, MarkdownClassificationTypes.MarkdownItalic },
+            { MarkdownClassificationTypes.MarkdownStrikethrough, MarkdownClassificationTypes.MarkdownStrikethrough },
             { MarkdownClassificationTypes.MarkdownBold, MarkdownClassificationTypes.MarkdownBold },
             { MarkdownClassificationTypes.MarkdownQuote, MarkdownClassificationTypes.MarkdownQuote },
         };

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Linq;
 using BaseClasses;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -61,9 +62,36 @@ namespace MarkdownEditor2022
 
         private void AddTagToList(Dictionary<MarkdownObject, ITagSpan<TokenTag>> list, MarkdownObject item)
         {
-            var span = new SnapshotSpan(_buffer.CurrentSnapshot, item.ToSpan());
-            var tag = new TokenTag(GetItemType(item), item is FencedCodeBlock);
+            var span = new SnapshotSpan(_buffer.CurrentSnapshot, GetApplicapleSpan(item));
+            var tag = new TokenTag(GetItemType(item), item is FencedCodeBlock)
+            {
+                GetOutliningText = GetOutliningText
+            };
+
             list.Add(item, new TagSpan<TokenTag>(span, tag));
+        }
+
+        private static string GetOutliningText(string text)
+        {
+            var firstLine = text.Split('\n').FirstOrDefault()?.Trim();
+            var language = "";
+
+            if (firstLine.Length > 3)
+            {
+                language = " " + firstLine.Substring(3).Trim().ToUpperInvariant();
+            }
+
+            return $"{language} Code Block ";
+        }
+
+        private static Span GetApplicapleSpan(MarkdownObject mdobj)
+        {
+            if (mdobj is LinkInline link && link.UrlSpan.HasValue)
+            {
+                return new Span(link.UrlSpan.Value.Start, link.UrlSpan.Value.Length);
+            }
+
+            return mdobj.ToSpan();
         }
 
         private static string GetItemType(MarkdownObject mdobj)
@@ -74,6 +102,7 @@ namespace MarkdownEditor2022
                 CodeBlock or CodeInline => MarkdownClassificationTypes.MarkdownCode,
                 QuoteBlock => MarkdownClassificationTypes.MarkdownQuote,
                 LinkInline => MarkdownClassificationTypes.MarkdownLink,
+                EmphasisInline ei when ei.DelimiterCount == 2 && ei.DelimiterChar == '~' => MarkdownClassificationTypes.MarkdownStrikethrough,
                 EmphasisInline ei when ei.DelimiterCount == 1 => MarkdownClassificationTypes.MarkdownItalic,
                 EmphasisInline ei when ei.DelimiterCount == 2 => MarkdownClassificationTypes.MarkdownBold,
                 HtmlBlock html when html.Type == HtmlBlockType.Comment => MarkdownClassificationTypes.MarkdownComment,

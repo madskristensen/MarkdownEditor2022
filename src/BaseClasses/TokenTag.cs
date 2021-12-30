@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Text;
@@ -30,5 +29,6 @@ namespace BaseClasses
         public virtual IList<ErrorListItem> Errors { get; set; }
         public virtual bool IsValid => Errors?.Any() == false;
         public virtual Func<SnapshotPoint, Task<object>> GetTooltipAsync { get; set; }
+        public virtual Func<string, string> GetOutliningText { get; set; } = (text) => text.Split('\n').FirstOrDefault().Trim();
     }
 }
