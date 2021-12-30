@@ -21,19 +21,7 @@ namespace MarkdownEditor2022
             int position = args.TextView.Caret.Position.BufferPosition.Position;
             ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
 
-            // Task lists
-            if (Handle(line, new Regex(@"^(\*|-|\d\.) \[( |x|X)\]"), position))
-            {
-                return true;
-            }
-
-            // Lists
-            if (Handle(line, new Regex(@"^(\*|-|\d\.)"), position))
-            {
-                return true;
-            }
-
-            return false;
+            return Handle(line, new Regex(@"^(\*|-|\d\.) (\[( |x|X)\][ ]*)?"), position);
         }
 
         private static bool Handle(ITextSnapshotLine line, Regex regex, int position)
@@ -43,13 +31,13 @@ namespace MarkdownEditor2022
 
             if (match.Success)
             {
-                if (lineText.Trim() == match.Value)
+                if (lineText.Trim() == match.Value.Trim())
                 {
                     line.Snapshot.TextBuffer.Replace(line.Extent, "\r\n");
                 }
                 else
                 {
-                    line.Snapshot.TextBuffer.Insert(position, $"\r\n{match.Value} ");
+                    line.Snapshot.TextBuffer.Insert(position, $"\r\n{match.Value}");
                 }
 
                 return true;

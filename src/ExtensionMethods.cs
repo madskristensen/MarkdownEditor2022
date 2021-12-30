@@ -22,6 +22,11 @@ namespace MarkdownEditor2022
 
         public static IEnumerable<ErrorListItem> GetErrors(this MarkdownObject item, string fileName)
         {
+            if (!AdvancedOptions.Instance.ValidateFileLinks)
+            {
+                yield break;
+            }
+
             if (item is LinkInline link && link.UrlSpan.HasValue)
             {
                 if (!IsUrlValid(fileName, link.Url))

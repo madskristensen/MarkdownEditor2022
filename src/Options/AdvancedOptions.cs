@@ -12,7 +12,7 @@ namespace MarkdownEditor2022
     public class AdvancedOptions : BaseOptionModel<AdvancedOptions>
     {
         [Category("Preview Window")]
-        [DisplayName("Enable Preview Window")]
+        [DisplayName("Enable preview window")]
         [Description("Determines if the preview window should be shown.")]
         [DefaultValue(true)]
         public bool EnablePreviewWindow { get; set; } = true;
@@ -24,10 +24,16 @@ namespace MarkdownEditor2022
         public bool EnableScrollSync { get; set; } = true;
 
         [Category("Preview Window")]
-        [DisplayName("Preview Window Width")]
+        [DisplayName("Preview window width")]
         [Description("The width in pixels of the preview window.")]
         [DefaultValue(500)]
         [Browsable(false)] // hidden
         public int PreviewWindowWidth { get; set; } = 500;
+
+        [Category("Validation")]
+        [DisplayName("Validate file links")]
+        [Description("Validates if links point to local files and folders that exist.")]
+        [DefaultValue(true)]
+        public bool ValidateFileLinks { get; set; } = true;
     }
 }
