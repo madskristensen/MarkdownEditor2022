@@ -11,6 +11,12 @@
       <Group guid="MarkdownEditor2022" id="EditorGroup" priority="9000">
         <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
       </Group>
+      <Group guid="MarkdownEditor2022" id="ReferenceGroup" priority="9010">
+        <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
+      </Group>
+      <Group guid="MarkdownEditor2022" id="SettingsGroup" priority="9020">
+        <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
+      </Group>
     </Groups>
 
     <Buttons>
@@ -34,17 +40,6 @@
         </Strings>
       </Button>
 
-      <Button guid="MarkdownEditor2022" id="OpenSettings" priority="300" type="Button">
-        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
-        <Icon guid="ImageCatalogGuid" id="Settings"/>
-        <CommandFlag>IconIsMoniker</CommandFlag>
-        <CommandFlag>DynamicVisibility</CommandFlag>
-        <Strings>
-          <ButtonText>Markdown Settings</ButtonText>
-          <LocCanonicalName>.Markdown.OpenSettings</LocCanonicalName>
-        </Strings>
-      </Button>
-
       <Button guid="MarkdownEditor2022" id="MakeBold" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <CommandFlag>CommandWellOnly</CommandFlag>
@@ -62,6 +57,35 @@
         <Strings>
           <ButtonText>Make Italic</ButtonText>
           <LocCanonicalName>.Markdown.MakeItalic</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="ShowKeybindings" priority="300" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ReferenceGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Keyboard Shortcut Reference</ButtonText>
+          <LocCanonicalName>.Markdown.ShowKeyboardShortcuts</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="ShowMarkdownReference" priority="300" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ReferenceGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Markdown Cheat Sheet</ButtonText>
+          <LocCanonicalName>.Markdown.ShowCheatSheet</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="OpenSettings" priority="6000" type="Button">
+        <Parent guid="MarkdownEditor2022" id="SettingsGroup" />
+        <Icon guid="ImageCatalogGuid" id="Settings"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Markdown Settings</ButtonText>
+          <LocCanonicalName>.Markdown.OpenSettings</LocCanonicalName>
         </Strings>
       </Button>
     </Buttons>
@@ -82,11 +106,15 @@
     <GuidSymbol name="EditorFactory" value="{24510b54-a648-4d69-a6c5-f68cbdf07546}" />
     <GuidSymbol name="MarkdownEditor2022" value="{0b1dfe17-2eb2-4fcc-8054-b6ab002a579d}">
       <IDSymbol name="EditorGroup" value="0x0001"/>
+      <IDSymbol name="ReferenceGroup" value="0x0002"/>
+      <IDSymbol name="SettingsGroup" value="0x0003"/>
       <IDSymbol name="ToggleSync" value="0x1000"/>
       <IDSymbol name="MakeBold" value="0x1010"/>
       <IDSymbol name="MakeItalic" value="0x1020"/>
       <IDSymbol name="InsertLink" value="0x1030"/>
       <IDSymbol name="OpenSettings" value="0x1040"/>
+      <IDSymbol name="ShowKeybindings" value="0x1050"/>
+      <IDSymbol name="ShowMarkdownReference" value="0x1060"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>

@@ -29,6 +29,10 @@
     {
       "pathOnDisk": "art/error.png",
       "targetPath": "art/error.png"
+    },
+    {
+      "pathOnDisk": "art/context-menu.png",
+      "targetPath": "art/context-menu.png"
     }
   ],
   "overview": "README.md",

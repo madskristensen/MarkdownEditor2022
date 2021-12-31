@@ -24,10 +24,14 @@ namespace MarkdownEditor2022
     internal sealed partial class PackageIds
     {
         public const int EditorGroup = 0x0001;
+        public const int ReferenceGroup = 0x0002;
+        public const int SettingsGroup = 0x0003;
         public const int ToggleSync = 0x1000;
         public const int MakeBold = 0x1010;
         public const int MakeItalic = 0x1020;
         public const int InsertLink = 0x1030;
         public const int OpenSettings = 0x1040;
+        public const int ShowKeybindings = 0x1050;
+        public const int ShowMarkdownReference = 0x1060;
     }
 }
