@@ -35,6 +35,11 @@ namespace MarkdownEditor2022
 
         private void UpdatePosition(object sender, TextViewLayoutChangedEventArgs e)
         {
+            if (!AdvancedOptions.Instance.EnableScrollSync)
+            {
+                return;
+            }
+
             // Only update if the view was actually scrolled
             if (_lastEdit < DateTime.Now.AddMilliseconds(-500) && _lastScrollPosition != e.NewViewState.ViewportTop)
             {
@@ -53,6 +58,11 @@ namespace MarkdownEditor2022
         private void OnTextBufferChange(object sender, TextContentChangedEventArgs e)
         {
             _lastEdit = DateTime.Now;
+
+            if (!AdvancedOptions.Instance.EnableScrollSync)
+            {
+                return;
+            }
 
             // Making sure the line being edited is visible in the preview window
             int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.Caret.Position.BufferPosition);

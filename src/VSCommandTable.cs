@@ -28,5 +28,6 @@ namespace MarkdownEditor2022
         public const int MakeBold = 0x1010;
         public const int MakeItalic = 0x1020;
         public const int InsertLink = 0x1030;
+        public const int OpenSettings = 0x1040;
     }
 }

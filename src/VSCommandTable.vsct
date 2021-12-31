@@ -8,7 +8,7 @@
 
   <Commands package="MarkdownEditor2022">
     <Groups>
-      <Group guid="MarkdownEditor2022" id="EditorGroup" priority="100">
+      <Group guid="MarkdownEditor2022" id="EditorGroup" priority="9000">
         <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
       </Group>
     </Groups>
@@ -26,6 +26,7 @@
       <Button guid="MarkdownEditor2022" id="InsertLink" priority="200" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <Icon guid="ImageCatalogGuid" id="AddLink"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
           <ButtonText>Insert Link</ButtonText>
@@ -33,9 +34,21 @@
         </Strings>
       </Button>
 
+      <Button guid="MarkdownEditor2022" id="OpenSettings" priority="300" type="Button">
+        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Icon guid="ImageCatalogGuid" id="Settings"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Markdown Settings</ButtonText>
+          <LocCanonicalName>.Markdown.OpenSettings</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="MarkdownEditor2022" id="MakeBold" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <CommandFlag>CommandWellOnly</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Make Bold</ButtonText>
           <LocCanonicalName>.Markdown.MakeBold</LocCanonicalName>
@@ -45,6 +58,7 @@
       <Button guid="MarkdownEditor2022" id="MakeItalic" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <CommandFlag>CommandWellOnly</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Make Italic</ButtonText>
           <LocCanonicalName>.Markdown.MakeItalic</LocCanonicalName>
@@ -55,6 +69,7 @@
 
   <VisibilityConstraints>
     <VisibilityItem guid="MarkdownEditor2022" id="ToggleSync" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="OpenSettings" context="EditorFactory" />
   </VisibilityConstraints>
 
   <KeyBindings>
@@ -71,6 +86,7 @@
       <IDSymbol name="MakeBold" value="0x1010"/>
       <IDSymbol name="MakeItalic" value="0x1020"/>
       <IDSymbol name="InsertLink" value="0x1030"/>
+      <IDSymbol name="OpenSettings" value="0x1040"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>
