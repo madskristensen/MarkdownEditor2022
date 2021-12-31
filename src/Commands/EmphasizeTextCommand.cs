@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.ComponentModel.Design;
+using System.Linq;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Operations;
 
@@ -16,6 +17,24 @@ namespace MarkdownEditor2022
     [Command(PackageIds.MakeItalic)]
     internal sealed class MakeItalicCommand : BaseCommand<MakeItalicCommand>
     {
+        protected override async Task InitializeCompletedAsync()
+        {
+            // Intercept the IncrementalSearch command (Ctrl+i) to hijack the keyboard shortcut
+            await VS.Commands.InterceptAsync(Microsoft.VisualStudio.VSConstants.VSStd2KCmdID.ISEARCH, () =>
+            {
+                return ThreadHelper.JoinableTaskFactory.Run(async () =>
+                {
+                    DocumentView doc = await VS.Documents.GetActiveDocumentViewAsync();
+                    if (doc?.TextBuffer != null && doc.TextBuffer.ContentType.IsOfType(Constants.LanguageName))
+                    {
+                        await Command.CommandID.ExecuteAsync();
+                        return CommandProgression.Stop;
+                    }
+
+                    return CommandProgression.Continue;
+                });
+            });
+        }
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
             await Emphasizer.EmphasizeTextAsync("*");

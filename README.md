@@ -66,10 +66,9 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 
 **Ctrl+B** makes the selected text bold by wrapping it with `**`.
 
-<!--**Ctrl+I** makes the selected text italic by wrapping it with `_`.
+**Ctrl+I** makes the selected text italic by wrapping it with `_`.
 
-**Ctrl+Shift+C** wraps the selected text in a code block.
--->
+<!--**Ctrl+Shift+C** wraps the selected text in a code block.-->
 **Ctrl+Space** checks and unchecks task list items.
 
 ```markdown
