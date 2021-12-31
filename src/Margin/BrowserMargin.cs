@@ -9,9 +9,9 @@ namespace MarkdownEditor2022
     {
         private readonly Document _document;
         private readonly ITextView _textView;
+        private double _lastScrollPosition;
         private bool _isDisposed;
-        private DateTime _lastEdited;
-        private int _lastLine;
+        private DateTime _lastEdit;
 
         public BrowserMargin(ITextView textview)
         {
@@ -35,17 +35,13 @@ namespace MarkdownEditor2022
 
         private void UpdatePosition(object sender, TextViewLayoutChangedEventArgs e)
         {
-            // Since we don't know if the layout changed due to typing, we add a buffer period to avoid the browser
-            // from scrolling to the top after typing.
-            if (_lastEdited < DateTime.Now.AddMilliseconds(-500))
+            // Only update if the view was actually scrolled
+            if (_lastEdit < DateTime.Now.AddMilliseconds(-500) && _lastScrollPosition != e.NewViewState.ViewportTop)
             {
+                _lastScrollPosition = e.NewViewState.ViewportTop;
                 int firstLine = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
 
-                if (_lastLine != firstLine)
-                {
-                    _lastLine = firstLine;
-                    Browser.UpdatePositionAsync(firstLine).FireAndForget();
-                }
+                Browser.UpdatePositionAsync(firstLine, false).FireAndForget();
             }
         }
 
@@ -56,9 +52,11 @@ namespace MarkdownEditor2022
 
         private void OnTextBufferChange(object sender, TextContentChangedEventArgs e)
         {
-            _lastEdited = DateTime.Now;
+            _lastEdit = DateTime.Now;
+
+            // Making sure the line being edited is visible in the preview window
             int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.Caret.Position.BufferPosition);
-            Browser.UpdatePositionAsync(line).FireAndForget();
+            Browser.UpdatePositionAsync(line, true).FireAndForget();
         }
 
         public ITextViewMargin GetTextViewMargin(string marginName)
@@ -140,11 +138,9 @@ namespace MarkdownEditor2022
             {
                 _document.Parsed -= UpdateBrowser;
                 _textView.LayoutChanged -= UpdatePosition;
+                _textView.TextBuffer.Changed -= OnTextBufferChange;
 
-                if (Browser != null)
-                {
-                    Browser.Dispose();
-                }
+                Browser?.Dispose();
             }
 
             _isDisposed = true;

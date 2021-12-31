@@ -35,11 +35,18 @@ namespace MarkdownEditor2022
 
         private Task ParseAsync()
         {
-            return Task.Run(() =>
+            return ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                Markdown = Markdig.Markdown.Parse(_buffer.CurrentSnapshot.GetText(), Pipeline);
-                Parsed?.Invoke(this, EventArgs.Empty);
-            });
+                try
+                {
+                    Markdown = Markdig.Markdown.Parse(_buffer.CurrentSnapshot.GetText(), Pipeline);
+                    Parsed?.Invoke(this, EventArgs.Empty);
+                }
+                catch (Exception ex)
+                {
+                    await ex.LogAsync();
+                }
+            }).Task;
         }
 
         public void Dispose()

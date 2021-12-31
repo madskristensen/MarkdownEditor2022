@@ -148,7 +148,7 @@ namespace MarkdownEditor2022
             }
         }
 
-        public Task UpdatePositionAsync(int line)
+        public Task UpdatePositionAsync(int line, bool isTyping)
         {
             if (_currentViewLine == line)
             {
@@ -158,11 +158,11 @@ namespace MarkdownEditor2022
             return ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
                 _currentViewLine = _document.Markdown.FindClosestLine(line);
-                SyncNavigation();
+                SyncNavigation(isTyping);
             }, VsTaskRunContext.UIThreadIdlePriority).Task;
         }
 
-        private void SyncNavigation()
+        private void SyncNavigation(bool isTyping)
         {
             if (_htmlDocument != null && AdvancedOptions.Instance.EnableScrollSync)
             {
@@ -176,7 +176,24 @@ namespace MarkdownEditor2022
                     IHTMLElement element = _htmlDocument.getElementById("pragma-line-" + _currentViewLine);
                     if (element != null)
                     {
-                        element.scrollIntoView(true);
+                        // When typing, scroll the edited element into view a bit under the top...
+                        if (isTyping)
+                        {
+                            IHTMLElement2 docElm = (IHTMLElement2)_htmlDocument.documentElement;
+                            int docScrollPos = _htmlDocument.documentElement.offsetTop;
+                            int windowHeight = docElm.clientHeight;
+
+                            // ...but only if it isn't already visible on screen
+                            if (element.offsetTop < docScrollPos || element.offsetTop > docScrollPos + windowHeight)
+                            {
+                                (_htmlDocument.documentElement as IHTMLElement2).scrollTop = element.offsetTop - 200;
+                            }
+                        }
+                        else
+                        {
+                            element.scrollIntoView(true);
+                            //(_htmlDocument.documentElement as IHTMLElement2).scrollTop = element.offsetTop;
+                        }
                     }
                 }
             }
@@ -235,9 +252,9 @@ namespace MarkdownEditor2022
                     content.innerHTML = html;
 
                     // Makes sure that any code blocks get syntax highlighted by Prism
-                    IHTMLWindow2 win = _htmlDocument.parentWindow;
+                    //IHTMLWindow2 win = _htmlDocument.parentWindow;
                     //try { win.execScript("Prism.highlightAll();", "javascript"); } catch { }
-                    try { win.execScript("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();", "javascript"); } catch { }
+                    //try { win.execScript("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();", "javascript"); } catch { }
 
                     // Adjust the anchors after and edit
                     AdjustAnchors();
@@ -250,8 +267,8 @@ namespace MarkdownEditor2022
                     _browser.NavigateToString(html);
                 }
 
-                SyncNavigation();
-            }, VsTaskRunContext.UIThreadBackgroundPriority).Task;
+                //SyncNavigation(true);
+            }, VsTaskRunContext.UIThreadIdlePriority).Task;
         }
 
         public static string GetFolder()

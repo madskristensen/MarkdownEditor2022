@@ -54,7 +54,7 @@ namespace MarkdownEditor2022
                 return true;
             }
 
-            if (url.Contains("://") || url.StartsWith("/") || url.StartsWith("#") || url.StartsWith("mailto:"))
+            if (url.Contains("://") || url.Contains("data:") || url.StartsWith("/") || url.StartsWith("#") || url.StartsWith("mailto:"))
             {
                 return true;
             }
