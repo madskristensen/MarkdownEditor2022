@@ -150,6 +150,11 @@ namespace MarkdownEditor2022
 
         public Task UpdatePositionAsync(int line)
         {
+            if (_currentViewLine == line)
+            {
+                return Task.CompletedTask;
+            }
+
             return ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
                 _currentViewLine = _document.Markdown.FindClosestLine(line);

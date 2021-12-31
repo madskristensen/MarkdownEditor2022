@@ -10,6 +10,8 @@ namespace MarkdownEditor2022
         private readonly Document _document;
         private readonly ITextView _textView;
         private bool _isDisposed;
+        private DateTime _lastEdited;
+        private int _lastLine;
 
         public BrowserMargin(ITextView textview)
         {
@@ -23,6 +25,7 @@ namespace MarkdownEditor2022
 
             _document.Parsed += UpdateBrowser;
             _textView.LayoutChanged += UpdatePosition;
+            _textView.TextBuffer.Changed += OnTextBufferChange;
         }
 
         public FrameworkElement VisualElement => this;
@@ -32,13 +35,30 @@ namespace MarkdownEditor2022
 
         private void UpdatePosition(object sender, TextViewLayoutChangedEventArgs e)
         {
-            int firstLine = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
-            Browser.UpdatePositionAsync(firstLine).FireAndForget();
+            // Since we don't know if the layout changed due to typing, we add a buffer period to avoid the browser
+            // from scrolling to the top after typing.
+            if (_lastEdited < DateTime.Now.AddMilliseconds(-500))
+            {
+                int firstLine = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
+
+                if (_lastLine != firstLine)
+                {
+                    _lastLine = firstLine;
+                    Browser.UpdatePositionAsync(firstLine).FireAndForget();
+                }
+            }
         }
 
         private void UpdateBrowser(object sender = null, EventArgs e = null)
         {
             Browser.UpdateBrowserAsync().FireAndForget();
+        }
+
+        private void OnTextBufferChange(object sender, TextContentChangedEventArgs e)
+        {
+            _lastEdited = DateTime.Now;
+            int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.Caret.Position.BufferPosition);
+            Browser.UpdatePositionAsync(line).FireAndForget();
         }
 
         public ITextViewMargin GetTextViewMargin(string marginName)
