@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Tagging;
+using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
@@ -38,7 +39,12 @@ namespace MarkdownEditor2022
             _document = buffer.GetDocument();
             _document.Parsed += ReParse;
             _tagsCache = new Dictionary<MarkdownObject, ITagSpan<TokenTag>>();
-            ReParse();
+
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await TaskScheduler.Default;
+                ReParse();
+            }).FireAndForget();
         }
 
         public IEnumerable<ITagSpan<TokenTag>> GetTags(NormalizedSnapshotSpanCollection spans)
@@ -48,21 +54,26 @@ namespace MarkdownEditor2022
 
         private void ReParse(object sender = null, EventArgs e = null)
         {
-            ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
-            {
-                Dictionary<MarkdownObject, ITagSpan<TokenTag>> list = new();
+            // Make sure this is running on a background thread.
+            ThreadHelper.ThrowIfOnUIThread();
 
-                foreach (MarkdownObject item in _document.Markdown.Descendants())
+            Dictionary<MarkdownObject, ITagSpan<TokenTag>> list = new();
+
+            foreach (MarkdownObject item in _document.Markdown.Descendants())
+            {
+                if (_document.IsParsing)
                 {
-                    AddTagToList(list, item);
+                    // Abort and wait for the next parse event to finish
+                    return;
                 }
 
-                _tagsCache = list;
+                AddTagToList(list, item);
+            }
 
-                SnapshotSpan span = new(_buffer.CurrentSnapshot, 0, _buffer.CurrentSnapshot.Length);
-                TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(span));
+            _tagsCache = list;
 
-            }, VsTaskRunContext.UIThreadIdlePriority).FireAndForget();
+            SnapshotSpan span = new(_buffer.CurrentSnapshot, 0, _buffer.CurrentSnapshot.Length);
+            TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(span));
         }
 
         private void AddTagToList(Dictionary<MarkdownObject, ITagSpan<TokenTag>> list, MarkdownObject item)

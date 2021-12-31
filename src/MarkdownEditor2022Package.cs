@@ -26,14 +26,14 @@ namespace MarkdownEditor2022
     {
         internal static MarkdownEditor MarkdownEditor { get; private set; }
 
-        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        protected override Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             MarkdownEditor = new(this);
             RegisterEditorFactory(MarkdownEditor);
 
             SetInternetExplorerRegistryKey();
 
-            await this.RegisterCommandsAsync();
+            return this.RegisterCommandsAsync();
         }
 
         // This is to enable DPI scaling in the preview browser instance

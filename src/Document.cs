@@ -1,6 +1,8 @@
-﻿using Markdig;
+﻿using System.Threading.Tasks;
+using Markdig;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Threading;
 
 namespace MarkdownEditor2022
 {
@@ -30,25 +32,27 @@ namespace MarkdownEditor2022
 
         public string FileName { get; }
 
+        public bool IsParsing { get; private set; }
+
         private void BufferChanged(object sender, TextContentChangedEventArgs e)
         {
             ParseAsync().FireAndForget();
         }
 
-        private Task ParseAsync()
+        private async Task ParseAsync()
         {
-            return ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            try
             {
-                try
-                {
-                    Markdown = Markdig.Markdown.Parse(_buffer.CurrentSnapshot.GetText(), Pipeline);
-                    Parsed?.Invoke(this, EventArgs.Empty);
-                }
-                catch (Exception ex)
-                {
-                    await ex.LogAsync();
-                }
-            }).Task;
+                IsParsing = true;
+                await TaskScheduler.Default; // move to a background thread
+                Markdown = Markdig.Markdown.Parse(_buffer.CurrentSnapshot.GetText(), Pipeline);
+                IsParsing = false;
+                Parsed?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                await ex.LogAsync();
+            }
         }
 
         private void AdvancedOptionsSaved(AdvancedOptions obj)
