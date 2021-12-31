@@ -19,10 +19,7 @@ namespace MarkdownEditor2022
                 return null;
             }
 
-            using (DpiAwareness.EnterDpiScope(DpiAwarenessContext.PerMonitorAwareV2))
-            {
-                return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => new BrowserMargin(wpfTextViewHost.TextView));
-            }
+            return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => new BrowserMargin(wpfTextViewHost.TextView));
         }
     }
 }

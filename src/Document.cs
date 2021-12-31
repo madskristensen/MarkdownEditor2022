@@ -13,7 +13,7 @@ namespace MarkdownEditor2022
             .UseAdvancedExtensions()
             .UsePragmaLines()
             .UsePreciseSourceLocation()
-            .UseEmojiAndSmiley(true)
+            .UseEmojiAndSmiley()
             .Build();
 
         public Document(ITextBuffer buffer)
@@ -21,7 +21,9 @@ namespace MarkdownEditor2022
             _buffer = buffer;
             _buffer.Changed += BufferChanged;
             FileName = buffer.GetFileName();
+
             ParseAsync().FireAndForget();
+            AdvancedOptions.Saved += AdvancedOptionsSaved;
         }
 
         public MarkdownDocument Markdown { get; private set; }
@@ -49,11 +51,17 @@ namespace MarkdownEditor2022
             }).Task;
         }
 
+        private void AdvancedOptionsSaved(AdvancedOptions obj)
+        {
+            ParseAsync().FireAndForget();
+        }
+
         public void Dispose()
         {
             if (!_isDisposed)
             {
                 _buffer.Changed -= BufferChanged;
+                AdvancedOptions.Saved -= AdvancedOptionsSaved;
             }
 
             _isDisposed = true;
