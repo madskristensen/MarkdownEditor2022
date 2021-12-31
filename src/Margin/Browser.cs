@@ -180,19 +180,18 @@ namespace MarkdownEditor2022
                         if (isTyping)
                         {
                             IHTMLElement2 docElm = (IHTMLElement2)_htmlDocument.documentElement;
-                            int docScrollPos = _htmlDocument.documentElement.offsetTop;
+                            int scrollPos = docElm.scrollTop;
                             int windowHeight = docElm.clientHeight;
 
                             // ...but only if it isn't already visible on screen
-                            if (element.offsetTop < docScrollPos || element.offsetTop > docScrollPos + windowHeight)
+                            if (element.offsetTop < scrollPos || element.offsetTop > scrollPos + windowHeight)
                             {
-                                (_htmlDocument.documentElement as IHTMLElement2).scrollTop = element.offsetTop - 200;
+                                docElm.scrollTop = element.offsetTop - 200;
                             }
                         }
                         else
                         {
                             element.scrollIntoView(true);
-                            //(_htmlDocument.documentElement as IHTMLElement2).scrollTop = element.offsetTop;
                         }
                     }
                 }
