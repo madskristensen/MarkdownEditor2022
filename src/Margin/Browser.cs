@@ -21,7 +21,6 @@ namespace MarkdownEditor2022
                        _cachedHeight = 0,
                        _positionPercentage = 0;
 
-
         [ThreadStatic]
         private static StringWriter _htmlWriterStatic;
 
@@ -255,7 +254,6 @@ namespace MarkdownEditor2022
                     // Makes sure that any code blocks get syntax highlighted by Prism
                     IHTMLWindow2 win = _htmlDocument.parentWindow;
                     try { win.execScript("Prism.highlightAll();", "javascript"); } catch { }
-                    //try { win.execScript("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();", "javascript"); } catch { }
 
                     // Adjust the anchors after and edit
                     AdjustAnchors();
@@ -268,7 +266,6 @@ namespace MarkdownEditor2022
                     _browser.NavigateToString(html);
                 }
 
-                //SyncNavigation(true);
             }, VsTaskRunContext.UIThreadIdlePriority).Task;
         }
 

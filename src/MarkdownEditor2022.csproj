@@ -45,12 +45,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="BaseClasses\TokenClassificationTaggerBase.cs" />
-    <Compile Include="BaseClasses\TokenErrorTaggerBase.cs" />
-    <Compile Include="BaseClasses\TokenOutliningTaggerBase.cs" />
-    <Compile Include="BaseClasses\TokenQuickInfoBase.cs" />
-    <Compile Include="BaseClasses\TokenTag.cs" />
-    <Compile Include="BaseClasses\TokenTaggerBase.cs" />
     <Compile Include="Commands\ShowMarkdownReferenceCommand.cs" />
     <Compile Include="Commands\ShowKeybindingsCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
@@ -140,7 +134,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Community.VisualStudio.VSCT" Version="16.0.29.6" PrivateAssets="all" />
-    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.364" ExcludeAssets="Runtime">
+    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.365" ExcludeAssets="Runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Markdig">
