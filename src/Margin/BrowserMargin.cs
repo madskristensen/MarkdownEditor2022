@@ -59,7 +59,7 @@ namespace MarkdownEditor2022
         {
             _lastEdit = DateTime.Now;
 
-            if (!AdvancedOptions.Instance.EnableScrollSync)
+            if (!AdvancedOptions.Instance.EnableScrollSync || _document.IsParsing)
             {
                 return;
             }

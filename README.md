@@ -12,7 +12,7 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 ## Features
 
 - Powered by [Markdig](https://github.com/lunet-io/markdig) - the best markdown parser
-- Syntax highlighting
+- Syntax highlighting of code blocks (using Prism.js)
 - Live preview window with scroll sync
 - CommonMark and GitHub flavored Markdown
 - High-DPI support
@@ -21,8 +21,8 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Outlining/folding of code blocks
 - Keyboard shortcuts
 - Brace completion with type-through
-- Lightning fast
 - Validation of relative URLs
+- Lightning fast
 
 ### Live Preview Window
 The preview window opens up on the right side of the document when it opens.

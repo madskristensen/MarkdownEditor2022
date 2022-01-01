@@ -41,17 +41,27 @@ namespace MarkdownEditor2022
 
         private async Task ParseAsync()
         {
+            IsParsing = true;
+            bool success = false;
+
             try
             {
-                IsParsing = true;
                 await TaskScheduler.Default; // move to a background thread
                 Markdown = Markdig.Markdown.Parse(_buffer.CurrentSnapshot.GetText(), Pipeline);
-                IsParsing = false;
-                Parsed?.Invoke(this, EventArgs.Empty);
+                success = true;
             }
             catch (Exception ex)
             {
                 await ex.LogAsync();
+            }
+            finally
+            {
+                IsParsing = false;
+
+                if (success)
+                {
+                    Parsed?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
 

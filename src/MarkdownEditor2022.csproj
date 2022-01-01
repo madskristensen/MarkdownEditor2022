@@ -105,6 +105,12 @@
     <Content Include="Margin\highlight.css">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="Margin\prism.css">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="Margin\prism.js">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="Resources\Icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>

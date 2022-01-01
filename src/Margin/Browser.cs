@@ -164,7 +164,7 @@ namespace MarkdownEditor2022
 
         private void SyncNavigation(bool isTyping)
         {
-            if (_htmlDocument != null && AdvancedOptions.Instance.EnableScrollSync)
+            if (_htmlDocument != null)
             {
                 if (_currentViewLine == 0)
                 {
@@ -251,8 +251,8 @@ namespace MarkdownEditor2022
                     content.innerHTML = html;
 
                     // Makes sure that any code blocks get syntax highlighted by Prism
-                    //IHTMLWindow2 win = _htmlDocument.parentWindow;
-                    //try { win.execScript("Prism.highlightAll();", "javascript"); } catch { }
+                    IHTMLWindow2 win = _htmlDocument.parentWindow;
+                    try { win.execScript("Prism.highlightAll();", "javascript"); } catch { }
                     //try { win.execScript("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();", "javascript"); } catch { }
 
                     // Adjust the anchors after and edit
@@ -288,20 +288,25 @@ namespace MarkdownEditor2022
         {
             string baseHref = Path.GetDirectoryName(_file).Replace("\\", "/");
             string folder = GetFolder();
-            string cssHighlightPath = Path.Combine(folder, "margin\\highlight.css");
+            string cssHighlight = File.ReadAllText(Path.Combine(folder, "margin\\highlight.css"));
+            string scriptPrismPath = Path.Combine(folder, "margin\\prism.js");
+            string cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism.css"));
 
             string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
     <base href=""file:///{baseHref}/"" />
-    <link rel=""stylesheet"" href=""{cssHighlightPath}"" />
-";
+    <style>
+        {cssHighlight}
+        {cssPrism}
+    </style>";
+
             string defaultContent = $@"
     <div id=""___markdown-content___"" class=""markdown-body"">
         [content]
     </div>
-";
+    <script async src=""{scriptPrismPath}""></script>";
 
             string templateFileName = GetHtmlTemplateFileNameFromResource();
             string template = File.ReadAllText(templateFileName);
