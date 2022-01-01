@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using mshtml;
@@ -224,6 +225,7 @@ namespace MarkdownEditor2022
 
                     htmlWriter.Flush();
                     html = htmlWriter.ToString();
+                    html = Regex.Replace(html, "\"language-(c|C)#\"", "\"language-csharp\"", RegexOptions.Compiled);
                 }
                 catch (Exception ex)
                 {
