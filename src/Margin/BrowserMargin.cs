@@ -52,7 +52,10 @@ namespace MarkdownEditor2022
 
         private void UpdateBrowser(object sender = null, EventArgs e = null)
         {
-            Browser.UpdateBrowserAsync().FireAndForget();
+            if (!_document.IsParsing)
+            {
+                Browser.UpdateBrowserAsync().FireAndForget();
+            }
         }
 
         private void OnTextBufferChange(object sender, TextContentChangedEventArgs e)
