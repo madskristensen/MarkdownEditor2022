@@ -33,5 +33,6 @@ namespace MarkdownEditor2022
         public const int OpenSettings = 0x1040;
         public const int ShowKeybindings = 0x1050;
         public const int ShowMarkdownReference = 0x1060;
+        public const int Refresh = 0x1070;
     }
 }

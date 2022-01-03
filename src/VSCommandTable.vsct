@@ -29,6 +29,17 @@
         </Strings>
       </Button>
 
+      <Button guid="MarkdownEditor2022" id="Refresh" priority="150" type="Button">
+        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Icon guid="ImageCatalogGuid" id="Refresh"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Refresh Preview</ButtonText>
+          <LocCanonicalName>.Markdown.Refresh</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="MarkdownEditor2022" id="InsertLink" priority="200" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <Icon guid="ImageCatalogGuid" id="AddLink"/>
@@ -93,6 +104,9 @@
 
   <VisibilityConstraints>
     <VisibilityItem guid="MarkdownEditor2022" id="ToggleSync" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="Refresh" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="ShowKeybindings" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="ShowMarkdownReference" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="OpenSettings" context="EditorFactory" />
   </VisibilityConstraints>
 
@@ -100,6 +114,7 @@
     <KeyBinding guid="MarkdownEditor2022" id="MakeBold" editor="EditorFactory" key1="B" mod1="Control" />
     <KeyBinding guid="MarkdownEditor2022" id="MakeItalic" editor="EditorFactory" key1="I" mod1="Control" />
     <KeyBinding guid="MarkdownEditor2022" id="InsertLink" editor="EditorFactory" key1="K" mod1="Control Alt" />
+    <KeyBinding guid="MarkdownEditor2022" id="Refresh" editor="EditorFactory" key1="R" mod1="Control Alt" />
   </KeyBindings>
 
   <Symbols>
@@ -115,6 +130,7 @@
       <IDSymbol name="OpenSettings" value="0x1040"/>
       <IDSymbol name="ShowKeybindings" value="0x1050"/>
       <IDSymbol name="ShowMarkdownReference" value="0x1060"/>
+      <IDSymbol name="Refresh" value="0x1070"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>

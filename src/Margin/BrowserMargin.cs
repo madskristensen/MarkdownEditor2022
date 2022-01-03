@@ -33,6 +33,14 @@ namespace MarkdownEditor2022
         public bool Enabled => true;
         public Browser Browser { get; private set; }
 
+        public async Task RefreshAsync()
+        {
+            await Browser.RefreshAsync();
+
+            int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
+            await Browser.UpdatePositionAsync(line, false);
+        }
+
         private void UpdatePosition(object sender, TextViewLayoutChangedEventArgs e)
         {
             if (!AdvancedOptions.Instance.EnableScrollSync)

@@ -205,6 +205,12 @@ namespace MarkdownEditor2022
             }
         }
 
+        public Task RefreshAsync()
+        {
+            _htmlDocument = null;
+            return UpdateBrowserAsync();
+        }
+
         public Task UpdateBrowserAsync()
         {
             return ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
