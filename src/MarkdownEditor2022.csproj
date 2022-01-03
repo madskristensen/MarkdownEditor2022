@@ -135,7 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Community.VisualStudio.VSCT" Version="16.0.29.6" PrivateAssets="all" />
-    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.365" ExcludeAssets="Runtime">
+    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.369" ExcludeAssets="Runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Markdig">

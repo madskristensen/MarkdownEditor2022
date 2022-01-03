@@ -1,10 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Markdig.Syntax;
+using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Language.Intellisense.AsyncCompletion;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.BraceCompletion;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
+using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
@@ -83,11 +90,76 @@ namespace MarkdownEditor2022
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class HideMargings : WpfTextViewCreationListener
     {
+        private readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private TableDataSource _dataSource;
+        private DocumentView _docView;
+
+        [Import] internal IBufferTagAggregatorFactoryService _bufferTagAggregator = null;
+        private Document _document;
+
         protected override void Created(DocumentView docView)
         {
-            docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
-            docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
-            docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
+            _document = docView.TextBuffer.GetDocument();
+            _docView ??= docView;
+            _dataSource ??= new TableDataSource(docView.TextBuffer.ContentType.DisplayName);
+
+            _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
+            _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
+            _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
+
+            _document.Parsed += OnParsed;
+        }
+
+        private void OnParsed(Document document)
+        {
+            ParseCommentsAsync().FireAndForget();
+        }
+
+        private async Task ParseCommentsAsync()
+        {
+            await TaskScheduler.Default;
+
+            IEnumerable<HtmlBlock> comments = _document.Markdown.Descendants<HtmlBlock>().Where(html => html.Type == HtmlBlockType.Comment);
+
+            if (!comments.Any())
+            {
+                _dataSource.CleanAllErrors();
+                return;
+            }
+
+            List<ErrorListItem> list = new();
+
+            foreach (HtmlBlock comment in comments)
+            {
+                SnapshotSpan span = new(_docView.TextBuffer.CurrentSnapshot, comment.ToSpan());
+                string text = span.GetText();
+
+                foreach (Match match in _taskRegex.Matches(text))
+                {
+                    ErrorListItem error = new()
+                    {
+                        FileName = _docView.FilePath,
+                        ErrorCategory = "suggestion",
+                        Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_MESSAGE,
+                        Message = match.Groups["phrase"].Value.Replace("-->", "").Replace("*/", "").Trim(),
+                        Line = comment.Line,
+                        Column = comment.Column,
+                        ErrorCode = match.Groups["keyword"].Value.ToUpperInvariant(),
+                        Icon = KnownMonikers.StatusInformationOutline,
+                    };
+
+                    list.Add(error);
+                }
+            }
+
+            _dataSource.AddErrors(list);
+        }
+
+        protected override void Closed(IWpfTextView textView)
+        {
+            _dataSource.CleanAllErrors();
+            _document.Parsed -= OnParsed;
         }
     }
 }
+

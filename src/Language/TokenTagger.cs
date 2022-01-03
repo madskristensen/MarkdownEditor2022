@@ -42,7 +42,7 @@ namespace MarkdownEditor2022
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await TaskScheduler.Default;
-                ReParse();
+                ReParse(_document);
             }).FireAndForget();
         }
 
@@ -51,16 +51,16 @@ namespace MarkdownEditor2022
             return _tagsCache.Values;
         }
 
-        private void ReParse(object sender = null, EventArgs e = null)
+        private void ReParse(Document document)
         {
             // Make sure this is running on a background thread.
             ThreadHelper.ThrowIfOnUIThread();
 
             Dictionary<MarkdownObject, ITagSpan<TokenTag>> list = new();
 
-            foreach (MarkdownObject item in _document.Markdown.Descendants())
+            foreach (MarkdownObject item in document.Markdown.Descendants())
             {
-                if (_document.IsParsing)
+                if (document.IsParsing)
                 {
                     // Abort and wait for the next parse event to finish
                     return;

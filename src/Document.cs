@@ -60,7 +60,7 @@ namespace MarkdownEditor2022
 
                 if (success)
                 {
-                    Parsed?.Invoke(this, EventArgs.Empty);
+                    Parsed?.Invoke(this);
                 }
             }
         }
@@ -81,6 +81,6 @@ namespace MarkdownEditor2022
             _isDisposed = true;
         }
 
-        public event EventHandler Parsed;
+        public event Action<Document> Parsed;
     }
 }

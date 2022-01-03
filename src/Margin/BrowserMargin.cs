@@ -21,7 +21,7 @@ namespace MarkdownEditor2022
             Browser = new Browser(textview.TextBuffer.GetFileName(), _document);
 
             CreateRightMarginControls();
-            UpdateBrowser();
+            UpdateBrowser(_document);
 
             _document.Parsed += UpdateBrowser;
             _textView.LayoutChanged += UpdatePosition;
@@ -58,9 +58,9 @@ namespace MarkdownEditor2022
             }
         }
 
-        private void UpdateBrowser(object sender = null, EventArgs e = null)
+        private void UpdateBrowser(Document document)
         {
-            if (!_document.IsParsing)
+            if (!document.IsParsing)
             {
                 Browser.UpdateBrowserAsync().FireAndForget();
             }
