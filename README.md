@@ -117,3 +117,4 @@ If you enjoy using the extension, please give it a ★★★★★ rating on the
 
 Should you encounter bugs or if you have feature requests, head on over to the GitHub repo to open an Issue if one doesn't already exist.
 
+Pull requests are also very welcome, since I can't always get around to fixing all bugs myself. This is a personal passion project, so my time is limited.
