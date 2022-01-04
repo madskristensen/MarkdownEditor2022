@@ -2,7 +2,7 @@
 [vsixgallery]: http://vsixgallery.com/extension/MarkdownEditor2022.2347dc70-1875-4775-bf48-f2b9fdfee8d4/
 [repo]:https://github.com/madskristensen/MarkdownEditor2022
 
-# Markdown editor for Visual Studio
+# Markdown Editor v2 for Visual Studio
 
 [![Build](https://github.com/madskristensen/MarkdownEditor2022/actions/workflows/build.yaml/badge.svg)](https://github.com/madskristensen/MarkdownEditor2022/actions/workflows/build.yaml)
 
