@@ -3,8 +3,12 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Markdig.Renderers;
 using Markdig.Syntax;
+using Microsoft.VisualStudio.PlatformUI;
 using mshtml;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using WebBrowser = System.Windows.Controls.WebBrowser;
@@ -32,9 +36,11 @@ namespace MarkdownEditor2022
 
             _browser.LoadCompleted += BrowserLoadCompleted;
             _browser.Navigating += BrowserNavigating;
+
+            _browser.SetResourceReference(Control.BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
         }
 
-        public readonly WebBrowser _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
+        public readonly WebBrowser _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
 
         private void BrowserNavigating(object sender, System.Windows.Navigation.NavigatingCancelEventArgs e)
         {
@@ -92,6 +98,7 @@ namespace MarkdownEditor2022
             _htmlDocument.documentElement.setAttribute("scrollTop", _positionPercentage * _cachedHeight / 100);
 
             AdjustAnchors();
+            _browser.Visibility = Visibility.Visible;
         }
 
         private void NavigateToFragment(string fragmentId)
@@ -297,12 +304,24 @@ namespace MarkdownEditor2022
             string scriptPrismPath = Path.Combine(folder, "margin\\prism.js");
             string cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism.css"));
 
+            if (AdvancedOptions.Instance.EnableDarkTheme)
+            {
+                SolidColorBrush brush = (SolidColorBrush)Application.Current.Resources[VsBrushes.ToolWindowBackgroundKey];
+                ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(brush.Color);
+
+                if (contrast == ContrastComparisonResult.ContrastHigherWithWhite)
+                {
+                    cssHighlight = File.ReadAllText(Path.Combine(folder, "margin\\highlight-dark.css"));
+                }
+            }
+
             string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
     <base href=""file:///{baseHref}/"" />
     <style>
+        html, body {{margin: 0}}
         {cssHighlight}
         {cssPrism}
     </style>";

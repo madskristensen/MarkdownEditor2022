@@ -24,6 +24,12 @@ namespace MarkdownEditor2022
         public bool EnableScrollSync { get; set; } = true;
 
         [Category("Preview Window")]
+        [DisplayName("Dark theme support")]
+        [Description("Determines if the preview window should render in dark mode when a dark Visual Studio theme is in use.")]
+        [DefaultValue(true)]
+        public bool EnableDarkTheme { get; set; } = true;
+
+        [Category("Preview Window")]
         [DisplayName("Preview window width")]
         [Description("The width in pixels of the preview window.")]
         [DefaultValue(500)]

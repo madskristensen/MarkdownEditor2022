@@ -85,6 +85,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Margin\highlight-dark.css">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="Margin\md-template.html">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>

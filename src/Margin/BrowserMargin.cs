@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 
@@ -26,6 +27,15 @@ namespace MarkdownEditor2022
             _document.Parsed += UpdateBrowser;
             _textView.LayoutChanged += UpdatePosition;
             _textView.TextBuffer.Changed += OnTextBufferChange;
+
+            SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+            Browser._browser.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+            VSColorTheme.ThemeChanged += OnThemeChange;
+        }
+
+        private void OnThemeChange(ThemeChangedEventArgs e)
+        {
+            RefreshAsync().FireAndForget();
         }
 
         public FrameworkElement VisualElement => this;
@@ -94,6 +104,8 @@ namespace MarkdownEditor2022
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(5, GridUnitType.Pixel) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(width, GridUnitType.Pixel), MinWidth = 150 });
             grid.RowDefinitions.Add(new RowDefinition());
+            grid.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+
             Children.Add(grid);
 
             grid.Children.Add(Browser._browser);
@@ -107,6 +119,7 @@ namespace MarkdownEditor2022
                 VerticalAlignment = VerticalAlignment.Stretch,
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
+            splitter.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
             splitter.DragCompleted += RightDragCompleted;
 
             grid.Children.Add(splitter);
@@ -160,6 +173,7 @@ namespace MarkdownEditor2022
                 _document.Parsed -= UpdateBrowser;
                 _textView.LayoutChanged -= UpdatePosition;
                 _textView.TextBuffer.Changed -= OnTextBufferChange;
+                VSColorTheme.ThemeChanged -= OnThemeChange;
 
                 Browser?.Dispose();
             }

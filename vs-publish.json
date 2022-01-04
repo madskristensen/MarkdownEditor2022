@@ -27,6 +27,10 @@
       "targetPath": "art/preview-window.png"
     },
     {
+      "pathOnDisk": "art/preview-window-dark.png",
+      "targetPath": "art/preview-window-dark.png"
+    },
+    {
       "pathOnDisk": "art/error.png",
       "targetPath": "art/error.png"
     },
