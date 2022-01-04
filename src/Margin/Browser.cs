@@ -54,7 +54,7 @@ namespace MarkdownEditor2022
             // If it's a file-based anchor we converted, open the related file if possible
             if (e.Uri.Scheme == "about")
             {
-                string file = e.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                string file = Uri.UnescapeDataString(e.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
                 if (file == "blank")
                 {
@@ -104,7 +104,7 @@ namespace MarkdownEditor2022
         private void NavigateToFragment(string fragmentId)
         {
             IHTMLElement element = _htmlDocument.getElementById(fragmentId);
-            element.scrollIntoView(true);
+            element?.scrollIntoView(true);
         }
 
         /// <summary>
