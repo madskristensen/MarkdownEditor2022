@@ -128,7 +128,12 @@ namespace MarkdownEditor2022
         {
             if (mdobj is LinkInline link && link.UrlSpan.HasValue)
             {
-                return new Span(link.UrlSpan.Value.Start, link.UrlSpan.Value.Length);
+                if (link.Reference == null)
+                {
+                    return new Span(link.UrlSpan.Value.Start, link.UrlSpan.Value.Length);
+                }
+
+                return new Span(link.LabelSpan.Value.Start, link.LabelSpan.Value.Length);
             }
 
             return mdobj.ToSpan();
