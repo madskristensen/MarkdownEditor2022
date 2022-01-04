@@ -15,6 +15,7 @@ namespace MarkdownEditor2022
             .UseAdvancedExtensions()
             .UsePragmaLines()
             .UsePreciseSourceLocation()
+            .UseYamlFrontMatter()
             .UseEmojiAndSmiley()
             .Build();
 
