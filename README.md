@@ -20,8 +20,7 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Powered by [Markdig](https://github.com/lunet-io/markdig) - the best markdown parser
 - Syntax highlighting of code blocks (using Prism.js)
 - Live preview window with scroll sync and dark theme support
-- CommonMark and GitHub flavored Markdown
-- High-DPI support
+- CommonMark and GitHub flavored Markdown + FrontMatter YAML
 - Drag 'n drop of images supported
 - Paste image from clipboard directly onto document
 - Outlining/folding of code blocks
@@ -36,7 +35,6 @@ The preview window opens up on the right side of the document when it opens.
 ![Preview window](art/preview-window.png)
 
 ![Preview window](art/preview-window-dark.png)
-
 
 Every time the markdown document is modified, the preview window will update.
 
@@ -122,3 +120,5 @@ If you enjoy using the extension, please give it a ★★★★★ rating on the
 Should you encounter bugs or if you have feature requests, head on over to the [GitHub repo][repo] to open an issue if one doesn't already exist.
 
 Pull requests are also very welcome, since I can't always get around to fixing all bugs myself. This is a personal passion project, so my time is limited.
+
+Another way to help out is to [sponser me on GitHub](https://github.com/sponsors/madskristensen).
