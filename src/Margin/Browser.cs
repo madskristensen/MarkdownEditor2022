@@ -92,13 +92,13 @@ namespace MarkdownEditor2022
 
         private void BrowserLoadCompleted(object sender, System.Windows.Navigation.NavigationEventArgs e)
         {
+            _browser.Visibility = Visibility.Visible;
             _htmlDocument = (HTMLDocument)_browser.Document;
 
             _cachedHeight = _htmlDocument.body.offsetHeight;
             _htmlDocument.documentElement.setAttribute("scrollTop", _positionPercentage * _cachedHeight / 100);
 
             AdjustAnchors();
-            _browser.Visibility = Visibility.Visible;
         }
 
         private void NavigateToFragment(string fragmentId)
