@@ -322,7 +322,7 @@ namespace MarkdownEditor2022
     <meta charset=""utf-8"" />
     <base href=""file:///{baseHref}/"" />
     <style>
-        html, body {{margin: 0}}
+        html, body {{margin: 0; padding-bottom:10px}}
         {cssHighlight}
         {cssPrism}
     </style>";
