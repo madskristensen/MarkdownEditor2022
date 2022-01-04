@@ -9,6 +9,8 @@ or get the [CI build](https://www.vsixgallery.com/extension/MarkdownEditor2022.2
 
 A full featured Markdown editor with live preview and syntax highlighting. Supports GitHub flavored Markdown.
 
+> This is a complete rewrite of the original [Markdown Editor](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownEditor64) with tons of fixes, tweeks, and performance improvements. A few little-used features are not being ported to this new extension, so if you rely on them you should keep using the original.
+
 ## Features
 
 - Powered by [Markdig](https://github.com/lunet-io/markdig) - the best markdown parser
@@ -109,3 +111,9 @@ Control the settings for this extension under
 **Tools -> Options -> Text Editor -> Markdown**
 
 ![Options](art/options.png)
+
+### How can I help?
+If you enjoy using the extension, please give it a ★★★★★ rating on the Visual Studio Marketplace.
+
+Should you encounter bugs or if you have feature requests, head on over to the GitHub repo to open an Issue if one doesn't already exist.
+
