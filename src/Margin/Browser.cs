@@ -312,6 +312,7 @@ namespace MarkdownEditor2022
                 if (contrast == ContrastComparisonResult.ContrastHigherWithWhite)
                 {
                     cssHighlight = File.ReadAllText(Path.Combine(folder, "margin\\highlight-dark.css"));
+                    cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism-dark.css"));
                 }
             }
 

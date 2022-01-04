@@ -103,6 +103,9 @@
     <Content Include="Margin\highlight.css">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="Margin\prism-dark.css">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="Margin\prism.css">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
