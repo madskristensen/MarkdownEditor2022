@@ -9,7 +9,7 @@ namespace MarkdownEditor2022.IntegrationTests
         [IdeFact]
         public async Task TestOpenVisualStudioAsync()
         {
-            string tempDirectory = Path.Combine(Path.GetTempPath(), "markdown-tests", Path.GetRandomFileName());
+            string tempDirectory = Path.Combine(TemporaryDirectory, Path.GetRandomFileName());
             Directory.CreateDirectory(tempDirectory);
 
             string filePath = Path.Combine(tempDirectory, "Simple.md");

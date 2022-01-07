@@ -16,6 +16,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Testing.SourceGenerator" Version="$(MicrosoftVisualStudioExtensibilityTestingVersion)" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Testing.Xunit" Version="$(MicrosoftVisualStudioExtensibilityTestingVersion)" />
+    <PackageReference Include="Microsoft.Internal.VisualStudio.Interop" Version="17.0.31902.203" />
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.0.31902.203" />
     <PackageReference Include="Nullable" Version="1.3.0" PrivateAssets="all" />
     <PackageReference Include="xunit" Version="2.4.1" />
