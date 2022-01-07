@@ -9,13 +9,13 @@ namespace MarkdownEditor2022
 {
     internal static class MarkdownClassificationTypes
     {
-        public const string MarkdownBold = "md_bold2";
-        public const string MarkdownItalic = "md_italic2";
+        public const string MarkdownBold = "md_bold";
+        public const string MarkdownItalic = "md_italic";
         public const string MarkdownStrikethrough = "md_strikethrough";
-        public const string MarkdownHeader = "md_header2";
-        public const string MarkdownCode = "md_code2";
-        public const string MarkdownQuote = "md_quote2";
-        public const string MarkdownHtml = "md_html2";
+        public const string MarkdownHeader = "md_header";
+        public const string MarkdownCode = "md_code";
+        public const string MarkdownQuote = "md_quote";
+        public const string MarkdownHtml = "md_html";
         public const string MarkdownLink = "md_link";
         public const string MarkdownComment = PredefinedClassificationTypeNames.Comment;
 
