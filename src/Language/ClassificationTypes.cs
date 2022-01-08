@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
 {
-    internal static class MarkdownClassificationTypes
+    internal static class ClassificationTypes
     {
         public const string MarkdownBold = "md_bold";
         public const string MarkdownItalic = "md_italic";
@@ -53,8 +53,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownBold)]
-    [Name(MarkdownClassificationTypes.MarkdownBold)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownBold)]
+    [Name(ClassificationTypes.MarkdownBold)]
     internal sealed class MarkdownBoldFormatDefinition : ClassificationFormatDefinition
     {
         public MarkdownBoldFormatDefinition()
@@ -65,8 +65,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownItalic)]
-    [Name(MarkdownClassificationTypes.MarkdownItalic)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownItalic)]
+    [Name(ClassificationTypes.MarkdownItalic)]
     internal sealed class MarkdownItalicFormatDefinition : ClassificationFormatDefinition
     {
         public MarkdownItalicFormatDefinition()
@@ -77,8 +77,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownStrikethrough)]
-    [Name(MarkdownClassificationTypes.MarkdownStrikethrough)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownStrikethrough)]
+    [Name(ClassificationTypes.MarkdownStrikethrough)]
     internal sealed class MarkdownStrikethroughFormatDefinition : ClassificationFormatDefinition
     {
         public MarkdownStrikethroughFormatDefinition()
@@ -92,8 +92,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownHeader)]
-    [Name(MarkdownClassificationTypes.MarkdownHeader)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader)]
+    [Name(ClassificationTypes.MarkdownHeader)]
     [UserVisible(true)]
     internal sealed class MarkdownHeaderFormatDefinition : ClassificationFormatDefinition
     {
@@ -105,8 +105,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownCode)]
-    [Name(MarkdownClassificationTypes.MarkdownCode)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownCode)]
+    [Name(ClassificationTypes.MarkdownCode)]
     [UserVisible(true)]
     internal sealed class MarkdownCodeFormatDefinition : ClassificationFormatDefinition
     {
@@ -118,8 +118,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownQuote)]
-    [Name(MarkdownClassificationTypes.MarkdownQuote)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownQuote)]
+    [Name(ClassificationTypes.MarkdownQuote)]
     [UserVisible(true)]
     internal sealed class MarkdownQuoteFormatDefinition : ClassificationFormatDefinition
     {
@@ -132,8 +132,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownHtml)]
-    [Name(MarkdownClassificationTypes.MarkdownHtml)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHtml)]
+    [Name(ClassificationTypes.MarkdownHtml)]
     [UserVisible(true)]
     internal sealed class MarkdownHtmlFormatDefinition : ClassificationFormatDefinition
     {
@@ -144,8 +144,8 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = MarkdownClassificationTypes.MarkdownLink)]
-    [Name(MarkdownClassificationTypes.MarkdownLink)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownLink)]
+    [Name(ClassificationTypes.MarkdownLink)]
     [UserVisible(true)]
     [Order(After = Priority.High)]
     internal sealed class MarkdownLinkFormatDefinition : ClassificationFormatDefinition

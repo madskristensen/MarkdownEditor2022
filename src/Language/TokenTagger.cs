@@ -143,15 +143,15 @@ namespace MarkdownEditor2022
         {
             return mdobj switch
             {
-                HeadingBlock => MarkdownClassificationTypes.MarkdownHeader,
-                CodeBlock or CodeInline => MarkdownClassificationTypes.MarkdownCode,
-                QuoteBlock => MarkdownClassificationTypes.MarkdownQuote,
-                LinkInline => MarkdownClassificationTypes.MarkdownLink,
-                EmphasisInline ei when ei.DelimiterCount == 2 && ei.DelimiterChar == '~' => MarkdownClassificationTypes.MarkdownStrikethrough,
-                EmphasisInline ei when ei.DelimiterCount == 1 => MarkdownClassificationTypes.MarkdownItalic,
-                EmphasisInline ei when ei.DelimiterCount == 2 => MarkdownClassificationTypes.MarkdownBold,
-                HtmlBlock html when html.Type == HtmlBlockType.Comment => MarkdownClassificationTypes.MarkdownComment,
-                HtmlBlock or HtmlInline or HtmlEntityInline => MarkdownClassificationTypes.MarkdownHtml,
+                HeadingBlock => ClassificationTypes.MarkdownHeader,
+                CodeBlock or CodeInline => ClassificationTypes.MarkdownCode,
+                QuoteBlock => ClassificationTypes.MarkdownQuote,
+                LinkInline => ClassificationTypes.MarkdownLink,
+                EmphasisInline ei when ei.DelimiterCount == 2 && ei.DelimiterChar == '~' => ClassificationTypes.MarkdownStrikethrough,
+                EmphasisInline ei when ei.DelimiterCount == 1 => ClassificationTypes.MarkdownItalic,
+                EmphasisInline ei when ei.DelimiterCount == 2 => ClassificationTypes.MarkdownBold,
+                HtmlBlock html when html.Type == HtmlBlockType.Comment => ClassificationTypes.MarkdownComment,
+                HtmlBlock or HtmlInline or HtmlEntityInline => ClassificationTypes.MarkdownHtml,
                 _ => null,
             };
         }

@@ -23,15 +23,15 @@ namespace MarkdownEditor2022
     {
         public override Dictionary<object, string> ClassificationMap { get; } = new()
         {
-            { MarkdownClassificationTypes.MarkdownHeader, MarkdownClassificationTypes.MarkdownHeader },
-            { MarkdownClassificationTypes.MarkdownCode, MarkdownClassificationTypes.MarkdownCode },
-            { MarkdownClassificationTypes.MarkdownHtml, MarkdownClassificationTypes.MarkdownHtml },
-            { MarkdownClassificationTypes.MarkdownComment, MarkdownClassificationTypes.MarkdownComment },
-            { MarkdownClassificationTypes.MarkdownLink, MarkdownClassificationTypes.MarkdownLink },
-            { MarkdownClassificationTypes.MarkdownItalic, MarkdownClassificationTypes.MarkdownItalic },
-            { MarkdownClassificationTypes.MarkdownStrikethrough, MarkdownClassificationTypes.MarkdownStrikethrough },
-            { MarkdownClassificationTypes.MarkdownBold, MarkdownClassificationTypes.MarkdownBold },
-            { MarkdownClassificationTypes.MarkdownQuote, MarkdownClassificationTypes.MarkdownQuote },
+            { ClassificationTypes.MarkdownHeader, ClassificationTypes.MarkdownHeader },
+            { ClassificationTypes.MarkdownCode, ClassificationTypes.MarkdownCode },
+            { ClassificationTypes.MarkdownHtml, ClassificationTypes.MarkdownHtml },
+            { ClassificationTypes.MarkdownComment, ClassificationTypes.MarkdownComment },
+            { ClassificationTypes.MarkdownLink, ClassificationTypes.MarkdownLink },
+            { ClassificationTypes.MarkdownItalic, ClassificationTypes.MarkdownItalic },
+            { ClassificationTypes.MarkdownStrikethrough, ClassificationTypes.MarkdownStrikethrough },
+            { ClassificationTypes.MarkdownBold, ClassificationTypes.MarkdownBold },
+            { ClassificationTypes.MarkdownQuote, ClassificationTypes.MarkdownQuote },
         };
     }
 
