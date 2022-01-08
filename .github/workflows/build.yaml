@@ -18,11 +18,11 @@ jobs:
     env:
       Configuration: Release
       DeployExtension: False
-      VsixManifestPath: src\source.extension.vsixmanifest
-      VsixManifestSourcePath: src\source.extension.cs
       
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0 # avoid shallow clone so Nerdbank.GitVersioning can do its work.
 
     - name: Setup .NET build dependencies
       uses: timheuer/bootstrap-dotnet@v1
@@ -30,13 +30,6 @@ jobs:
         nuget: 'false'
         sdk: 'false'
         msbuild: 'true'
-
-    - name: Increment VSIX version
-      id: vsix_version
-      uses: timheuer/vsix-version-stamp@v1
-      with:
-        manifest-file: ${{ env.VsixManifestPath }}
-        vsix-token-source-file: ${{ env.VsixManifestSourcePath }}
 
     - name: Build
       run: msbuild /v:m -restore /p:OutDir=../_built

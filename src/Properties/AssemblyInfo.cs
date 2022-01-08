@@ -14,9 +14,6 @@ using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
 
-[assembly: AssemblyVersion(Vsix.Version)]
-[assembly: AssemblyFileVersion(Vsix.Version)]
-
 namespace System.Runtime.CompilerServices
 {
     public class IsExternalInit { }
