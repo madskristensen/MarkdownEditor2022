@@ -2,6 +2,7 @@
 global using Community.VisualStudio.Toolkit;
 global using Microsoft.VisualStudio.Shell;
 global using Task = System.Threading.Tasks.Task;
+using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio;
@@ -15,7 +16,7 @@ namespace MarkdownEditor2022
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.MarkdownEditor2022String)]
 
-    [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, EnableCommenting = true, ShowCompletion = true)]
+    [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, EnableCommenting = true, ShowCompletion = true, ShowDropDownOptions = true)]
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, 0)]
     [ProvideLanguageExtension(typeof(MarkdownEditor), Constants.FileExtension)]
     [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 50)]
@@ -30,6 +31,8 @@ namespace MarkdownEditor2022
         {
             MarkdownEditor = new(this);
             RegisterEditorFactory(MarkdownEditor);
+
+            ((IServiceContainer)this).AddService(typeof(MarkdownEditor), MarkdownEditor, true);
 
             SetInternetExplorerRegistryKey();
 

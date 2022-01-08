@@ -21,6 +21,7 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Syntax highlighting of code blocks (using Prism.js)
 - Live preview window with scroll sync and dark theme support
 - CommonMark and GitHub flavored Markdown + FrontMatter YAML
+- Jump between Markdown Headings from the NavigationBar
 - Drag 'n drop of images supported
 - Paste image from clipboard directly onto document
 - Outlining/folding of code blocks
@@ -50,6 +51,11 @@ All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Color
 #### GitHub and other flavors
 Advanced markdown extensions are supported to give more features to the syntax. This includes pipe tables, emoji, mathematics and a lot
 more.
+
+### Heading-based navigation
+The NavigationBar shows all of the document headings, like a table of contents. Select a heading to jump to that section of the document.
+
+![Navigator Bar](art/navigator-bar.png)
 
 ### Drag 'n drop images
 Drag an image directly from Solution Explorer onto the document to insert the appropriate markdown that will render the image.

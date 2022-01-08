@@ -7,6 +7,9 @@ namespace MarkdownEditor2022
     [Guid(PackageGuids.EditorFactoryString)]
     internal sealed class MarkdownEditor : LanguageBase
     {
+        private bool _disposed = false;
+        private MarkdownHeaderDropdownBars? _dropdownBars;
+
         public MarkdownEditor(object site) : base(site)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -31,7 +34,7 @@ namespace MarkdownEditor2022
             preferences.InsertTabs = false;
             preferences.IndentSize = 2;
             preferences.IndentStyle = IndentingStyle.Smart;
-            preferences.ShowNavigationBar = false;
+            preferences.ShowNavigationBar = true;
 
             preferences.WordWrap = true;
             preferences.WordWrapGlyphs = true;
@@ -39,6 +42,25 @@ namespace MarkdownEditor2022
             preferences.AutoListMembers = true;
             preferences.EnableQuickInfo = true;
             preferences.ParameterInformation = true;
+        }
+
+        public override TypeAndMemberDropdownBars CreateDropDownHelper(IVsTextView textView)
+        {
+            _dropdownBars?.Dispose();
+            _dropdownBars = new MarkdownHeaderDropdownBars(textView, this);
+
+            return _dropdownBars;
+        }
+
+        public override void Dispose()
+        {
+            if (_disposed) return;
+            
+            _disposed = true;
+            _dropdownBars?.Dispose();
+            _dropdownBars = null;
+
+            base.Dispose();
         }
     }
 }
