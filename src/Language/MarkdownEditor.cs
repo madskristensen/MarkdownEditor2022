@@ -8,7 +8,7 @@ namespace MarkdownEditor2022
     internal sealed class MarkdownEditor : LanguageBase
     {
         private bool _disposed = false;
-        private MarkdownHeaderDropdownBars? _dropdownBars;
+        private DropdownBars _dropdownBars;
 
         public MarkdownEditor(object site) : base(site)
         {
@@ -47,15 +47,18 @@ namespace MarkdownEditor2022
         public override TypeAndMemberDropdownBars CreateDropDownHelper(IVsTextView textView)
         {
             _dropdownBars?.Dispose();
-            _dropdownBars = new MarkdownHeaderDropdownBars(textView, this);
+            _dropdownBars = new DropdownBars(textView, this);
 
             return _dropdownBars;
         }
 
         public override void Dispose()
         {
-            if (_disposed) return;
-            
+            if (_disposed)
+            {
+                return;
+            }
+
             _disposed = true;
             _dropdownBars?.Dispose();
             _dropdownBars = null;

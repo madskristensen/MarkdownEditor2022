@@ -65,7 +65,7 @@
     <Compile Include="Language\EditorFeatures.cs" />
     <Compile Include="Language\MarkdownEditor.cs" />
     <Compile Include="Language\MarkdownClassificationTypes.cs" />
-    <Compile Include="Language\MarkdownHeaderDropdownBars.cs" />
+    <Compile Include="Language\DropdownBars.cs" />
     <Compile Include="Language\TokenTagger.cs" />
     <Compile Include="Margin\Browser.cs" />
     <Compile Include="Margin\BrowserMargin.cs" />

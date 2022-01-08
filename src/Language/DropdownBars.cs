@@ -1,31 +1,28 @@
 ﻿using System.Collections;
+using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Markdig.Syntax;
-using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
-using Microsoft.VisualStudio.Threading;
 
 namespace MarkdownEditor2022
 {
-    internal class MarkdownHeaderDropdownBars : TypeAndMemberDropdownBars, IDisposable
+    internal class DropdownBars : TypeAndMemberDropdownBars, IDisposable
     {
-        private bool _disposed;
-
         private readonly LanguageService _languageService;
         private readonly IWpfTextView _textView;
         private readonly Document _document;
+        private bool _disposed;
+        private bool _bufferHasChanged;
 
-        public MarkdownHeaderDropdownBars(IVsTextView textView, LanguageService languageService) 
+        public DropdownBars(IVsTextView textView, LanguageService languageService)
             : base(languageService)
         {
             _languageService = languageService;
 
-            IComponentModel compModel = (IComponentModel)languageService.GetService(typeof(SComponentModel));
-            IVsEditorAdaptersFactoryService adapter = compModel.GetService<IVsEditorAdaptersFactoryService>();
+            IVsEditorAdaptersFactoryService adapter = VS.GetMefService<IVsEditorAdaptersFactoryService>();
 
             _textView = adapter.GetWpfTextView(textView);
             _textView.Caret.PositionChanged += CaretPositionChanged;
@@ -33,54 +30,60 @@ namespace MarkdownEditor2022
             _document = _textView.TextBuffer.GetDocument();
             _document.Parsed += OnDocumentParsed;
 
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            {
-                await TaskScheduler.Default;
-                OnDocumentParsed(_document);
-            }).FireAndForget();
+            SynchronizeDropdowns();
         }
 
-        private void CaretPositionChanged(object sender, CaretPositionChangedEventArgs e)
+        private void CaretPositionChanged(object sender, CaretPositionChangedEventArgs e) => SynchronizeDropdowns();
+        private void OnDocumentParsed(Document document)
         {
+            _bufferHasChanged = true;
             SynchronizeDropdowns();
         }
 
         private void SynchronizeDropdowns()
         {
-            ThreadHelper.JoinableTaskFactory.StartOnIdle(
-                () => _languageService.SynchronizeDropdowns(),
-                VsTaskRunContext.UIThreadIdlePriority).FireAndForget();
-        }
-
-        private void OnDocumentParsed(Document document)
-        {
-            ThreadHelper.ThrowIfOnUIThread();
-
-            if (document.IsParsing)
+            if (_document.IsParsing)
             {
-                // Abort and wait for the next parse event to finish
                 return;
             }
 
-            SynchronizeDropdowns();
+            ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+            {
+                if (!_document.IsParsing)
+                {
+                    _languageService.SynchronizeDropdowns();
+                }
+            }, VsTaskRunContext.UIThreadBackgroundPriority).FireAndForget();
         }
 
         public override bool OnSynchronizeDropdowns(LanguageService languageService, IVsTextView textView, int line, int col, ArrayList dropDownTypes, ArrayList dropDownMembers, ref int selectedType, ref int selectedMember)
         {
-            dropDownTypes.Clear();
+            if (_bufferHasChanged || dropDownMembers.Count == 0)
+            {
+                dropDownMembers.Clear();
 
-            _document.Markdown.Descendants<HeadingBlock>()
-                .Select(headingBlock => CreateDropDownMember(headingBlock, textView))
-                .ToList()
-                .ForEach(ddm => dropDownTypes.Add(ddm));
+                _document.Markdown.Descendants<HeadingBlock>()
+                    .Select(headingBlock => CreateDropDownMember(headingBlock, textView))
+                    .ToList()
+                    .ForEach(ddm => dropDownMembers.Add(ddm));
+            }
 
-            textView.GetCaretPos(out int caretLine, out int caretColumn);
+            if (dropDownTypes.Count == 0)
+            {
+                string thisExt = $"{Vsix.Name} ({Vsix.Version})";
+                string markdig = Path.GetFileName($"Powered by Markdig ({Markdig.Markdown.Version})");
+                dropDownTypes.Add(new DropDownMember(thisExt, new TextSpan(), 126, DROPDOWNFONTATTR.FONTATTR_GRAY));
+                dropDownTypes.Add(new DropDownMember(markdig, new TextSpan(), 126, DROPDOWNFONTATTR.FONTATTR_GRAY));
+            }
 
-            DropDownMember currentDropDown = dropDownTypes
+            DropDownMember currentDropDown = dropDownMembers
                 .OfType<DropDownMember>()
-                .Where(d => d.Span.iStartLine <= caretLine)
+                .Where(d => d.Span.iStartLine <= line)
                 .LastOrDefault();
-            selectedType = dropDownTypes.IndexOf(currentDropDown);
+
+            selectedMember = dropDownMembers.IndexOf(currentDropDown);
+            selectedType = 0;
+            _bufferHasChanged = false;
 
             return true;
         }
@@ -90,9 +93,11 @@ namespace MarkdownEditor2022
             TextSpan textSpan = GetTextSpan(headingBlock, textView);
             textView.GetTextStream(textSpan.iStartLine, textSpan.iStartIndex, textSpan.iEndLine, textSpan.iEndIndex, out string headingText);
 
-            headingText = ProcessHeadingText(headingText ?? String.Empty, headingBlock.Level, headingBlock.HeaderChar);
+            headingText = ProcessHeadingText(headingText ?? string.Empty, headingBlock.Level, headingBlock.HeaderChar);
 
-            return new DropDownMember(headingText, textSpan, 0, headingBlock.Level == 1 ? DROPDOWNFONTATTR.FONTATTR_BOLD : DROPDOWNFONTATTR.FONTATTR_PLAIN);
+            DROPDOWNFONTATTR fontAttr = headingBlock.Level == 1 ? DROPDOWNFONTATTR.FONTATTR_BOLD : DROPDOWNFONTATTR.FONTATTR_PLAIN;
+
+            return new DropDownMember(headingText, textSpan, 126, fontAttr);
         }
 
         private static TextSpan GetTextSpan(HeadingBlock headingBlock, IVsTextView textView)
@@ -113,18 +118,22 @@ namespace MarkdownEditor2022
         /// </summary>
         private static string ProcessHeadingText(string text, int level, char headingChar)
         {
-            string headingDeclaration = new string(headingChar, level);
+            string headingDeclaration = new(headingChar, level);
+
             if (text.StartsWith(headingDeclaration))
             {
                 text = text.Substring(headingDeclaration.Length);
             }
 
-            return new string(' ', (2 * level) + 1) + text.Trim();
+            return new string(' ', (3 * level) + 1).Substring(4) + text.Trim();
         }
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (_disposed)
+            {
+                return;
+            }
 
             _disposed = true;
             _textView.Caret.PositionChanged -= CaretPositionChanged;
