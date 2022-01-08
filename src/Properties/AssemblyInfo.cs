@@ -3,12 +3,12 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle(Vsix.Name)]
-[assembly: AssemblyDescription(Vsix.Description)]
+[assembly: AssemblyTitle(ThisAssembly.AssemblyTitle)]
+[assembly: AssemblyDescription(ThisAssembly.AssemblyDescription)]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany(Vsix.Author)]
-[assembly: AssemblyProduct(Vsix.Name)]
-[assembly: AssemblyCopyright(Vsix.Author)]
+[assembly: AssemblyCompany(ThisAssembly.Authors)]
+[assembly: AssemblyProduct(ThisAssembly.AssemblyTitle)]
+[assembly: AssemblyCopyright(ThisAssembly.Authors)]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

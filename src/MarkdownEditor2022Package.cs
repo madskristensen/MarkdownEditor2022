@@ -11,7 +11,7 @@ using Microsoft.Win32;
 namespace MarkdownEditor2022
 {
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [InstalledProductRegistration(Vsix.Name, Vsix.Description, ThisAssembly.AssemblyInformationalVersion)]
+    [InstalledProductRegistration(ThisAssembly.AssemblyTitle, ThisAssembly.AssemblyDescription, ThisAssembly.AssemblyInformationalVersion)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.MarkdownEditor2022String)]
 

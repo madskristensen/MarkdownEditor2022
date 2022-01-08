@@ -41,7 +41,7 @@ namespace MarkdownEditor2022
                         Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_WARNING,
                         Line = link.Line,
                         Column = item.Column,
-                        BuildTool = Vsix.Name,
+                        BuildTool = ThisAssembly.AssemblyTitle,
                         ErrorCode = "MD001"
                     };
                 }

@@ -27,6 +27,20 @@
     <StartProgram Condition="'$(DevEnvDir)' != ''">$(DevEnvDir)devenv.exe</StartProgram>
     <StartArguments>/rootsuffix Exp</StartArguments>
   </PropertyGroup>
+  <PropertyGroup>
+    <Authors>Mads Kristensen</Authors>
+    <Product>Markdown Editor v2</Product>
+    <AssemblyTitle>$(Product)</AssemblyTitle>
+    <Description>A full featured Markdown editor with live preview and syntax highlighting. Supports GitHub flavored Markdown.</Description>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <AdditionalThisAssemblyFields Visible="false" />
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <AdditionalThisAssemblyFields Include="Authors" String="$(Authors)" />
+    <AdditionalThisAssemblyFields Include="AssemblyDescription" String="$(Description)" />
+    <AdditionalThisAssemblyFields Include="Product" String="$(Product)" />
+  </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
@@ -73,11 +87,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Commands\EnablePreviewSyncCommand.cs" />
     <Compile Include="MarkdownEditor2022Package.cs" />
-    <Compile Include="source.extension.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>source.extension.vsixmanifest</DependentUpon>
-    </Compile>
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -97,8 +106,6 @@
     </Content>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
-      <Generator>VsixManifestGenerator</Generator>
-      <LastGenOutput>source.extension.cs</LastGenOutput>
     </None>
     <Content Include="Margin\highlight.css">
       <IncludeInVSIX>true</IncludeInVSIX>
@@ -155,9 +162,24 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Target Name="GetVsixName" Returns="$(VsixName)">
+    <PropertyGroup>
+      <VsixName Condition="'$(VsixName)' == ''">$(Product)</VsixName>
+    </PropertyGroup>
+  </Target>
+  <Target Name="GetVsixDescription" Returns="$(VsixDescription)">
+    <PropertyGroup>
+      <VsixDescription Condition="'$(VsixDescription)' == ''">$(Description)</VsixDescription>
+    </PropertyGroup>
+  </Target>
   <Target Name="GetVsixVersion" Returns="$(VsixVersion)">
     <PropertyGroup>
       <VsixVersion Condition="'$(VsixVersion)' == ''">$(BuildVersionSimple)</VsixVersion>
+    </PropertyGroup>
+  </Target>
+  <Target Name="GetVsixPublisher" Returns="$(VsixPublisher)">
+    <PropertyGroup>
+      <VsixPublisher Condition="'$(VsixPublisher)' == ''">$(Authors)</VsixPublisher>
     </PropertyGroup>
   </Target>
 </Project>
