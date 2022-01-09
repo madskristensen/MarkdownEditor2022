@@ -9,7 +9,6 @@ using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Tagging;
-using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
@@ -24,71 +23,57 @@ namespace MarkdownEditor2022
             buffer.Properties.GetOrCreateSingletonProperty(() => new TokenTagger(buffer)) as ITagger<T>;
     }
 
-    internal class TokenTagger : ITagger<TokenTag>, IDisposable
+    internal class TokenTagger : TokenTaggerBase, IDisposable
     {
         private readonly Document _document;
-        private readonly ITextBuffer _buffer;
-        private Dictionary<MarkdownObject, ITagSpan<TokenTag>> _tagsCache;
-        private bool _isDisposed;
         private static readonly ImageId _errorIcon = KnownMonikers.StatusWarning.ToImageId();
+        private bool _isDisposed;
 
-        internal TokenTagger(ITextBuffer buffer)
+        internal TokenTagger(ITextBuffer buffer) : base(buffer)
         {
-            _buffer = buffer;
             _document = buffer.GetDocument();
             _document.Parsed += ReParse;
-            _tagsCache = new Dictionary<MarkdownObject, ITagSpan<TokenTag>>();
-
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            {
-                await TaskScheduler.Default;
-                ReParse(_document);
-            }).FireAndForget();
-        }
-
-        public IEnumerable<ITagSpan<TokenTag>> GetTags(NormalizedSnapshotSpanCollection spans)
-        {
-            return _tagsCache.Values;
         }
 
         private void ReParse(Document document)
         {
+            _ = TokenizeAsync();
+        }
+
+        public override Task TokenizeAsync()
+        {
             // Make sure this is running on a background thread.
             ThreadHelper.ThrowIfOnUIThread();
 
-            Dictionary<MarkdownObject, ITagSpan<TokenTag>> list = new();
+            List<ITagSpan<TokenTag>> list = new();
 
-            foreach (MarkdownObject item in document.Markdown.Descendants())
+            foreach (MarkdownObject item in _document.Markdown.Descendants())
             {
-                if (document.IsParsing)
+                if (_document.IsParsing)
                 {
                     // Abort and wait for the next parse event to finish
-                    return;
+                    return Task.CompletedTask;
                 }
 
                 AddTagToList(list, item);
             }
 
-            _tagsCache = list;
-
-            SnapshotSpan span = new(_buffer.CurrentSnapshot, 0, _buffer.CurrentSnapshot.Length);
-            TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(span));
+            OnTagsUpdated(list);
+            return Task.CompletedTask;
         }
 
-        private void AddTagToList(Dictionary<MarkdownObject, ITagSpan<TokenTag>> list, MarkdownObject item)
+        private void AddTagToList(List<ITagSpan<TokenTag>> list, MarkdownObject item)
         {
-            SnapshotSpan span = new(_buffer.CurrentSnapshot, GetApplicapleSpan(item));
-            TokenTag tag = new(GetItemType(item), item is FencedCodeBlock)
-            {
-                Errors = item.GetErrors(_document.FileName).ToList(),
-                GetTooltipAsync = GetTooltipAsync,
-                GetOutliningText = GetOutliningText
-            };
+            bool supportsOutlining = item is FencedCodeBlock;
+            IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
 
-            list.Add(item, new TagSpan<TokenTag>(span, tag));
+            SnapshotSpan span = new(Buffer.CurrentSnapshot, GetApplicapleSpan(item));
+            TokenTag tag = CreateToken(GetItemType(item), true, supportsOutlining, errors);
+
+            list.Add(new TagSpan<TokenTag>(span, tag));
         }
 
-        private static string GetOutliningText(string text)
+        public override string GetOutliningText(string text)
         {
             string firstLine = text.Split('\n').FirstOrDefault()?.Trim();
             string language = "";
@@ -101,7 +86,7 @@ namespace MarkdownEditor2022
             return $"{language} Code Block ";
         }
 
-        private Task<object> GetTooltipAsync(SnapshotPoint triggerPoint)
+        public override Task<object> GetTooltipAsync(SnapshotPoint triggerPoint)
         {
             LinkInline item = _document.Markdown.Descendants()
                 .OfType<LinkInline>()
@@ -166,7 +151,5 @@ namespace MarkdownEditor2022
 
             _isDisposed = true;
         }
-
-        public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
     }
 }

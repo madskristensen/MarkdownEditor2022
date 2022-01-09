@@ -108,6 +108,7 @@
     <VisibilityItem guid="MarkdownEditor2022" id="ShowKeybindings" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="ShowMarkdownReference" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="OpenSettings" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="InsertLink" context="EditorFactory" />
   </VisibilityConstraints>
 
   <KeyBindings>

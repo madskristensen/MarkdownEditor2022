@@ -47,13 +47,13 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+            _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
                 if (!_document.IsParsing)
                 {
                     _languageService.SynchronizeDropdowns();
                 }
-            }, VsTaskRunContext.UIThreadBackgroundPriority).FireAndForget();
+            }, VsTaskRunContext.UIThreadIdlePriority);
         }
 
         public override bool OnSynchronizeDropdowns(LanguageService languageService, IVsTextView textView, int line, int col, ArrayList dropDownTypes, ArrayList dropDownMembers, ref int selectedType, ref int selectedMember)
@@ -71,7 +71,7 @@ namespace MarkdownEditor2022
             if (dropDownTypes.Count == 0)
             {
                 string thisExt = $"{Vsix.Name} ({Vsix.Version})";
-                string markdig = Path.GetFileName($"Powered by Markdig ({Markdig.Markdown.Version})");
+                string markdig = Path.GetFileName($"   Powered by Markdig ({Markdig.Markdown.Version})");
                 dropDownTypes.Add(new DropDownMember(thisExt, new TextSpan(), 126, DROPDOWNFONTATTR.FONTATTR_GRAY));
                 dropDownTypes.Add(new DropDownMember(markdig, new TextSpan(), 126, DROPDOWNFONTATTR.FONTATTR_GRAY));
             }

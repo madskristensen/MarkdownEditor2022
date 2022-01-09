@@ -11,9 +11,7 @@ namespace MarkdownEditor2022
         private DropdownBars _dropdownBars;
 
         public MarkdownEditor(object site) : base(site)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-        }
+        { }
 
         public override string Name => Constants.LanguageName;
 

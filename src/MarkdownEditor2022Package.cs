@@ -19,20 +19,20 @@ namespace MarkdownEditor2022
     [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, EnableCommenting = true, ShowCompletion = true, ShowDropDownOptions = true)]
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, 0)]
     [ProvideLanguageExtension(typeof(MarkdownEditor), Constants.FileExtension)]
+    
     [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 50)]
-    [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
     [ProvideEditorFactory(typeof(MarkdownEditor), 0, false, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorLogicalView(typeof(MarkdownEditor), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
+    
+    [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
     {
-        internal static MarkdownEditor MarkdownEditor { get; private set; }
-
         protected override Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
-            MarkdownEditor = new(this);
-            RegisterEditorFactory(MarkdownEditor);
+            MarkdownEditor language = new(this);
+            RegisterEditorFactory(language);
 
-            ((IServiceContainer)this).AddService(typeof(MarkdownEditor), MarkdownEditor, true);
+            ((IServiceContainer)this).AddService(typeof(MarkdownEditor), language, true);
 
             SetInternetExplorerRegistryKey();
 
