@@ -9,35 +9,32 @@ using Microsoft.VisualStudio.Utilities;
 namespace MarkdownEditor2022
 {
     [Export(typeof(ICommandHandler))]
-    [Name(nameof(CommentCommand))]
+    [Name(nameof(SmartIndentCommand))]
     [ContentType(Constants.LanguageName)]
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class SmartIndentCommand : ICommandHandler<ReturnKeyCommandArgs>
     {
+        private static readonly Regex _regex = new(@"^(\*|-|\d\.|[a-z]\.) (\[( |x|X)\][ ]*)?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
         public string DisplayName => GetType().Name;
 
         public bool ExecuteCommand(ReturnKeyCommandArgs args, CommandExecutionContext executionContext)
         {
             int position = args.TextView.Caret.Position.BufferPosition.Position;
             ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
-
-            return Handle(line, new Regex(@"^(\*|-|\d\.) (\[( |x|X)\][ ]*)?"), position);
-        }
-
-        private static bool Handle(ITextSnapshotLine line, Regex regex, int position)
-        {
             string lineText = line.GetText();
-            Match match = regex.Match(lineText);
+            Match match = _regex.Match(lineText);
 
             if (match.Success)
             {
+                string newLine = args.TextView.Options.GetOptionValue<string>(DefaultOptions.NewLineCharacterOptionName);
                 if (lineText.Trim() == match.Value.Trim())
                 {
-                    line.Snapshot.TextBuffer.Replace(line.Extent, "\r\n");
+                    line.Snapshot.TextBuffer.Replace(line.Extent, newLine);
                 }
                 else
                 {
-                    line.Snapshot.TextBuffer.Insert(position, $"\r\n{match.Value}");
+                    line.Snapshot.TextBuffer.Insert(position, $"{newLine}{match.Value}");
                 }
 
                 return true;

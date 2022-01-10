@@ -23,7 +23,7 @@ namespace MarkdownEditor2022
             preferences.EnableMatchBraces = true;
             preferences.EnableMatchBracesAtCaret = true;
             preferences.EnableShowMatchingBrace = true;
-            preferences.EnableCommenting = false;
+            preferences.EnableCommenting = true;
             preferences.HighlightMatchingBraceFlags = _HighlightMatchingBraceFlags.HMB_USERECTANGLEBRACES;
             preferences.LineNumbers = false;
             preferences.MaxErrorMessages = 100;

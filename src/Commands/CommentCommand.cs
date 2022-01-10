@@ -1,35 +1,46 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
-using Microsoft.VisualStudio.Commanding;
+using Markdig.Syntax;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Formatting;
-using Microsoft.VisualStudio.Text.Operations;
-using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
 {
-    [Export(typeof(ICommandHandler))]
-    [Name(nameof(CommentCommand))]
-    [ContentType(Constants.LanguageName)]
-    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
-    public class CommentCommand : ICommandHandler<CommentSelectionCommandArgs>
+    public class Commenting
     {
-        [Import] internal ITextUndoHistoryRegistry _undoRegistry = null;
+        public static async Task InitializeAsync()
+        {
+            // We need to manually intercept the commenting command, because language services swallow these commands.
+            await VS.Commands.InterceptAsync(VSConstants.VSStd2KCmdID.COMMENT_BLOCK, () => Execute(Comment));
+            await VS.Commands.InterceptAsync(VSConstants.VSStd2KCmdID.UNCOMMENT_BLOCK, () => Execute(Uncomment));
+        }
 
-        public string DisplayName => GetType().Name;
+        private static CommandProgression Execute(Action<DocumentView> action)
+        {
+            return ThreadHelper.JoinableTaskFactory.Run(async () =>
+            {
+                DocumentView doc = await VS.Documents.GetActiveDocumentViewAsync();
 
-        public bool ExecuteCommand(CommentSelectionCommandArgs args, CommandExecutionContext executionContext)
+                if (doc?.TextBuffer != null && doc.TextBuffer.ContentType.IsOfType(Constants.LanguageName))
+                {
+                    action(doc);
+                    return CommandProgression.Stop;
+                }
+
+                return CommandProgression.Continue;
+            });
+        }
+
+        private static void Comment(DocumentView doc)
         {
             List<SnapshotSpan> list = new();
 
-            foreach (SnapshotSpan span in args.TextView.Selection.SelectedSpans.Reverse())
+            foreach (SnapshotSpan span in doc.TextView.Selection.SelectedSpans.Reverse())
             {
                 if (span.IsEmpty)
                 {
-                    ITextViewLine line = args.TextView.TextViewLines.GetTextViewLineContainingBufferPosition(span.Start);
+                    ITextViewLine line = doc.TextView.TextViewLines.GetTextViewLineContainingBufferPosition(span.Start);
                     list.Add(line.Extent);
                 }
                 else
@@ -38,25 +49,38 @@ namespace MarkdownEditor2022
                 }
             }
 
-            ITextUndoHistory undo = _undoRegistry.RegisterHistory(args.TextView.TextBuffer);
-
-            using (ITextUndoTransaction transaction = undo.CreateTransaction("Uncomment"))
+            foreach (SnapshotSpan item in list)
             {
-                foreach (SnapshotSpan item in list)
+                using (ITextEdit edit = doc.TextBuffer.CreateEdit())
                 {
-                    args.TextView.TextBuffer.Insert(item.End.Position, "-->");
-                    args.TextView.TextBuffer.Insert(item.Start.Position, "<!--");
+                    edit.Insert(item.End.Position, "-->");
+                    edit.Insert(item.Start.Position, "<!--");
+                    edit.Apply();
                 }
-
-                transaction.Complete();
             }
-
-            return true;
         }
 
-        public CommandState GetCommandState(CommentSelectionCommandArgs args)
+        private static void Uncomment(DocumentView doc)
         {
-            return CommandState.Available;
+            Document document = doc.TextBuffer.GetDocument();
+
+            foreach (SnapshotSpan span in doc.TextView.Selection.SelectedSpans.Reverse())
+            {
+                MarkdownObject block = document.Markdown.Descendants().LastOrDefault(d => d.Span.Start <= span.Start.Position && d.Span.End >= span.Start.Position);
+
+                if (block is HtmlBlock html && html.Type == HtmlBlockType.Comment)
+                {
+                    Span openSpan = new(html.Span.Start, 4);
+                    Span closeSpan = new(html.Span.End - 2, 3);
+
+                    using (ITextEdit edit = doc.TextBuffer.CreateEdit())
+                    {
+                        edit.Delete(closeSpan);
+                        edit.Delete(openSpan);
+                        edit.Apply();
+                    }
+                }
+            }
         }
     }
 }

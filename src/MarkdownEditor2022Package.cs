@@ -16,27 +16,28 @@ namespace MarkdownEditor2022
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.MarkdownEditor2022String)]
 
-    [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, EnableCommenting = true, ShowCompletion = true, ShowDropDownOptions = true)]
+    [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, ShowCompletion = true, ShowDropDownOptions = true)]
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, 0)]
     [ProvideLanguageExtension(typeof(MarkdownEditor), Constants.FileExtension)]
-    
+
     [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 50)]
     [ProvideEditorFactory(typeof(MarkdownEditor), 0, false, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorLogicalView(typeof(MarkdownEditor), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
-    
+
     [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
     {
-        protected override Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
+            await JoinableTaskFactory.SwitchToMainThreadAsync();
+
             MarkdownEditor language = new(this);
             RegisterEditorFactory(language);
-
             ((IServiceContainer)this).AddService(typeof(MarkdownEditor), language, true);
 
             SetInternetExplorerRegistryKey();
 
-            return this.RegisterCommandsAsync();
+            await Commenting.InitializeAsync();
         }
 
         // This is to enable DPI scaling in the preview browser instance

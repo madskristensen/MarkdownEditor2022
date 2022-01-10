@@ -30,7 +30,7 @@ namespace MarkdownEditor2022
 
             if (block is ListItemBlock || block?.Parent is ListItemBlock)
             {
-                args.TextView.TextBuffer.Insert(line.Start.Position, "  ");
+                args.TextView.TextBuffer.Insert(line.Start.Position, "    ");
                 return true;
             }
 
@@ -59,7 +59,7 @@ namespace MarkdownEditor2022
 
                 if (text.StartsWith("  ", StringComparison.Ordinal))
                 {
-                    args.TextView.TextBuffer.Delete(new Span(line.Start.Position, 2));
+                    args.TextView.TextBuffer.Delete(new Span(line.Start.Position, 4));
                     isHandled = true;
                 }
             }
