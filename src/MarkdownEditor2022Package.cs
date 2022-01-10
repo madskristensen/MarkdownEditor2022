@@ -20,9 +20,9 @@ namespace MarkdownEditor2022
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, 0)]
     [ProvideLanguageExtension(typeof(MarkdownEditor), Constants.FileExtension)]
 
-    [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 50)]
-    [ProvideEditorFactory(typeof(MarkdownEditor), 0, false, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+    [ProvideEditorFactory(typeof(MarkdownEditor), 0, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorLogicalView(typeof(MarkdownEditor), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
+    [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 1000)]
 
     [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
     public sealed class MarkdownEditor2022Package : ToolkitPackage

@@ -4,18 +4,19 @@ using Microsoft.VisualStudio.TextManager.Interop;
 
 namespace MarkdownEditor2022
 {
+    [ComVisible(true)]
     [Guid(PackageGuids.EditorFactoryString)]
     internal sealed class MarkdownEditor : LanguageBase
     {
-        private bool _disposed = false;
         private DropdownBars _dropdownBars;
+        private bool _disposed;
 
         public MarkdownEditor(object site) : base(site)
         { }
 
         public override string Name => Constants.LanguageName;
 
-        public override string[] FileExtensions => new[] { Constants.FileExtension };
+        public override string[] FileExtensions { get; } = new[] { Constants.FileExtension };
 
         public override void SetDefaultPreferences(LanguagePreferences preferences)
         {
