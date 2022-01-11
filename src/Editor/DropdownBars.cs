@@ -19,14 +19,23 @@ namespace MarkdownEditor2022
         public DropdownBars(IVsTextView textView, LanguageService languageService) : base(languageService)
         {
             _languageService = languageService;
-
             _textView = textView.ToIWpfTextView();
-            _textView.Caret.PositionChanged += CaretPositionChanged;
-
             _document = _textView.TextBuffer.GetDocument();
             _document.Parsed += OnDocumentParsed;
 
-            //SynchronizeDropdowns();
+            InitializeAsync(textView).FireAndForget();
+        }
+
+        // This moves the caret to trigger initial drop down load
+        private Task InitializeAsync(IVsTextView textView)
+        {
+            return ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+            {
+                textView.SendExplicitFocus();
+                _textView.Caret.MoveToNextCaretPosition();
+                _textView.Caret.PositionChanged += CaretPositionChanged;
+                _textView.Caret.MoveToPreviousCaretPosition();
+            }).Task;
         }
 
         private void CaretPositionChanged(object sender, CaretPositionChangedEventArgs e) => SynchronizeDropdowns();
@@ -45,10 +54,7 @@ namespace MarkdownEditor2022
 
             _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
-                if (!_document.IsParsing)
-                {
-                    _languageService.SynchronizeDropdowns();
-                }
+                _languageService.SynchronizeDropdowns();
             }, VsTaskRunContext.UIThreadIdlePriority);
         }
 
