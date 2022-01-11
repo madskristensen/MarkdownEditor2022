@@ -6,12 +6,11 @@ namespace MarkdownEditor2022
 {
     [ComVisible(true)]
     [Guid(PackageGuids.EditorFactoryString)]
-    internal sealed class MarkdownEditor : LanguageBase
+    internal sealed class LanguageFactory : LanguageBase
     {
         private DropdownBars _dropdownBars;
-        private bool _disposed;
 
-        public MarkdownEditor(object site) : base(site)
+        public LanguageFactory(object site) : base(site)
         { }
 
         public override string Name => Constants.LanguageName;
@@ -53,15 +52,8 @@ namespace MarkdownEditor2022
 
         public override void Dispose()
         {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
             _dropdownBars?.Dispose();
             _dropdownBars = null;
-
             base.Dispose();
         }
     }

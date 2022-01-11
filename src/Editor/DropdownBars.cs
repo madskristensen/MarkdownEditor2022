@@ -79,7 +79,7 @@ namespace MarkdownEditor2022
             DropDownMember currentDropDown = dropDownMembers
                 .OfType<DropDownMember>()
                 .Where(d => d.Span.iStartLine <= line)
-                .LastOrDefault();
+                .LastOrDefault() ?? (DropDownMember)dropDownMembers[0];
 
             selectedMember = dropDownMembers.IndexOf(currentDropDown);
             selectedType = 0;

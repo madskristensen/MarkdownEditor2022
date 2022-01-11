@@ -16,13 +16,13 @@ namespace MarkdownEditor2022
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.MarkdownEditor2022String)]
 
-    [ProvideLanguageService(typeof(MarkdownEditor), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, ShowCompletion = true, ShowDropDownOptions = true)]
+    [ProvideLanguageService(typeof(LanguageFactory), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, ShowCompletion = true, ShowDropDownOptions = true)]
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, 0)]
-    [ProvideLanguageExtension(typeof(MarkdownEditor), Constants.FileExtension)]
+    [ProvideLanguageExtension(typeof(LanguageFactory), Constants.FileExtension)]
 
-    [ProvideEditorFactory(typeof(MarkdownEditor), 0, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
-    [ProvideEditorLogicalView(typeof(MarkdownEditor), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
-    [ProvideEditorExtension(typeof(MarkdownEditor), Constants.FileExtension, 1000)]
+    [ProvideEditorFactory(typeof(LanguageFactory), 0, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+    [ProvideEditorLogicalView(typeof(LanguageFactory), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
+    [ProvideEditorExtension(typeof(LanguageFactory), Constants.FileExtension, 1000)]
 
     [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
@@ -31,9 +31,9 @@ namespace MarkdownEditor2022
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            MarkdownEditor language = new(this);
+            LanguageFactory language = new(this);
             RegisterEditorFactory(language);
-            ((IServiceContainer)this).AddService(typeof(MarkdownEditor), language, true);
+            ((IServiceContainer)this).AddService(typeof(LanguageFactory), language, true);
 
             SetInternetExplorerRegistryKey();
 

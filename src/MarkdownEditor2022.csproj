@@ -61,11 +61,11 @@
     <Compile Include="DragDrop\MarkdownDropHandler.cs" />
     <Compile Include="DragDrop\MarkdownDropHandlerProvider.cs" />
     <Compile Include="ExtensionMethods.cs" />
-    <Compile Include="Language\EditorFeatures.cs" />
-    <Compile Include="Language\MarkdownEditor.cs" />
-    <Compile Include="Language\ClassificationTypes.cs" />
-    <Compile Include="Language\DropdownBars.cs" />
-    <Compile Include="Language\TokenTagger.cs" />
+    <Compile Include="Editor\EditorFeatures.cs" />
+    <Compile Include="Editor\LanguageFactory.cs" />
+    <Compile Include="Editor\ClassificationTypes.cs" />
+    <Compile Include="Editor\DropdownBars.cs" />
+    <Compile Include="Editor\TokenTagger.cs" />
     <Compile Include="Margin\Browser.cs" />
     <Compile Include="Margin\BrowserMargin.cs" />
     <Compile Include="Margin\BrowserMarginProvider.cs" />
