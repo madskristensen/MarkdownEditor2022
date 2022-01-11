@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using Markdig.Syntax;
-using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
@@ -15,28 +14,25 @@ namespace MarkdownEditor2022
         private readonly IWpfTextView _textView;
         private readonly Document _document;
         private bool _disposed;
-        private bool _bufferHasChanged;
+        private bool _hasBufferChanged;
 
-        public DropdownBars(IVsTextView textView, LanguageService languageService)
-            : base(languageService)
+        public DropdownBars(IVsTextView textView, LanguageService languageService) : base(languageService)
         {
             _languageService = languageService;
 
-            IVsEditorAdaptersFactoryService adapter = VS.GetMefService<IVsEditorAdaptersFactoryService>();
-
-            _textView = adapter.GetWpfTextView(textView);
+            _textView = textView.ToIWpfTextView();
             _textView.Caret.PositionChanged += CaretPositionChanged;
 
             _document = _textView.TextBuffer.GetDocument();
             _document.Parsed += OnDocumentParsed;
 
-            SynchronizeDropdowns();
+            //SynchronizeDropdowns();
         }
 
         private void CaretPositionChanged(object sender, CaretPositionChangedEventArgs e) => SynchronizeDropdowns();
         private void OnDocumentParsed(Document document)
         {
-            _bufferHasChanged = true;
+            _hasBufferChanged = true;
             SynchronizeDropdowns();
         }
 
@@ -58,7 +54,7 @@ namespace MarkdownEditor2022
 
         public override bool OnSynchronizeDropdowns(LanguageService languageService, IVsTextView textView, int line, int col, ArrayList dropDownTypes, ArrayList dropDownMembers, ref int selectedType, ref int selectedMember)
         {
-            if (_bufferHasChanged || dropDownMembers.Count == 0)
+            if (_hasBufferChanged || dropDownMembers.Count == 0)
             {
                 dropDownMembers.Clear();
 
@@ -83,7 +79,7 @@ namespace MarkdownEditor2022
 
             selectedMember = dropDownMembers.IndexOf(currentDropDown);
             selectedType = 0;
-            _bufferHasChanged = false;
+            _hasBufferChanged = false;
 
             return true;
         }
