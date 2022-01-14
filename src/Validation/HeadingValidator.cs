@@ -9,11 +9,6 @@ namespace MarkdownEditor2022.Validation
     {
         public static IEnumerable<ErrorListItem> GetErrors(HeadingBlock header)
         {
-            if (!AdvancedOptions.Instance.ValidateHeaderIncrements)
-            {
-                yield break;
-            }
-
             if (header.Level > 1)
             {
                 HeadingBlock last = header.Parent.Descendants()
@@ -34,8 +29,8 @@ namespace MarkdownEditor2022.Validation
             {
                 ProjectName = "",
                 Message = $"Heading levels should only increment by one level at a time.",
-                ErrorCategory = PredefinedErrorTypeNames.Warning,
-                Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_WARNING,
+                ErrorCategory = PredefinedErrorTypeNames.Suggestion,
+                Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_MESSAGE,
                 Line = mdobj.Line,
                 Column = mdobj.Column,
                 BuildTool = Vsix.Name,

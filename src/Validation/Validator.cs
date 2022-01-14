@@ -12,12 +12,12 @@ namespace MarkdownEditor2022
 
         public static IEnumerable<ErrorListItem> GetErrors(this MarkdownObject item, string fileName)
         {
-            if (item is LinkInline link)
+            if (item is LinkInline link && AdvancedOptions.Instance.ValidateFileLinks)
             {
                 return UrlValidator.GetErrors(link, fileName).AddFilename(fileName);
             }
 
-            if (item is HeadingBlock header)
+            if (item is HeadingBlock header && AdvancedOptions.Instance.ValidateHeaderIncrements)
             {
                 return HeadingValidator.GetErrors(header).AddFilename(fileName);
             }
