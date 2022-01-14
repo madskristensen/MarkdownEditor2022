@@ -85,7 +85,7 @@ namespace MarkdownEditor2022
     public class SameWordHighlighter : SameWordHighlighterBase
     { }
 
-    //[Export(typeof(IWpfTextViewCreationListener))]
+    [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType(Constants.LanguageName)]
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class HideMargings : WpfTextViewCreationListener
