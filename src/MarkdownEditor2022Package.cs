@@ -37,6 +37,7 @@ namespace MarkdownEditor2022
 
             SetInternetExplorerRegistryKey();
 
+            await this.RegisterCommandsAsync();
             await Commenting.InitializeAsync();
         }
 

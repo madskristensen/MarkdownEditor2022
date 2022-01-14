@@ -112,7 +112,8 @@ The errors will also be listed in the Error List.
 ## Context menu
 Right-click anywhere in the markdown document to get easy access to common tasks, such as toggling the preview window scroll sync, see Markdown references, and getting to the settings dialog.
 
-![Context menu](art/context-menu.png)
+![Context menu](art/context-menu.png
+)
 
 ### Settings
 Control the settings for this extension under
