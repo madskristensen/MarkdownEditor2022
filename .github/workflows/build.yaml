@@ -42,7 +42,7 @@ jobs:
     #  run: '&"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\devenv.exe" /RootSuffix Exp /ResetSettings General.vssettings /Command File.Exit'
 
     - name: Build
-      run: msbuild /v:m -restore /p:OutDir=./_built
+      run: msbuild /v:m -restore /p:OutDir=\_built
 
     #- name: test
     #  run: dotnet test --no-build -c ${{ env.Configuration }} /p:OutDir=../_built /bl:"bin/build_logs/test.binlog" --filter "TestCategory!=FailsInCloudTest" -v n /p:CollectCoverage=true /m:1 --logger trx --settings "${{ github.workspace }}/.github/workflows/${{ runner.os }}.runsettings"
