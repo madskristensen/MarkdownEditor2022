@@ -88,22 +88,24 @@ namespace MarkdownEditor2022
 
         public override Task<object> GetTooltipAsync(SnapshotPoint triggerPoint)
         {
-            LinkInline item = _document.Markdown.Descendants()
-                .OfType<LinkInline>()
-                .Where(l => l.Span.Start <= triggerPoint.Position && l.Span.End >= triggerPoint.Position)
-                .FirstOrDefault();
+            IEnumerable<MarkdownObject> items = _document.Markdown.Descendants()
+                    .Where(l => l.Span.Start <= triggerPoint.Position && l.Span.End >= triggerPoint.Position);
 
             // Error messages
-            IEnumerable<ErrorListItem> errors = item?.GetErrors(_document.FileName);
-            if (errors != null && errors.Any())
+            foreach (MarkdownObject item in items)
             {
-                ContainerElement elm = new(
-                    ContainerElementStyle.Wrapped,
-                    new ImageElement(_errorIcon),
-                    string.Join(Environment.NewLine, errors.Select(e => e.Message))
-                );
+                IEnumerable<ErrorListItem> errors = item?.GetErrors(_document.FileName);
 
-                return Task.FromResult<object>(elm);
+                if (errors?.Any() == true)
+                {
+                    ContainerElement elm = new(
+                        ContainerElementStyle.Wrapped,
+                        new ImageElement(_errorIcon),
+                        string.Join(Environment.NewLine, errors.Select(e => e.Message))
+                    );
+
+                    return Task.FromResult<object>(elm);
+                }
             }
 
             return Task.FromResult<object>(null);
@@ -113,6 +115,11 @@ namespace MarkdownEditor2022
         {
             if (mdobj is LinkInline link && link.UrlSpan.HasValue)
             {
+                if (string.IsNullOrEmpty(link.Url))
+                {
+                    return new Span(link.Span.Start, link.Span.Length);
+                }
+
                 if (link.Reference == null)
                 {
                     return new Span(link.UrlSpan.Value.Start, link.UrlSpan.Value.Length);

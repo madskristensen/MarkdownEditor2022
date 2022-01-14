@@ -29,7 +29,7 @@ namespace MarkdownEditor2022.Validation
             {
                 ProjectName = "",
                 Message = $"Heading levels should only increment by one level at a time.",
-                ErrorCategory = PredefinedErrorTypeNames.Suggestion,
+                ErrorCategory = PredefinedErrorTypeNames.Warning,
                 Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_MESSAGE,
                 Line = mdobj.Line,
                 Column = mdobj.Column,

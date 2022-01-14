@@ -8,21 +8,21 @@ namespace MarkdownEditor2022
 {
     public static class Validator
     {
-        private static readonly IEnumerable<ErrorListItem> _empty = Enumerable.Empty<ErrorListItem>();
-
         public static IEnumerable<ErrorListItem> GetErrors(this MarkdownObject item, string fileName)
         {
-            if (item is LinkInline link && AdvancedOptions.Instance.ValidateFileLinks)
+            IEnumerable<ErrorListItem> errors = null;
+
+            if (item is LinkInline link && AdvancedOptions.Instance.ValidateUrls)
             {
-                return UrlValidator.GetErrors(link, fileName).AddFilename(fileName);
+                errors = UrlValidator.GetErrors(link, fileName);
             }
 
-            if (item is HeadingBlock header && AdvancedOptions.Instance.ValidateHeaderIncrements)
+            else if (item is HeadingBlock header && AdvancedOptions.Instance.ValidateHeaderIncrements)
             {
-                return HeadingValidator.GetErrors(header).AddFilename(fileName);
+                errors = HeadingValidator.GetErrors(header);
             }
 
-            return _empty;
+            return errors?.ToArray().AddFilename(fileName);
         }
 
         private static IEnumerable<ErrorListItem> AddFilename(this IEnumerable<ErrorListItem> errors, string fileName)

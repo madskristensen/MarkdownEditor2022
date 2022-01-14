@@ -37,10 +37,10 @@ namespace MarkdownEditor2022
         public int PreviewWindowWidth { get; set; } = 500;
 
         [Category("Validation")]
-        [DisplayName("Validate file links")]
-        [Description("Validates if links point to local files and folders that exist.")]
+        [DisplayName("Validate URLs")]
+        [Description("Validates if links point to local files and folders actually exist on disk.")]
         [DefaultValue(true)]
-        public bool ValidateFileLinks { get; set; } = true;
+        public bool ValidateUrls { get; set; } = true;
 
         [Category("Validation")]
         [DisplayName("Validate header increments")]

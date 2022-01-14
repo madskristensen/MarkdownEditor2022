@@ -24,8 +24,6 @@ namespace MarkdownEditor2022.Validation
                     ErrorCode = "MD042",
                     HelpLink = "https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md042---no-empty-links",
                 };
-
-                yield break;
             }
             else
             {
