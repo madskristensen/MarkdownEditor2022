@@ -78,6 +78,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>source.extension.vsixmanifest</DependentUpon>
     </Compile>
+    <Compile Include="Validation\HeadingValidator.cs" />
+    <Compile Include="Validation\UrlValidator.cs" />
+    <Compile Include="Validation\Validator.cs" />
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

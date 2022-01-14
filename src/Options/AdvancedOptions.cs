@@ -41,5 +41,11 @@ namespace MarkdownEditor2022
         [Description("Validates if links point to local files and folders that exist.")]
         [DefaultValue(true)]
         public bool ValidateFileLinks { get; set; } = true;
+
+        [Category("Validation")]
+        [DisplayName("Validate header increments")]
+        [Description("This rule is triggered when you skip heading levels in a markdown document.")]
+        [DefaultValue(true)]
+        public bool ValidateHeaderIncrements { get; set; } = true;
     }
 }
