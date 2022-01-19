@@ -37,6 +37,10 @@
     {
       "pathOnDisk": "art/context-menu.png",
       "targetPath": "art/context-menu.png"
+    },
+    {
+      "pathOnDisk": "art/navigator-bar.png",
+      "targetPath": "art/navigator-bar.png"
     }
   ],
   "overview": "README.md",
