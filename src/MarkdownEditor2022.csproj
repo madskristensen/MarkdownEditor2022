@@ -60,6 +60,8 @@
     <Compile Include="Document.cs" />
     <Compile Include="DragDrop\MarkdownDropHandler.cs" />
     <Compile Include="DragDrop\MarkdownDropHandlerProvider.cs" />
+    <Compile Include="Editor\IntelliSense.cs" />
+    <Compile Include="Editor\IntelliSense.EmojiMap.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Editor\EditorFeatures.cs" />
     <Compile Include="Editor\LanguageFactory.cs" />
@@ -144,7 +146,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Community.VisualStudio.VSCT" Version="16.0.29.6" PrivateAssets="all" />
-    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.393" ExcludeAssets="Runtime">
+    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.403" ExcludeAssets="Runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Markdig" Version="0.26.0" />

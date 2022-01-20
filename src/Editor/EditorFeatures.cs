@@ -3,6 +3,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Markdig.Helpers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -58,16 +59,42 @@ namespace MarkdownEditor2022
     [BracePair('{', '}')]
     [BracePair('"', '"')]
     [BracePair('*', '*')]
+    [BracePair(':', ':')]
     [ContentType(Constants.LanguageName)]
     [ProvideBraceCompletion(Constants.LanguageName)]
     internal sealed class BraceCompletion : BraceCompletionBase
-    { }
+    {
+        protected override bool IsValidBraceCompletionContext(SnapshotPoint openingPoint)
+        {
+            if (!base.IsValidBraceCompletionContext(openingPoint))
+            {
+                return false;
+            }
+
+            bool isPrevOk = true;
+            bool isNextOk = true;
+
+            if (openingPoint > 0 &&
+                openingPoint.Subtract(1) is SnapshotPoint prev &&
+                !prev.GetChar().IsWhiteSpaceOrZero())
+            {
+                isPrevOk = false;
+            }
+
+            if (openingPoint < openingPoint.Snapshot.Length && !openingPoint.GetChar().IsWhiteSpaceOrZero())
+            {
+                isNextOk = false;
+            }
+
+            return isPrevOk && isNextOk;
+        }
+    }
 
     [Export(typeof(IAsyncCompletionCommitManagerProvider))]
     [ContentType(Constants.LanguageName)]
     internal sealed class CompletionCommitManager : CompletionCommitManagerBase
     {
-        public override IEnumerable<char> CommitChars => new char[] { ' ', '\'', '"', ',', '.', ';', ':', '\\', '$' };
+        public override IEnumerable<char> CommitChars => new char[] { ' ', '\'', '"', ',', '.', ';', ':', '\\' };
     }
 
     [Export(typeof(IViewTaggerProvider))]
