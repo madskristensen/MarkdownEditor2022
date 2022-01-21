@@ -52,6 +52,11 @@ All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Color
 Advanced markdown extensions are supported to give more features to the syntax. This includes pipe tables, emoji, mathematics and a lot
 more.
 
+### IntelliSense
+You get full IntelliSense for over 1,600 emoji and smiley characters.
+
+![Markdown Emoji Intellisense](art/emoji.gif)
+
 ### Heading-based navigation
 The NavigationBar shows all of the document headings, like a table of contents. Select a heading to jump to that section of the document.
 

@@ -41,6 +41,10 @@
     {
       "pathOnDisk": "art/navigator-bar.png",
       "targetPath": "art/navigator-bar.png"
+    },
+    {
+      "pathOnDisk": "art/emoji.gif",
+      "targetPath": "art/emoji.gif"
     }
   ],
   "overview": "README.md",

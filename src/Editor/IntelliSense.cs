@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Markdig.Extensions.Emoji;
 using Markdig.Helpers;
 using Microsoft.VisualStudio.Core.Imaging;
 using Microsoft.VisualStudio.Imaging;
@@ -37,7 +38,9 @@ namespace MarkdownEditor2022
             if (_cache == null)
             {
                 int index = 1;
-                _cache = IntelliSenseEmojiMap.Emojis.Select(e => CreateCompletionItem(e, index++)).ToImmutableArray();
+                _cache = EmojiMapping.GetDefaultEmojiShortcodeToUnicode()
+                    .Select(e => CreateCompletionItem(e, index++))
+                    .ToImmutableArray();
             }
 
             return Task.FromResult(new CompletionContext(_cache));
