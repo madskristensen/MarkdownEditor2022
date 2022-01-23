@@ -50,6 +50,6 @@ namespace MarkdownEditor2022
         public bool ValidateHeaderIncrements { get; set; } = true;
 
         [Browsable(false)]
-        public int RatingIncrements { get; set; }
+        public int RatingRequests { get; set; }
     }
 }

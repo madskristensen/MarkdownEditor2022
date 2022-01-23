@@ -2,7 +2,7 @@
 {
     public interface IRatingConfig
     {
-        int RatingIncrements { get; set; }
+        int RatingRequests { get; set; }
 
         Task SaveAsync();
     }

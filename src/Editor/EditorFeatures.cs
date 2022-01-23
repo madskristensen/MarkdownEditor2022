@@ -122,7 +122,7 @@ namespace MarkdownEditor2022
         private TableDataSource _dataSource;
         private DocumentView _docView;
         private Document _document;
-        private RateMyExtension _rating;
+        private RatingPrompt _rating;
         private readonly DateTime _openedDate = DateTime.Now;
 
         [Import] internal IBufferTagAggregatorFactoryService _bufferTagAggregator = null;

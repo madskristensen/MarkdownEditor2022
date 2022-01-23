@@ -6,13 +6,13 @@ using Microsoft.VisualStudio.PlatformUI;
 
 namespace BaseClasses
 {
-    public class RateMyExtension
+    public class RatingPrompt
     {
         private const string _urlFormat = "https://marketplace.visualstudio.com/items?itemName={0}#review-details";
         private const int _minutesVisible = 2;
         private bool _hasChecked;
 
-        public RateMyExtension(string marketplaceId, string extensionName, IRatingConfig config = null, int requestsBeforePrompt = 10)
+        public RatingPrompt(string marketplaceId, string extensionName, IRatingConfig config = null, int requestsBeforePrompt = 10)
         {
             MarketplaceId = marketplaceId ?? throw new ArgumentNullException(nameof(marketplaceId));
             ExtensionName = extensionName ?? throw new ArgumentNullException(nameof(extensionName));
@@ -36,7 +36,7 @@ namespace BaseClasses
 
         public void RegisterSuccessfullUsage()
         {
-            if (!_hasChecked)
+            if (!_hasChecked && Config.RatingRequests < RequestsBeforePrompt)
             {
                 _hasChecked = true;
                 IncrementAsync().FireAndForget();
@@ -45,21 +45,23 @@ namespace BaseClasses
 
         public async Task ResetAsync()
         {
-            Config.RatingIncrements = 0;
+            Config.RatingRequests = 0;
             await Config.SaveAsync();
         }
 
         private async Task IncrementAsync()
         {
-            if (Config.RatingIncrements > RequestsBeforePrompt)
+            await Task.Yield(); // Yield to allow any shutdown procedure to continue
+
+            if (VsShellUtilities.ShellIsShuttingDown)
             {
                 return;
             }
 
-            Config.RatingIncrements += 1;
+            Config.RatingRequests += 1;
             await Config.SaveAsync();
 
-            if (Config.RatingIncrements == RequestsBeforePrompt)
+            if (Config.RatingRequests == RequestsBeforePrompt)
             {
                 PromptAsync().FireAndForget();
             }

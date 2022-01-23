@@ -7,7 +7,7 @@ namespace BaseClasses
     public class DefaultConfig : IRatingConfig
     {
         private const string _propertyName = "RatingIncrement";
-        public int RatingIncrements { get; set; }
+        public int RatingRequests { get; set; }
 
         public async Task SaveAsync()
         {
