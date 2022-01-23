@@ -120,15 +120,18 @@ namespace MarkdownEditor2022
         private readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private TableDataSource _dataSource;
         private DocumentView _docView;
+        private Document _document;
+        private RateMyExtension _rating;
+        private readonly DateTime _openedDate = DateTime.Now;
 
         [Import] internal IBufferTagAggregatorFactoryService _bufferTagAggregator = null;
-        private Document _document;
 
         protected override void Created(DocumentView docView)
         {
             _document = docView.TextBuffer.GetDocument();
             _docView ??= docView;
             _dataSource ??= new TableDataSource(docView.TextBuffer.ContentType.DisplayName);
+            _rating = new RateMyExtension(Constants.MarketplaceId, Vsix.Name);
 
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
@@ -184,6 +187,12 @@ namespace MarkdownEditor2022
 
         protected override void Closed(IWpfTextView textView)
         {
+            if (_openedDate.AddMinutes(2) < DateTime.Now)
+            {
+                // Only register use after the document was open for more than 2 minutes.
+                _rating.RegisterSuccessfullUsage();
+            }
+
             _dataSource.CleanAllErrors();
             _document.Parsed -= OnParsed;
         }

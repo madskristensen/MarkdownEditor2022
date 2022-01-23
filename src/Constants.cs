@@ -4,7 +4,7 @@
     {
         public const string LanguageName = "Markdown";
         public const string FileExtension = ".md";
-
         public static bool IsTest = false;
+        public const string MarketplaceId = "MadsKristensen.MarkdownEditor2";
     }
 }

@@ -47,5 +47,11 @@ namespace MarkdownEditor2022
         [Description("This rule is triggered when you skip heading levels in a markdown document.")]
         [DefaultValue(true)]
         public bool ValidateHeaderIncrements { get; set; } = true;
+
+        [Browsable(false)]
+        public int RatingIncrements { get; set; }
+
+        [Browsable(false)]
+        public DateTime RatingLastIncrements { get; set; }
     }
 }
