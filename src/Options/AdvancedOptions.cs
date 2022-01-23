@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
+using BaseClasses;
 
 namespace MarkdownEditor2022
 {
@@ -9,7 +10,7 @@ namespace MarkdownEditor2022
         public class AdvancedOptions : BaseOptionPage<MarkdownEditor2022.AdvancedOptions> { }
     }
 
-    public class AdvancedOptions : BaseOptionModel<AdvancedOptions>
+    public class AdvancedOptions : BaseOptionModel<AdvancedOptions>, IRatingConfig
     {
         [Category("Preview Window")]
         [DisplayName("Enable preview window")]
@@ -50,8 +51,5 @@ namespace MarkdownEditor2022
 
         [Browsable(false)]
         public int RatingIncrements { get; set; }
-
-        [Browsable(false)]
-        public DateTime RatingLastIncrements { get; set; }
     }
 }

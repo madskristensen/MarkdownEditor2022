@@ -3,6 +3,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BaseClasses;
 using Markdig.Helpers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Imaging;
@@ -131,7 +132,7 @@ namespace MarkdownEditor2022
             _document = docView.TextBuffer.GetDocument();
             _docView ??= docView;
             _dataSource ??= new TableDataSource(docView.TextBuffer.ContentType.DisplayName);
-            _rating = new RateMyExtension(Constants.MarketplaceId, Vsix.Name);
+            _rating = new(Constants.MarketplaceId, Vsix.Name, AdvancedOptions.Instance);
 
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);

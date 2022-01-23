@@ -45,6 +45,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BaseClasses\DefaultConfig.cs" />
+    <Compile Include="BaseClasses\IRatingConfig.cs" />
     <Compile Include="Commands\RefreshCommand.cs" />
     <Compile Include="Commands\ShowMarkdownReferenceCommand.cs" />
     <Compile Include="Commands\ShowKeybindingsCommand.cs" />
@@ -74,7 +76,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Commands\EnablePreviewSyncCommand.cs" />
     <Compile Include="MarkdownEditor2022Package.cs" />
-    <Compile Include="RateMyExtension.cs" />
+    <Compile Include="BaseClasses\RateMyExtension.cs" />
     <Compile Include="source.extension.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -146,7 +148,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Community.VisualStudio.VSCT" Version="16.0.29.6" PrivateAssets="all" />
-    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.403" ExcludeAssets="Runtime">
+    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.406" ExcludeAssets="Runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Markdig" Version="0.26.0" />
