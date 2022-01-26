@@ -1,8 +1,10 @@
 ﻿using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
+using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.DragDrop;
@@ -88,7 +90,28 @@ namespace MarkdownEditor2022
             else if (info.Data.GetDataPresent("CF_VSSTGPROJECTITEMS"))
             {
                 // The drag and drop operation came from the VS solution explorer
-                return data.GetText();
+                MemoryStream ms = (MemoryStream)data.GetData("CF_VSSTGPROJECTITEMS", false);
+                return GetFileData(ms);
+            }
+
+            return null;
+        }
+
+        private static string GetFileData(MemoryStream ms)
+        {
+            string uuidPattern = @"\{(.*?)\}";
+            string projectUUID = "";
+            string content = Encoding.Unicode.GetString(ms.ToArray());
+            //Get the Project UUID and remove it from the data object
+            Match match = Regex.Match(content, uuidPattern, RegexOptions.Singleline);
+            if (match.Success) projectUUID = match.Value.ToString();
+            content = content.Replace(projectUUID, "").Substring(match.Index);
+            //Split the file list: Part1 => Project Name, Part2 => File name
+            string[] projectFiles = content.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+
+            for (int i = 0; i < projectFiles.Length; i += 2)
+            {
+                return projectFiles[i + 1].Substring(0, projectFiles[i + 1].IndexOf("\0"));
             }
 
             return null;

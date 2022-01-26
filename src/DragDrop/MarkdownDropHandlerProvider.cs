@@ -7,8 +7,11 @@ namespace MarkdownEditor2022
 {
     [Export(typeof(IDropHandlerProvider))]
     [DropFormat("CF_VSSTGPROJECTITEMS")]
+    [DropFormat("CF_VSREFPROJECTITEMS")]
+    [DropFormat("UnicodeText")]
+    [DropFormat("VX Clipboard Descriptor Format")]
     [DropFormat("FileDrop")]
-    [Name("IgnoreDropHandler")]
+    [Name("Image drop handler")]
     [ContentType(Constants.LanguageName)]
     [Order(Before = "DefaultFileDropHandler")]
     internal class MarkdownDropHandlerProvider : IDropHandlerProvider

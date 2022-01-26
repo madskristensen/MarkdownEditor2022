@@ -3,7 +3,6 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using BaseClasses;
 using Markdig.Helpers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Imaging;
@@ -191,7 +190,7 @@ namespace MarkdownEditor2022
             if (_openedDate.AddMinutes(2) < DateTime.Now)
             {
                 // Only register use after the document was open for more than 2 minutes.
-                _rating.RegisterSuccessfullUsage();
+                _rating.RegisterSuccessfulUsage();
             }
 
             _dataSource.CleanAllErrors();

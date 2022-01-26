@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
-using BaseClasses;
 
 namespace MarkdownEditor2022
 {
