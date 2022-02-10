@@ -112,7 +112,6 @@ namespace MarkdownEditor2022
     {
         public MarkdownCodeFormatDefinition()
         {
-            FontTypeface = new Typeface("Consolas");
             DisplayName = "Markdown Code";
         }
     }
