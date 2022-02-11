@@ -45,6 +45,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Commands\GenerateTocCommand.cs" />
     <Compile Include="Commands\RefreshCommand.cs" />
     <Compile Include="Commands\ShowMarkdownReferenceCommand.cs" />
     <Compile Include="Commands\ShowKeybindingsCommand.cs" />

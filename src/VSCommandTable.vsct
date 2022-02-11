@@ -51,6 +51,17 @@
         </Strings>
       </Button>
 
+      <Button guid="MarkdownEditor2022" id="GenerateTOC" priority="300" type="Button">
+        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Icon guid="ImageCatalogGuid" id="TreeList"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Generate TOC</ButtonText>
+          <LocCanonicalName>.Markdown.GenerateTOC</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="MarkdownEditor2022" id="MakeBold" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <CommandFlag>CommandWellOnly</CommandFlag>
@@ -132,6 +143,7 @@
       <IDSymbol name="ShowKeybindings" value="0x1050"/>
       <IDSymbol name="ShowMarkdownReference" value="0x1060"/>
       <IDSymbol name="Refresh" value="0x1070"/>
+      <IDSymbol name="GenerateTOC" value="0x1080"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>
