@@ -1,14 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Text;
+using Slugify;
 
 namespace MarkdownEditor2022
 {
     [Command(PackageIds.GenerateTOC)]
     internal sealed class GenerateTocCommand : BaseCommand<GenerateTocCommand>
     {
+        private static readonly Regex _regex = new(@"#* (<a(.*)\sname=(?:""(?<url>[^""]+)""|'([^']+)').*?>(?<title>.*?)</a>|(?<title>[^\{]+)(\{#(?<url>[^\s]+)\}))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly SlugHelper _slugHelper = new();
+
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
             DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
@@ -20,30 +25,46 @@ namespace MarkdownEditor2022
             }
 
             StringBuilder sb = new();
-            sb.AppendLine("<!--Start-Of-TOC-->");
+            sb.AppendLine("<!--TOC-->");
 
             int position = docView.TextView.Caret.Position.BufferPosition;
             IEnumerable<HeadingBlock> headers = doc.Markdown.Descendants<HeadingBlock>().Where(h => h.Span.Start > position);
 
             foreach (HeadingBlock header in headers)
             {
-                string text = docView.TextBuffer.CurrentSnapshot.GetText(header.ToSpan())
-                    .TrimStart('#')
-                    .Trim();
-
-                string cleanText = text.Replace(" ", "-")
-                                       .Replace("?", "");
+                GetHeader(docView.TextBuffer.CurrentSnapshot, header, out string title, out string url);
 
                 int level = (header.Level - 1) * 3;
                 string indent = "".PadLeft(level, ' ');
 
-                sb.AppendLine($"{indent}- [{text}](#{cleanText})");
+                sb.AppendLine($"{indent}- [{title}](#{url})");
             }
 
-            sb.AppendLine("<!--End-Of-TOC-->");
+            sb.AppendLine("<!--/TOC-->");
 
             SnapshotSpan selection = docView.TextView.Selection.SelectedSpans.First();
             docView.TextBuffer.Replace(selection, sb.ToString());
+        }
+
+        private static void GetHeader(ITextSnapshot snapshot, HeadingBlock heading, out string title, out string url)
+        {
+            ITextSnapshotLine line = snapshot.GetLineFromLineNumber(heading.Line);
+            string lineText = line.Extent.GetText();
+            Match match = _regex.Match(lineText);
+
+            if (match.Success)
+            {
+                title = match.Groups["title"].Value;
+                url = match.Groups["url"]?.Value ?? snapshot.GetText(heading.ToSpan()).TrimStart('#');
+            }
+            else
+            {
+                title = snapshot.GetText(heading.ToSpan()).TrimStart('#');
+                url = title;
+            }
+
+            title = title.Trim();
+            url = _slugHelper.GenerateSlug(url);
         }
     }
 }
