@@ -117,7 +117,8 @@ namespace MarkdownEditor2022
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class HideMargings : WpfTextViewCreationListener
     {
-        private readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _tocRegex = new(@"<!--TOC-->.+<!--/TOC-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
         private TableDataSource _dataSource;
         private DocumentView _docView;
         private Document _document;
@@ -138,6 +139,30 @@ namespace MarkdownEditor2022
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
 
             _document.Parsed += OnParsed;
+            _docView.Document.FileActionOccurred += Document_FileActionOccurred;
+        }
+
+        private void Document_FileActionOccurred(object sender, TextDocumentFileActionEventArgs e)
+        {
+            if (e.FileActionType == FileActionTypes.ContentSavedToDisk)
+            {
+                Match match = _tocRegex.Match(_docView.TextBuffer.CurrentSnapshot.GetText());
+
+                if (match.Success)
+                {
+                    string toc = GenerateTocCommand.Generate(_docView, _document, match.Index + match.Length);
+                    Span span = new(match.Index, match.Length);
+                    _docView.TextBuffer.Replace(span, toc);
+                    _docView.Document.SaveCopy(e.FilePath, true);
+
+                    ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+                    {
+                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                        _docView.Document.UpdateDirtyState(false, System.IO.File.GetLastWriteTime(e.FilePath));
+
+                    }, VsTaskRunContext.UIThreadIdlePriority).FireAndForget();
+                }
+            }
         }
 
         private void OnParsed(Document document)
@@ -195,6 +220,7 @@ namespace MarkdownEditor2022
 
             _dataSource.CleanAllErrors();
             _document.Parsed -= OnParsed;
+            _docView.Document.FileActionOccurred -= Document_FileActionOccurred;
         }
     }
 }

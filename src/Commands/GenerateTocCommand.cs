@@ -24,26 +24,32 @@ namespace MarkdownEditor2022
                 return;
             }
 
+            int position = docView.TextView.Caret.Position.BufferPosition;
+            string toc = Generate(docView, doc, position);
+
+            SnapshotSpan selection = docView.TextView.Selection.SelectedSpans.First();
+            docView.TextBuffer.Replace(selection, toc);
+        }
+
+        public static string Generate(DocumentView docView, Document doc, int position)
+        {
             StringBuilder sb = new();
             sb.AppendLine("<!--TOC-->");
 
-            int position = docView.TextView.Caret.Position.BufferPosition;
             IEnumerable<HeadingBlock> headers = doc.Markdown.Descendants<HeadingBlock>().Where(h => h.Span.Start > position);
 
             foreach (HeadingBlock header in headers)
             {
                 GetHeader(docView.TextBuffer.CurrentSnapshot, header, out string title, out string url);
 
-                int level = (header.Level - 1) * 3;
+                int level = (header.Level - 1) * 2;
                 string indent = "".PadLeft(level, ' ');
 
                 sb.AppendLine($"{indent}- [{title}](#{url})");
             }
 
             sb.AppendLine("<!--/TOC-->");
-
-            SnapshotSpan selection = docView.TextView.Selection.SelectedSpans.First();
-            docView.TextBuffer.Replace(selection, sb.ToString());
+            return sb.ToString().Trim();
         }
 
         private static void GetHeader(ITextSnapshot snapshot, HeadingBlock heading, out string title, out string url)
