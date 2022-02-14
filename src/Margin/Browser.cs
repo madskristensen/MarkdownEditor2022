@@ -304,16 +304,23 @@ namespace MarkdownEditor2022
             string scriptPrismPath = Path.Combine(folder, "margin\\prism.js");
             string cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism.css"));
 
-            if (AdvancedOptions.Instance.EnableDarkTheme)
+            bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
+
+            if (AdvancedOptions.Instance.Theme == Theme.Automatic)
             {
                 SolidColorBrush brush = (SolidColorBrush)Application.Current.Resources[VsBrushes.ToolWindowBackgroundKey];
                 ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(brush.Color);
 
                 if (contrast == ContrastComparisonResult.ContrastHigherWithWhite)
                 {
-                    cssHighlight = File.ReadAllText(Path.Combine(folder, "margin\\highlight-dark.css"));
-                    cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism-dark.css"));
+                    useLightTheme = false;
                 }
+            }
+
+            if (!useLightTheme)
+            {
+                cssHighlight = File.ReadAllText(Path.Combine(folder, "margin\\highlight-dark.css"));
+                cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism-dark.css"));
             }
 
             string defaultHeadBeg = $@"

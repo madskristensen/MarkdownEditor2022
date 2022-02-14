@@ -26,8 +26,9 @@ namespace MarkdownEditor2022
         [Category("Preview Window")]
         [DisplayName("Dark theme support")]
         [Description("Determines if the preview window should render in dark mode when a dark Visual Studio theme is in use.")]
-        [DefaultValue(true)]
-        public bool EnableDarkTheme { get; set; } = true;
+        [DefaultValue(Theme.Automatic)]
+        [TypeConverter(typeof(EnumConverter))]
+        public Theme Theme { get; set; } = Theme.Automatic;
 
         [Category("Preview Window")]
         [DisplayName("Preview window width")]
@@ -50,5 +51,12 @@ namespace MarkdownEditor2022
 
         [Browsable(false)]
         public int RatingRequests { get; set; }
+    }
+
+    public enum Theme
+    {
+        Automatic,
+        Dark,
+        Light,
     }
 }

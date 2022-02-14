@@ -27,10 +27,16 @@ namespace MarkdownEditor2022
             _document.Parsed += UpdateBrowser;
             _textView.LayoutChanged += UpdatePosition;
             _textView.TextBuffer.Changed += OnTextBufferChange;
+            AdvancedOptions.Saved += AdvancedOptions_Saved;
 
             SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
             Browser._browser.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
             VSColorTheme.ThemeChanged += OnThemeChange;
+        }
+
+        private void AdvancedOptions_Saved(AdvancedOptions obj)
+        {
+            RefreshAsync().FireAndForget();
         }
 
         private void OnThemeChange(ThemeChangedEventArgs e)
@@ -174,6 +180,7 @@ namespace MarkdownEditor2022
                 _textView.LayoutChanged -= UpdatePosition;
                 _textView.TextBuffer.Changed -= OnTextBufferChange;
                 VSColorTheme.ThemeChanged -= OnThemeChange;
+                AdvancedOptions.Saved -= AdvancedOptions_Saved;
 
                 Browser?.Dispose();
             }
