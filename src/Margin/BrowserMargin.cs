@@ -21,7 +21,15 @@ namespace MarkdownEditor2022
 
             Browser = new Browser(textview.TextBuffer.GetFileName(), _document);
 
-            CreateRightMarginControls();
+            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical)
+            {
+                CreateRightMarginControls();
+            }
+            else
+            {
+                CreateBottomMarginControls();
+            }
+
             UpdateBrowser(_document);
 
             _document.Parsed += UpdateBrowser;
@@ -126,7 +134,7 @@ namespace MarkdownEditor2022
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
             splitter.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
-            splitter.DragCompleted += RightDragCompleted;
+            splitter.DragCompleted += SplitterDragCompleted;
 
             grid.Children.Add(splitter);
             Grid.SetColumn(splitter, 1);
@@ -163,11 +171,48 @@ namespace MarkdownEditor2022
             _textView.ViewportWidthChanged += (e, s) => fixWidth();
         }
 
-        private void RightDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        private void CreateBottomMarginControls()
         {
-            if (!double.IsNaN(Browser._browser.ActualWidth))
+            int height = AdvancedOptions.Instance.PreviewWindowHeight;
+
+            Grid grid = new();
+            grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(0, GridUnitType.Star) });
+            grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(5, GridUnitType.Pixel) });
+            grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(height, GridUnitType.Pixel) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            grid.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+
+            Children.Add(grid);
+
+            grid.Children.Add(Browser._browser);
+            Grid.SetColumn(Browser._browser, 0);
+            Grid.SetRow(Browser._browser, 2);
+
+            GridSplitter splitter = new()
+            {
+                Height = 5,
+                ResizeDirection = GridResizeDirection.Rows,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            splitter.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+            splitter.DragCompleted += SplitterDragCompleted;
+
+            grid.Children.Add(splitter);
+            Grid.SetColumn(splitter, 0);
+            Grid.SetRow(splitter, 1);
+        }
+
+        private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical && !double.IsNaN(Browser._browser.ActualWidth))
             {
                 AdvancedOptions.Instance.PreviewWindowWidth = (int)Browser._browser.ActualWidth;
+                AdvancedOptions.Instance.Save();
+            }
+            else if (!double.IsNaN(Browser._browser.ActualHeight))
+            {
+                AdvancedOptions.Instance.PreviewWindowHeight = (int)Browser._browser.ActualHeight;
                 AdvancedOptions.Instance.Save();
             }
         }

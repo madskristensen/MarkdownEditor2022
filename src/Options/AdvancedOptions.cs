@@ -18,6 +18,13 @@ namespace MarkdownEditor2022
         public bool EnablePreviewWindow { get; set; } = true;
 
         [Category("Preview Window")]
+        [DisplayName("Preview window location")]
+        [Description("Determines if the preview window should be shown on the side or below the document. Requires re-opening document to take effect.")]
+        [DefaultValue(PreviewLocation.Vertical)]
+        [TypeConverter(typeof(EnumConverter))]
+        public PreviewLocation PreviewWindowLocation { get; set; } = PreviewLocation.Vertical;
+
+        [Category("Preview Window")]
         [DisplayName("Enable scroll sync")]
         [Description("Determines if the preview window should sync its scroll position with the editor document.")]
         [DefaultValue(true)]
@@ -36,6 +43,13 @@ namespace MarkdownEditor2022
         [DefaultValue(500)]
         [Browsable(false)] // hidden
         public int PreviewWindowWidth { get; set; } = 500;
+
+        [Category("Preview Window")]
+        [DisplayName("Preview window height")]
+        [Description("The height in pixels of the preview window.")]
+        [DefaultValue(300)]
+        [Browsable(false)] // hidden
+        public int PreviewWindowHeight { get; set; } = 300;
 
         [Category("Validation")]
         [DisplayName("Validate URLs")]
@@ -58,5 +72,11 @@ namespace MarkdownEditor2022
         Automatic,
         Dark,
         Light,
+    }
+
+    public enum PreviewLocation
+    {
+        Horizontal,
+        Vertical,
     }
 }
