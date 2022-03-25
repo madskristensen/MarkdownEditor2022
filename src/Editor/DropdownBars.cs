@@ -1,20 +1,24 @@
 ﻿using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Markdig.Syntax;
+using Microsoft.VisualStudio.Imaging;
+using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 
 namespace MarkdownEditor2022
 {
-    internal class DropdownBars : TypeAndMemberDropdownBars, IDisposable
+    internal class DropdownBars : TypeAndMemberDropdownBars, IVsDropdownBarClient4, IDisposable
     {
         private readonly LanguageService _languageService;
         private readonly IWpfTextView _textView;
         private readonly Document _document;
         private bool _disposed;
         private bool _hasBufferChanged;
+        private static readonly Regex _stripHtml = new (@"</?\w+((\s+\w+(\s*=\s*(?:"".*?""|'.*?'|[^'"">\s]+))?)+\s*|\s*)/?>", RegexOptions.Compiled);
 
         public DropdownBars(IVsTextView textView, LanguageService languageService) : base(languageService)
         {
@@ -72,10 +76,10 @@ namespace MarkdownEditor2022
 
             if (dropDownTypes.Count == 0)
             {
-                string thisExt = $"{Vsix.Name} ({Vsix.Version})";
+                string thisExt = $" {Vsix.Name} ({Vsix.Version})";
                 string markdig = Path.GetFileName($"   Powered by Markdig ({Markdig.Markdown.Version})");
-                dropDownTypes.Add(new DropDownMember(thisExt, new TextSpan(), 126, DROPDOWNFONTATTR.FONTATTR_GRAY));
-                dropDownTypes.Add(new DropDownMember(markdig, new TextSpan(), 126, DROPDOWNFONTATTR.FONTATTR_GRAY));
+                dropDownTypes.Add(new DropDownMember(thisExt, new TextSpan(), 0, DROPDOWNFONTATTR.FONTATTR_GRAY));
+                dropDownTypes.Add(new DropDownMember(markdig, new TextSpan(), 0, DROPDOWNFONTATTR.FONTATTR_GRAY));
             }
 
             DropDownMember currentDropDown = dropDownMembers
@@ -96,10 +100,11 @@ namespace MarkdownEditor2022
             textView.GetTextStream(textSpan.iStartLine, textSpan.iStartIndex, textSpan.iEndLine, textSpan.iEndIndex, out string headingText);
 
             headingText = ProcessHeadingText(headingText ?? string.Empty, headingBlock.Level, headingBlock.HeaderChar);
+            headingText = _stripHtml.Replace(headingText, "");
 
             DROPDOWNFONTATTR fontAttr = headingBlock.Level == 1 ? DROPDOWNFONTATTR.FONTATTR_BOLD : DROPDOWNFONTATTR.FONTATTR_PLAIN;
 
-            return new DropDownMember(headingText, textSpan, 126, fontAttr);
+            return new DropDownMember(headingText, textSpan, 0, fontAttr);
         }
 
         private static TextSpan GetTextSpan(HeadingBlock headingBlock, IVsTextView textView)
@@ -127,7 +132,7 @@ namespace MarkdownEditor2022
                 text = text.Substring(headingDeclaration.Length);
             }
 
-            return new string(' ', (3 * level) + 1).Substring(4) + text.Trim();
+            return new string(' ', (3 * level) + 2).Substring(4) + text.Trim();
         }
 
         public void Dispose()
@@ -140,6 +145,16 @@ namespace MarkdownEditor2022
             _disposed = true;
             _textView.Caret.PositionChanged -= CaretPositionChanged;
             _document.Parsed -= OnDocumentParsed;
+        }
+
+        public ImageMoniker GetEntryImage(int iCombo, int iIndex)
+        {
+            if (iCombo == 0)
+            {
+                return KnownMonikers.TypePublic;
+            }
+
+            return KnownMonikers.FieldPublic;
         }
     }
 }
