@@ -151,10 +151,10 @@ namespace MarkdownEditor2022
         {
             if (iCombo == 0)
             {
-                return KnownMonikers.TypePublic;
+                return KnownMonikers.HotSpot;
             }
 
-            return KnownMonikers.FieldPublic;
+            return KnownMonikers.Commit;
         }
     }
 }
