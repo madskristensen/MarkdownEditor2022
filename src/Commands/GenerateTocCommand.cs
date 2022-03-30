@@ -14,6 +14,12 @@ namespace MarkdownEditor2022
         private static readonly Regex _regex = new(@"#* (<a(.*)\sname=(?:""(?<url>[^""]+)""|'([^']+)').*?>(?<title>.*?)</a>|(?<title>[^\{]+)(\{#(?<url>[^\s]+)\}))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly SlugHelper _slugHelper = new();
 
+        protected override Task InitializeCompletedAsync()
+        {
+            Command.Supported = false;
+            return base.InitializeCompletedAsync();
+        }        
+
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
             DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();

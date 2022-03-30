@@ -3,6 +3,12 @@
     [Command(PackageIds.ToggleSync)]
     internal sealed class EnablePreviewSyncCommand : BaseCommand<EnablePreviewSyncCommand>
     {
+        protected override Task InitializeCompletedAsync()
+        {
+            Command.Supported = false;
+            return base.InitializeCompletedAsync();
+        }
+                
         protected override void BeforeQueryStatus(EventArgs e)
         {
             Command.Checked = AdvancedOptions.Instance.EnableScrollSync;

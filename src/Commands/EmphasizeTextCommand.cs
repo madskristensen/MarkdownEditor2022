@@ -8,6 +8,12 @@ namespace MarkdownEditor2022
     [Command(PackageIds.MakeBold)]
     internal sealed class MakeBoldCommand : BaseCommand<MakeBoldCommand>
     {
+        protected override Task InitializeCompletedAsync()
+        {
+            Command.Supported = false;
+            return base.InitializeCompletedAsync();
+        }
+        
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
             await Emphasizer.EmphasizeTextAsync("**");
@@ -19,6 +25,8 @@ namespace MarkdownEditor2022
     {
         protected override async Task InitializeCompletedAsync()
         {
+            Command.Supported = false;
+            
             // Intercept the IncrementalSearch command (Ctrl+i) to hijack the keyboard shortcut
             await VS.Commands.InterceptAsync(Microsoft.VisualStudio.VSConstants.VSStd2KCmdID.ISEARCH, () =>
             {

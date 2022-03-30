@@ -7,6 +7,12 @@ namespace MarkdownEditor2022
     [Command(PackageIds.InsertLink)]
     internal sealed class InsertLinkCommand : BaseCommand<InsertLinkCommand>
     {
+        protected override Task InitializeCompletedAsync()
+        {
+            Command.Supported = false;
+            return base.InitializeCompletedAsync();
+        }
+        
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
             DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
