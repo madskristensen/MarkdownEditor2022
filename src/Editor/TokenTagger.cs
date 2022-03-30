@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
+using Span = Microsoft.VisualStudio.Text.Span;
 
 namespace MarkdownEditor2022
 {
@@ -29,7 +30,7 @@ namespace MarkdownEditor2022
         private static readonly ImageId _errorIcon = KnownMonikers.StatusWarning.ToImageId();
         private bool _isDisposed;
 
-        internal TokenTagger(ITextBuffer buffer) : base(buffer)
+        internal TokenTagger(ITextBuffer buffer) : base(buffer, false)
         {
             _document = buffer.GetDocument();
             _document.Parsed += ReParse;
@@ -46,8 +47,9 @@ namespace MarkdownEditor2022
             ThreadHelper.ThrowIfOnUIThread();
 
             List<ITagSpan<TokenTag>> list = new();
+            IEnumerable<MarkdownObject> descendants = _document.Markdown.Descendants();
 
-            foreach (MarkdownObject item in _document.Markdown.Descendants())
+            foreach (MarkdownObject item in descendants)
             {
                 if (_document.IsParsing)
                 {
@@ -56,6 +58,19 @@ namespace MarkdownEditor2022
                 }
 
                 AddTagToList(list, item);
+            }
+
+            List<HeadingBlock> headings = descendants.OfType<HeadingBlock>().ToList();
+
+            foreach (HeadingBlock heading in headings)
+            {
+                if (_document.IsParsing)
+                {
+                    // Abort and wait for the next parse event to finish
+                    return Task.CompletedTask;
+                }
+
+                AddHeaderOutlining(list, heading, headings);
             }
 
             OnTagsUpdated(list);
@@ -73,6 +88,36 @@ namespace MarkdownEditor2022
             list.Add(new TagSpan<TokenTag>(span, tag));
         }
 
+        private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, IList<HeadingBlock> headings)
+        {
+            if (heading.Level == 1)
+                return;
+
+            if (heading == headings.Last())
+            {
+                TokenTag tag = CreateToken("outlining", false, true, null);
+                Span span = Span.FromBounds(heading.Span.Start, Buffer.CurrentSnapshot.Length);
+                SnapshotSpan ss = new(Buffer.CurrentSnapshot, span);
+                list.Add(new TagSpan<TokenTag>(ss, tag));
+                return;
+            }
+
+            int index = headings.IndexOf(heading);
+
+            foreach (HeadingBlock next in headings.Skip(index + 1))
+            {
+                if (heading.Level >= next.Level)
+                {
+                    TokenTag tag = CreateToken("outlining", false, true, null);
+                    Span span = Span.FromBounds(heading.Span.Start, next.Span.Start);
+                    SnapshotSpan ss = new(Buffer.CurrentSnapshot, span);
+                    list.Add(new TagSpan<TokenTag>(ss, tag));
+                    
+                    break;
+                }               
+            }
+        }
+
         public override string GetOutliningText(string text)
         {
             string firstLine = text.Split('\n').FirstOrDefault()?.Trim();
@@ -80,10 +125,10 @@ namespace MarkdownEditor2022
 
             if (firstLine.Length > 3)
             {
-                language = " " + firstLine.Substring(3).Trim().ToUpperInvariant();
+                language = " " + firstLine.Substring(3).Trim();
             }
 
-            return $"{language} Code Block ";
+            return $"{language} ";
         }
 
         public override Task<object> GetTooltipAsync(SnapshotPoint triggerPoint)
