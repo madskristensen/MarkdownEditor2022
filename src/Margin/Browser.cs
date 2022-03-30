@@ -308,13 +308,10 @@ namespace MarkdownEditor2022
 
             if (AdvancedOptions.Instance.Theme == Theme.Automatic)
             {
-                SolidColorBrush brush = (SolidColorBrush)Application.Current.Resources[VsBrushes.ToolWindowBackgroundKey];
+                SolidColorBrush brush = (SolidColorBrush)Application.Current.Resources[CommonControlsColors.TextBoxBackgroundBrushKey];
                 ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(brush.Color);
 
-                if (contrast == ContrastComparisonResult.ContrastHigherWithWhite)
-                {
-                    useLightTheme = false;
-                }
+                useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
             }
 
             if (!useLightTheme)
