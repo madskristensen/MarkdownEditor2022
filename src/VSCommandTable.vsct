@@ -65,7 +65,6 @@
       <Button guid="MarkdownEditor2022" id="MakeBold" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <CommandFlag>CommandWellOnly</CommandFlag>
-        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Make Bold</ButtonText>
           <LocCanonicalName>.Markdown.MakeBold</LocCanonicalName>
@@ -75,7 +74,6 @@
       <Button guid="MarkdownEditor2022" id="MakeItalic" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <CommandFlag>CommandWellOnly</CommandFlag>
-        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Make Italic</ButtonText>
           <LocCanonicalName>.Markdown.MakeItalic</LocCanonicalName>
