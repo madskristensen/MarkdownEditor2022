@@ -26,6 +26,7 @@ namespace MarkdownEditor2022
         public const int EditorGroup = 0x0001;
         public const int ReferenceGroup = 0x0002;
         public const int SettingsGroup = 0x0003;
+        public const int PreviewGroup = 0x0004;
         public const int ToggleSync = 0x1000;
         public const int MakeBold = 0x1010;
         public const int MakeItalic = 0x1020;

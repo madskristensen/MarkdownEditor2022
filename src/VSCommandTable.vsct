@@ -11,17 +11,20 @@
       <Group guid="MarkdownEditor2022" id="EditorGroup" priority="9000">
         <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
       </Group>
-      <Group guid="MarkdownEditor2022" id="ReferenceGroup" priority="9010">
+      <Group guid="MarkdownEditor2022" id="PreviewGroup" priority="9010">
         <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
       </Group>
-      <Group guid="MarkdownEditor2022" id="SettingsGroup" priority="9020">
+      <Group guid="MarkdownEditor2022" id="ReferenceGroup" priority="9020">
+        <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
+      </Group>
+      <Group guid="MarkdownEditor2022" id="SettingsGroup" priority="9030">
         <Parent guid="guidSHLMainMenu" id ="IDM_VS_CTXT_CODEWIN"/>
       </Group>
     </Groups>
 
     <Buttons>
       <Button guid="MarkdownEditor2022" id="ToggleSync" priority="100" type="Button">
-        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Parent guid="MarkdownEditor2022" id="PreviewGroup" />
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
           <ButtonText>Enable Preview Sync</ButtonText>
@@ -30,7 +33,7 @@
       </Button>
 
       <Button guid="MarkdownEditor2022" id="Refresh" priority="150" type="Button">
-        <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Parent guid="MarkdownEditor2022" id="PreviewGroup" />
         <Icon guid="ImageCatalogGuid" id="Refresh"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <CommandFlag>DynamicVisibility</CommandFlag>
@@ -64,7 +67,10 @@
 
       <Button guid="MarkdownEditor2022" id="MakeBold" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Icon guid="ImageCatalogGuid" id="Bold"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
         <CommandFlag>CommandWellOnly</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
           <ButtonText>Make Bold</ButtonText>
           <LocCanonicalName>.Markdown.MakeBold</LocCanonicalName>
@@ -73,7 +79,10 @@
 
       <Button guid="MarkdownEditor2022" id="MakeItalic" priority="100" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
+        <Icon guid="ImageCatalogGuid" id="Italic"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
         <CommandFlag>CommandWellOnly</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
           <ButtonText>Make Italic</ButtonText>
           <LocCanonicalName>.Markdown.MakeItalic</LocCanonicalName>
@@ -119,6 +128,8 @@
     <VisibilityItem guid="MarkdownEditor2022" id="OpenSettings" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="InsertLink" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="GenerateTOC" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="MakeBold" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="MakeItalic" context="EditorFactory" />
   </VisibilityConstraints>
 
   <KeyBindings>
@@ -134,6 +145,7 @@
       <IDSymbol name="EditorGroup" value="0x0001"/>
       <IDSymbol name="ReferenceGroup" value="0x0002"/>
       <IDSymbol name="SettingsGroup" value="0x0003"/>
+      <IDSymbol name="PreviewGroup" value="0x0004"/>
       <IDSymbol name="ToggleSync" value="0x1000"/>
       <IDSymbol name="MakeBold" value="0x1010"/>
       <IDSymbol name="MakeItalic" value="0x1020"/>
