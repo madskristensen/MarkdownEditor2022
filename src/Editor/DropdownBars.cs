@@ -18,7 +18,7 @@ namespace MarkdownEditor2022
         private readonly Document _document;
         private bool _disposed;
         private bool _hasBufferChanged;
-        private static readonly Regex _stripHtml = new (@"</?\w+((\s+\w+(\s*=\s*(?:"".*?""|'.*?'|[^'"">\s]+))?)+\s*|\s*)/?>", RegexOptions.Compiled);
+        private static readonly Regex _stripHtml = new(@"</?\w+((\s+\w+(\s*=\s*(?:"".*?""|'.*?'|[^'"">\s]+))?)+\s*|\s*)/?>", RegexOptions.Compiled);
 
         public DropdownBars(IVsTextView textView, LanguageService languageService) : base(languageService)
         {
@@ -62,14 +62,15 @@ namespace MarkdownEditor2022
             }, VsTaskRunContext.UIThreadIdlePriority);
         }
 
-        public override bool OnSynchronizeDropdowns(LanguageService languageService, IVsTextView textView, int line, int col, ArrayList dropDownTypes, ArrayList dropDownMembers, ref int selectedType, ref int selectedMember)
+        public override bool OnSynchronizeDropdowns(LanguageService languageService, IVsTextView oldView, int line, int col, ArrayList dropDownTypes, ArrayList dropDownMembers, ref int selectedType, ref int selectedMember)
         {
             if (_hasBufferChanged || dropDownMembers.Count == 0)
             {
                 dropDownMembers.Clear();
+                IWpfTextView view = oldView.ToIWpfTextView();
 
                 _document.Markdown.Descendants<HeadingBlock>()
-                    .Select(headingBlock => CreateDropDownMember(headingBlock, textView))
+                    .Select(headingBlock => CreateDropDownMember(headingBlock, oldView, view))
                     .ToList()
                     .ForEach(ddm => dropDownMembers.Add(ddm));
             }
@@ -94,16 +95,21 @@ namespace MarkdownEditor2022
             return true;
         }
 
-        private static DropDownMember CreateDropDownMember(HeadingBlock headingBlock, IVsTextView textView)
+        private static DropDownMember CreateDropDownMember(HeadingBlock headingBlock, IVsTextView oldView, IWpfTextView textView)
         {
-            TextSpan textSpan = GetTextSpan(headingBlock, textView);
-            textView.GetTextStream(textSpan.iStartLine, textSpan.iStartIndex, textSpan.iEndLine, textSpan.iEndIndex, out string headingText);
+            string headingText = textView.TextBuffer.CurrentSnapshot.GetText(headingBlock.ToSpan());
+
+            if (headingText.Contains('\n'))
+            {
+                headingText = headingText.Split('\n').First();
+            }
 
             headingText = ProcessHeadingText(headingText ?? string.Empty, headingBlock.Level, headingBlock.HeaderChar);
             headingText = _stripHtml.Replace(headingText, "");
 
             DROPDOWNFONTATTR fontAttr = headingBlock.Level == 1 ? DROPDOWNFONTATTR.FONTATTR_BOLD : DROPDOWNFONTATTR.FONTATTR_PLAIN;
-
+            TextSpan textSpan = GetTextSpan(headingBlock, oldView);
+            
             return new DropDownMember(headingText, textSpan, 0, fontAttr);
         }
 
