@@ -158,7 +158,7 @@ namespace MarkdownEditor2022
 
         private static Span GetApplicapleSpan(MarkdownObject mdobj)
         {
-            if (mdobj is LinkInline link && link.UrlSpan.HasValue)
+            if (mdobj is LinkInline link && link.UrlSpan != null)
             {
                 if (string.IsNullOrEmpty(link.Url))
                 {
@@ -167,10 +167,10 @@ namespace MarkdownEditor2022
 
                 if (link.Reference == null)
                 {
-                    return new Span(link.UrlSpan.Value.Start, link.UrlSpan.Value.Length);
+                    return new Span(link.UrlSpan.Start, link.UrlSpan.Length);
                 }
 
-                return new Span(link.LabelSpan.Value.Start, link.LabelSpan.Value.Length);
+                return new Span(link.LabelSpan.Start, link.LabelSpan.Length);
             }
 
             return mdobj.ToSpan();
