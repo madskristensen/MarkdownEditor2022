@@ -47,16 +47,16 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Markdig">
-      <Version>0.28.1</Version>
+      <Version>0.30.2</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.SDK">
       <Version>17.0.31902.203</Version>
     </PackageReference>
     <PackageReference Include="MSTest.TestAdapter">
-      <Version>2.2.8</Version>
+      <Version>2.2.10</Version>
     </PackageReference>
     <PackageReference Include="MSTest.TestFramework">
-      <Version>2.2.8</Version>
+      <Version>2.2.10</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
