@@ -11,6 +11,12 @@ namespace MarkdownEditor2022
 
     public class AdvancedOptions : BaseOptionModel<AdvancedOptions>, IRatingConfig
     {
+        [Category("Editor")]
+        [DisplayName("Emoji IntelliSense")]
+        [Description("Determines if IntelliSense for emojis should be shown when typing a colon.")]
+        [DefaultValue(true)]
+        public bool EnableEmojiIntelliSense { get; set; } = true;
+
         [Category("Preview Window")]
         [DisplayName("Enable preview window")]
         [Description("Determines if the preview window should be shown.")]

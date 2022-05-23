@@ -73,6 +73,11 @@ namespace MarkdownEditor2022
                 return CompletionStartData.DoesNotParticipateInCompletion;
             }
 
+            if (trigger.Character != ':' || !AdvancedOptions.Instance.EnableEmojiIntelliSense)
+            {
+                return CompletionStartData.DoesNotParticipateInCompletion;
+            }
+
             ITextSnapshotLine line = triggerLocation.GetContainingLine();
             string lineText = line.GetText();
 
