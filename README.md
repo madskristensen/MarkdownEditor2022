@@ -28,6 +28,7 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Table of contents (TOC) generation
 - Outlining/folding of code blocks
 - Keyboard shortcuts
+- Support for custom CSS and HTML templates in preview window
 - Brace completion with type-through
 - Validation of relative URLs
 - Lightning fast
@@ -115,6 +116,13 @@ Relative URLs are validated and will show a red squiggly when they can't be reso
 ![Error](art/error.png)
 
 The errors will also be listed in the Error List.
+
+## Custom styles and template
+You can provide your own .CSS and HTML templates used to render the preview window. The extension will look for the files **md-styles.css** and **md-template.html** in the same folder and any parent folder. If one or both of these files are found, they are being applied in the preview. 
+
+The HTML template must contain the string **[content]** which is where the rendered markdown will be injected.
+
+You have to refresh the preview window after making changes to the custom CSS and HTML file. You can do that from the markdown editor context menu or by hitting **Ctrl+Alt+R**.
 
 ## Context menu
 Right-click anywhere in the markdown document to get easy access to common tasks, such as toggling the preview window scroll sync, see Markdown references, and getting to the settings dialog.

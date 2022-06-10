@@ -288,19 +288,18 @@ namespace MarkdownEditor2022
             return Path.GetDirectoryName(assembly);
         }
 
-        private static string GetHtmlTemplateFileNameFromResource()
+        private string GetHtmlTemplateFileNameFromResource()
         {
-            string assembly = Assembly.GetExecutingAssembly().Location;
-            string assemblyDir = Path.GetDirectoryName(assembly);
+            string defaultTemplate = Path.Combine(GetFolder(), "Margin\\md-template.html");
 
-            return Path.Combine(assemblyDir, "Margin\\md-template.html");
+            return FindFileRecursively(Path.GetDirectoryName(_file), "md-template.html", defaultTemplate);            
         }
 
         private string GetHtmlTemplate()
         {
             string baseHref = Path.GetDirectoryName(_file).Replace("\\", "/");
             string folder = GetFolder();
-            string cssHighlight = File.ReadAllText(Path.Combine(folder, "margin\\highlight.css"));
+            string cssFile = Path.Combine(folder, "margin\\highlight.css");
             string scriptPrismPath = Path.Combine(folder, "margin\\prism.js");
             string cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism.css"));
 
@@ -316,10 +315,13 @@ namespace MarkdownEditor2022
 
             if (!useLightTheme)
             {
-                cssHighlight = File.ReadAllText(Path.Combine(folder, "margin\\highlight-dark.css"));
+                cssFile = Path.Combine(folder, "margin\\highlight-dark.css");
                 cssPrism = File.ReadAllText(Path.Combine(folder, "margin\\prism-dark.css"));
             }
 
+            cssFile = FindFileRecursively(Path.GetDirectoryName(_file), "md-styles.css", cssFile);
+
+            string cssHighlight = File.ReadAllText(cssFile);
             string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
@@ -343,6 +345,26 @@ namespace MarkdownEditor2022
                 .Replace("<head>", defaultHeadBeg)
                 .Replace("[content]", defaultContent)
                 .Replace("[title]", "Markdown Preview");
+        }
+
+        private static string FindFileRecursively(string folder, string fileName, string fallbackFileName)
+        {
+            DirectoryInfo dir = new(folder);
+
+            do
+            {
+                string file = Path.Combine(dir.FullName, fileName);
+                
+                if (File.Exists(file))
+                {
+                    return file;
+                }
+                
+                dir = dir.Parent;
+                
+            } while (dir != null);
+
+            return fallbackFileName;
         }
 
         public void Dispose()
