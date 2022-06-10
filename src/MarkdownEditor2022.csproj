@@ -80,6 +80,16 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>source.extension.vsixmanifest</DependentUpon>
     </Compile>
+    <Compile Include="SuggestedActions\Actions\BaseSuggestedAction.cs" />
+    <Compile Include="SuggestedActions\Actions\ConvertToCodeBlockAction.cs" />
+    <Compile Include="SuggestedActions\Actions\ConvertToImageAction.cs" />
+    <Compile Include="SuggestedActions\Actions\ConvertToLinkAction.cs" />
+    <Compile Include="SuggestedActions\Actions\ConvertToOrderedList.cs" />
+    <Compile Include="SuggestedActions\Actions\ConvertToQuoteAction.cs" />
+    <Compile Include="SuggestedActions\Actions\ConvertToTaskList.cs" />
+    <Compile Include="SuggestedActions\Actions\ConvertToUnorderedList.cs" />
+    <Compile Include="SuggestedActions\SuggestedActionsSource.cs" />
+    <Compile Include="SuggestedActions\SuggestedActionsSourceProvider.cs" />
     <Compile Include="Validation\HeadingValidator.cs" />
     <Compile Include="Validation\UrlValidator.cs" />
     <Compile Include="Validation\Validator.cs" />
