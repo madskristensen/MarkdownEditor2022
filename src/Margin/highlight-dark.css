@@ -300,6 +300,10 @@
         border-left: .25em solid #30363d;
     }
 
+    .markdown-body ul {
+        list-style: disc
+    }
+
     .markdown-body ul,
     .markdown-body ol {
         margin-top: 0;
