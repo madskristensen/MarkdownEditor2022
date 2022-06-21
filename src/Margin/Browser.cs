@@ -51,14 +51,16 @@ namespace MarkdownEditor2022
 
             e.Cancel = true;
 
+            Uri uri = e.Uri;
+
             // If it's a file-based anchor we converted, open the related file if possible
-            if (e.Uri.Scheme == "about")
+            if (uri.Scheme == "about")
             {
-                string file = Uri.UnescapeDataString(e.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                string file = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
                 if (file == "blank")
                 {
-                    string fragment = e.Uri.Fragment?.TrimStart('#');
+                    string fragment = uri.Fragment?.TrimStart('#');
                     NavigateToFragment(fragment);
                     return;
                 }
@@ -84,9 +86,9 @@ namespace MarkdownEditor2022
                     VS.Documents.OpenInPreviewTabAsync(file).FireAndForget();
                 }
             }
-            else if (e.Uri.IsAbsoluteUri && e.Uri.Scheme.StartsWith("http"))
+            else if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
             {
-                Process.Start(e.Uri.ToString());
+                Process.Start(uri.ToString());
             }
         }
 
