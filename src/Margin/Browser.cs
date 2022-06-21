@@ -292,7 +292,7 @@ namespace MarkdownEditor2022
         {
             string defaultTemplate = Path.Combine(GetFolder(), "Margin\\md-template.html");
 
-            return FindFileRecursively(Path.GetDirectoryName(_file), "md-template.html", defaultTemplate);            
+            return FindFileRecursively(Path.GetDirectoryName(_file), "md-template.html", defaultTemplate);
         }
 
         private string GetHtmlTemplate()
@@ -354,14 +354,14 @@ namespace MarkdownEditor2022
             do
             {
                 string file = Path.Combine(dir.FullName, fileName);
-                
+
                 if (File.Exists(file))
                 {
                     return file;
                 }
-                
+
                 dir = dir.Parent;
-                
+
             } while (dir != null);
 
             return fallbackFileName;
