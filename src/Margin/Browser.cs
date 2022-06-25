@@ -54,18 +54,26 @@ namespace MarkdownEditor2022
 
         private async void BrowserInitializedAsync(object sender, EventArgs e)
         {
-            await InitializeWebView2CoreAsync();
-            SetVirtualFolderMapping();
-            _browser.Visibility = Visibility.Visible;
+            // Use try catch in async event handler as per .NET guidelines to prevent uncatched exceptions from task thread pool
+            try
+            {
+                await InitializeWebView2CoreAsync();
+                SetVirtualFolderMapping();
+                _browser.Visibility = Visibility.Visible;
 
-            string offsetHeightResult = await _browser.ExecuteScriptAsync("document.body.offsetHeight;");
-            double.TryParse(offsetHeightResult, out _cachedHeight);
+                string offsetHeightResult = await _browser.ExecuteScriptAsync("document.body.offsetHeight;");
+                double.TryParse(offsetHeightResult, out _cachedHeight);
 
-            await _browser.ExecuteScriptAsync($@"document.documentElement.scrollTop={_positionPercentage * _cachedHeight / 100}");
+                await _browser.ExecuteScriptAsync($@"document.documentElement.scrollTop={_positionPercentage * _cachedHeight / 100}");
 
-            await AdjustAnchorsAsync();
+                await AdjustAnchorsAsync();
 
-            await UpdateBrowserAsync();
+                await UpdateBrowserAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Exception in {nameof(BrowserInitializedAsync)}: {ex.Message}");
+            }
 
             async Task InitializeWebView2CoreAsync()
             {
@@ -85,54 +93,62 @@ namespace MarkdownEditor2022
 
         private async void BrowserNavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
         {
-            if (e.Uri == null) return;
-
-            // Setting content rather than URL navigating
-            if (e.Uri.StartsWith("data:text/html;"))
+            // Use try catch in async event handler as per .NET guidelines to prevent uncatched exceptions from task thread pool
+            try
             {
-                return;
-            }
+                if (e.Uri == null) return;
 
-            e.Cancel = true;
-
-            Uri uri = new(e.Uri);
-
-            // If it's a file-based anchor we converted, open the related file if possible
-            if (uri.Scheme == "about")
-            {
-                string file = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-
-                if (file == "blank")
+                // Setting content rather than URL navigating
+                if (e.Uri.StartsWith("data:text/html;"))
                 {
-                    string fragment = uri.Fragment?.TrimStart('#');
-                    await NavigateToFragmentAsync(fragment);
                     return;
                 }
 
-                if (!File.Exists(file))
+                e.Cancel = true;
+
+                Uri uri = new(e.Uri);
+
+                // If it's a file-based anchor we converted, open the related file if possible
+                if (uri.Scheme == "about")
                 {
-                    string ext = null;
+                    string file = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
-                    // If the file has no extension, see if one exists with a markdown extension.  If so,
-                    // treat it as the file to open.
-                    //if (string.IsNullOrEmpty(Path.GetExtension(file)))
-                    //{
-                    //    ext = LanguageFactory. ContentTypeDefinition.MarkdownExtensions.FirstOrDefault(fx => File.Exists(file + fx));
-                    //}
-
-                    if (ext != null)
+                    if (file == "blank")
                     {
-                        VS.Documents.OpenInPreviewTabAsync(file + ext).FireAndForget();
+                        string fragment = uri.Fragment?.TrimStart('#');
+                        await NavigateToFragmentAsync(fragment);
+                        return;
+                    }
+
+                    if (!File.Exists(file))
+                    {
+                        string ext = null;
+
+                        // If the file has no extension, see if one exists with a markdown extension.  If so,
+                        // treat it as the file to open.
+                        //if (string.IsNullOrEmpty(Path.GetExtension(file)))
+                        //{
+                        //    ext = LanguageFactory. ContentTypeDefinition.MarkdownExtensions.FirstOrDefault(fx => File.Exists(file + fx));
+                        //}
+
+                        if (ext != null)
+                        {
+                            VS.Documents.OpenInPreviewTabAsync(file + ext).FireAndForget();
+                        }
+                    }
+                    else
+                    {
+                        VS.Documents.OpenInPreviewTabAsync(file).FireAndForget();
                     }
                 }
-                else
+                else if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
                 {
-                    VS.Documents.OpenInPreviewTabAsync(file).FireAndForget();
+                    Process.Start(uri.ToString());
                 }
             }
-            else if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
+            catch (Exception ex)
             {
-                Process.Start(uri.ToString());
+                Debug.WriteLine($"Exception in {nameof(BrowserInitializedAsync)}: {ex.Message}");
             }
         }
 
