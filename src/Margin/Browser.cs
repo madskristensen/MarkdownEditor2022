@@ -248,7 +248,7 @@ namespace MarkdownEditor2022
 
         private async Task<bool> IsHtmlTemplateLoadedAsync()
         {
-            string hasContentResult = await _browser.ExecuteScriptAsync($@"document.getElementById(""___markdown-content___"") !== null;");
+            string hasContentResult = await _browser.ExecuteScriptAsync($@"document.getElementById(""___markdown-content___"") !== null && mermaid && Prism;");
             return hasContentResult == "true";
         }
 
@@ -342,7 +342,7 @@ namespace MarkdownEditor2022
         {
             bool useLightTheme = UseLightTheme();
             string css = ReadCSS(useLightTheme);
-            string mermaidJsParameters = $"{{ 'securityLevel': 'loose', 'theme': '{(useLightTheme ? "forest" : "dark")}', startOnLoad: true, flowchart: {{ htmlLabels: false }} }}";
+            string mermaidJsParameters = $"{{ 'securityLevel': 'loose', 'theme': '{(useLightTheme ? "forest" : "dark")}', startOnLoad: false, flowchart: {{ htmlLabels: false }} }}";
 
             string defaultHeadBeg = $@"
 <head>
@@ -358,8 +358,8 @@ namespace MarkdownEditor2022
     <div id=""___markdown-content___"" class=""markdown-body"">
         [content]
     </div>
-    <script async src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/prism.js""></script>
-    <script async src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/mermaid.min.js""></script>
+    <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/prism.js""></script>
+    <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/mermaid.min.js""></script>
     <script>
         mermaid.initialize({mermaidJsParameters});
     </script>
