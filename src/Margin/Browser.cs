@@ -40,15 +40,22 @@ namespace MarkdownEditor2022
             _currentViewLine = -1;
 
             _browser.Initialized += BrowserInitializedAsync;
-            _browser.NavigationStarting += BrowserNavigationStarting;
+            _browser.NavigationStarting += BrowserNavigationStartingAsync;
+            _browser.NavigationCompleted += _browser_NavigationCompleted;
 
             _browser.SetResourceReference(Control.BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+        }
+
+        private void _browser_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            _browser.ExecuteScriptAsync("mermaid.init(undefined, document.querySelectorAll('.mermaid'));").FireAndForget();
         }
 
         public void Dispose()
         {
             _browser.Initialized -= BrowserInitializedAsync;
-            _browser.NavigationStarting -= BrowserNavigationStarting;
+            _browser.NavigationStarting -= BrowserNavigationStartingAsync;
+            _browser.NavigationCompleted -= _browser_NavigationCompleted;
             _browser.Dispose();
         }
 
@@ -79,6 +86,7 @@ namespace MarkdownEditor2022
             {
                 string tempDir = Path.Combine(Path.GetTempPath(), Assembly.GetExecutingAssembly().GetName().Name);
                 CoreWebView2Environment webView2Environment = await CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: null);
+
                 await _browser.EnsureCoreWebView2Async(webView2Environment);
             }
 
@@ -91,7 +99,7 @@ namespace MarkdownEditor2022
             }
         }
 
-        private async void BrowserNavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
+        private async void BrowserNavigationStartingAsync(object sender, CoreWebView2NavigationStartingEventArgs e)
         {
             // Use try catch in async event handler as per .NET guidelines to prevent uncatched exceptions from task thread pool
             try
@@ -262,7 +270,7 @@ namespace MarkdownEditor2022
                 await UpdateContentAsync(html);
                 await SyncNavigationAsync(isTyping: false);
             }
-            catch (Exception e)
+            catch
             {
             }
 
@@ -309,7 +317,6 @@ namespace MarkdownEditor2022
 
                     // Makes sure that any code blocks get syntax highlighted by Prism
                     await _browser.ExecuteScriptAsync("Prism.highlightAll();");
-                    await _browser.ExecuteScriptAsync("mermaid.init(undefined, document.querySelectorAll('.mermaid'));");
                     await _browser.ExecuteScriptAsync("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();");
 
                     // Adjust the anchors after and edit
