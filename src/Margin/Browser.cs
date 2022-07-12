@@ -92,7 +92,10 @@ namespace MarkdownEditor2022
         {
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                if (e.Uri == null) return;
+                if (e.Uri == null)
+                {
+                    return;
+                }
 
                 // Setting content rather than URL navigating
                 if (e.Uri.StartsWith("data:text/html;"))
@@ -105,11 +108,11 @@ namespace MarkdownEditor2022
                 Uri uri = new(e.Uri);
 
                 // If it's a file-based anchor we converted, open the related file if possible
-                if (uri.Scheme == "about")
+                if (uri.Authority == "browsing-file-host")
                 {
                     string file = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
-                    if (file == "blank")
+                    if (string.IsNullOrEmpty(file))
                     {
                         string fragment = uri.Fragment?.TrimStart('#');
                         await NavigateToFragmentAsync(fragment);
@@ -118,7 +121,9 @@ namespace MarkdownEditor2022
 
                     if (!File.Exists(file))
                     {
-                        string ext = null;
+                        string currentDir = Path.GetDirectoryName(_file);
+                        FileInfo localFile = new(Path.Combine(currentDir, file));
+                        //string ext = null;
 
                         // If the file has no extension, see if one exists with a markdown extension.  If so,
                         // treat it as the file to open.
@@ -127,9 +132,9 @@ namespace MarkdownEditor2022
                         //    ext = LanguageFactory. ContentTypeDefinition.MarkdownExtensions.FirstOrDefault(fx => File.Exists(file + fx));
                         //}
 
-                        if (ext != null)
+                        if (localFile.Exists)
                         {
-                            VS.Documents.OpenInPreviewTabAsync(file + ext).FireAndForget();
+                            VS.Documents.OpenInPreviewTabAsync(localFile.FullName).FireAndForget();
                         }
                     }
                     else
@@ -182,7 +187,10 @@ namespace MarkdownEditor2022
 
         public Task UpdatePositionAsync(int line, bool isTyping)
         {
-            if (_currentViewLine == line) return Task.CompletedTask;
+            if (_currentViewLine == line)
+            {
+                return Task.CompletedTask;
+            }
 
             return ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
             {

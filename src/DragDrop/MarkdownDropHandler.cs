@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
-using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.DragDrop;
@@ -16,7 +15,7 @@ namespace MarkdownEditor2022
         private readonly IWpfTextView _view;
         private string _draggedFileName;
         private readonly string _documentFileName;
-        private const string _markdownTemplate = "![{0}]({1})";
+        private const string _markdownLink = "[{0}]({1})";
         private static readonly string[] _imageExtensions = { ".jpg", ".jpeg", ".bmp", ".png", ".gif", ".svg", ".tif", ".tiff" };
 
         public MarkdownDropHandler(IWpfTextView view)
@@ -34,10 +33,18 @@ namespace MarkdownEditor2022
                                               .Replace("\\", "/")
                                               .Replace(" ", "%20");
 
-                string altText = ToFriendlyName(_draggedFileName);
-                string image = string.Format(_markdownTemplate, altText, relative);
+                string ext = Path.GetExtension(_draggedFileName);
+                bool isImage = _imageExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
 
-                _view.TextBuffer.Insert(position, image);
+                string altText = ToFriendlyName(_draggedFileName);
+                string link = string.Format(_markdownLink, altText, relative);
+
+                if (isImage)
+                {
+                    link = "!" + link;
+                }
+                _view.TextBuffer.Insert(position, link);
+
             }
             catch (Exception ex)
             {
@@ -63,12 +70,6 @@ namespace MarkdownEditor2022
         public bool IsDropEnabled(DragDropInfo dragDropInfo)
         {
             _draggedFileName = GetImageFilename(dragDropInfo);
-            string ext = Path.GetExtension(_draggedFileName);
-
-            if (!_imageExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
-            {
-                return false;
-            }
 
             return File.Exists(_draggedFileName) || Directory.Exists(_draggedFileName);
         }
@@ -104,7 +105,11 @@ namespace MarkdownEditor2022
             string content = Encoding.Unicode.GetString(ms.ToArray());
             //Get the Project UUID and remove it from the data object
             Match match = Regex.Match(content, uuidPattern, RegexOptions.Singleline);
-            if (match.Success) projectUUID = match.Value.ToString();
+            if (match.Success)
+            {
+                projectUUID = match.Value.ToString();
+            }
+
             content = content.Replace(projectUUID, "").Substring(match.Index);
             //Split the file list: Part1 => Project Name, Part2 => File name
             string[] projectFiles = content.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
