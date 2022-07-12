@@ -39,30 +39,23 @@ namespace MarkdownEditor2022
             _document = document;
             _currentViewLine = -1;
 
-            _browser.Initialized += BrowserInitializedAsync;
-            _browser.NavigationStarting += BrowserNavigationStartingAsync;
-            _browser.NavigationCompleted += _browser_NavigationCompleted;
+            _browser.Initialized += BrowserInitialized;
+            _browser.NavigationStarting += BrowserNavigationStarting;
 
             _browser.SetResourceReference(Control.BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
         }
 
-        private void _browser_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
-        {
-            _browser.ExecuteScriptAsync("mermaid.init(undefined, document.querySelectorAll('.mermaid'));").FireAndForget();
-        }
-
         public void Dispose()
         {
-            _browser.Initialized -= BrowserInitializedAsync;
-            _browser.NavigationStarting -= BrowserNavigationStartingAsync;
-            _browser.NavigationCompleted -= _browser_NavigationCompleted;
+            _browser.Initialized -= BrowserInitialized;
+            _browser.NavigationStarting -= BrowserNavigationStarting;
             _browser.Dispose();
         }
 
-        private async void BrowserInitializedAsync(object sender, EventArgs e)
+        private void BrowserInitialized(object sender, EventArgs e)
         {
-            // Use try catch in async event handler as per .NET guidelines to prevent uncatched exceptions from task thread pool
-            try
+
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await InitializeWebView2CoreAsync();
                 SetVirtualFolderMapping();
@@ -76,11 +69,7 @@ namespace MarkdownEditor2022
                 await AdjustAnchorsAsync();
 
                 await UpdateBrowserAsync();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Exception in {nameof(BrowserInitializedAsync)}: {ex.Message}");
-            }
+            }).FireAndForget();
 
             async Task InitializeWebView2CoreAsync()
             {
@@ -99,10 +88,9 @@ namespace MarkdownEditor2022
             }
         }
 
-        private async void BrowserNavigationStartingAsync(object sender, CoreWebView2NavigationStartingEventArgs e)
+        private void BrowserNavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
         {
-            // Use try catch in async event handler as per .NET guidelines to prevent uncatched exceptions from task thread pool
-            try
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 if (e.Uri == null) return;
 
@@ -153,11 +141,7 @@ namespace MarkdownEditor2022
                 {
                     Process.Start(uri.ToString());
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Exception in {nameof(BrowserInitializedAsync)}: {ex.Message}");
-            }
+            }).FireAndForget();
         }
 
         private async Task NavigateToFragmentAsync(string fragmentId)
@@ -349,7 +333,7 @@ namespace MarkdownEditor2022
         {
             bool useLightTheme = UseLightTheme();
             string css = ReadCSS(useLightTheme);
-            string mermaidJsParameters = $"{{ 'securityLevel': 'loose', 'theme': '{(useLightTheme ? "forest" : "dark")}', startOnLoad: false, flowchart: {{ htmlLabels: false }} }}";
+            string mermaidJsParameters = $"{{ 'securityLevel': 'loose', 'theme': '{(useLightTheme ? "forest" : "dark")}', startOnLoad: true, flowchart: {{ htmlLabels: false }} }}";
 
             string defaultHeadBeg = $@"
 <head>

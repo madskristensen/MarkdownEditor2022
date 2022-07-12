@@ -35,27 +35,29 @@ namespace MarkdownEditor2022
             RegisterEditorFactory(language);
             ((IServiceContainer)this).AddService(typeof(LanguageFactory), language, true);
 
-            SetInternetExplorerRegistryKey();
+            //SetInternetExplorerRegistryKey();
 
             await this.RegisterCommandsAsync();
             await Commenting.InitializeAsync();
         }
 
+        // TODO: Remove this method if WebView2 doesn't benefit from it
         // This is to enable DPI scaling in the preview browser instance
-        private static void SetInternetExplorerRegistryKey()
-        {
-            try
-            {
-                using (RegistryKey featureControl = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Internet Explorer\\Main\\FeatureControl", true))
-                using (RegistryKey pixel = featureControl.CreateSubKey("FEATURE_96DPI_PIXEL", true, RegistryOptions.Volatile))
-                {
-                    pixel.SetValue("devenv.exe", 1, RegistryValueKind.DWord);
-                }
-            }
-            catch (Exception ex)
-            {
-                ex.Log();
-            }
-        }
+        //private static void SetInternetExplorerRegistryKey()
+        //{
+        //    try
+        //    {
+        //        using (RegistryKey featureControl = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Internet Explorer\\Main\\FeatureControl", true))
+        //        using (RegistryKey pixel = featureControl.CreateSubKey("FEATURE_96DPI_PIXEL", true, RegistryOptions.Volatile))
+        //        {
+        //            pixel.SetValue("devenv.exe", 1, RegistryValueKind.DWord);
+        //            //pixel.DeleteValue("devenv.exe");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        ex.Log();
+        //    }
+        //}
     }
 }
