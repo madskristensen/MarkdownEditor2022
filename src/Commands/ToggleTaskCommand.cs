@@ -1,52 +1,54 @@
-﻿using System.ComponentModel.Composition;
-using System.Text.RegularExpressions;
-using Microsoft.VisualStudio.Commanding;
+﻿using System.Text.RegularExpressions;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
-using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
 {
-    [Export(typeof(ICommandHandler))]
-    [Name(nameof(ToggleTaskCommand))]
-    [ContentType(Constants.LanguageName)]
-    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
-    public class ToggleTaskCommand : ICommandHandler<CommitUniqueCompletionListItemCommandArgs>
+    public class ToggleTaskCommand
     {
         private static readonly Regex _regex = new(@"\* \[( |x|X)\]", RegexOptions.Compiled);
-        public string DisplayName => GetType().Name;
 
-        public bool ExecuteCommand(CommitUniqueCompletionListItemCommandArgs args, CommandExecutionContext executionContext)
+        public static async Task InitializeAsync()
         {
-            int position = args.TextView.Caret.Position.BufferPosition.Position;
-            ITextSnapshotLine line = args.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
-
-            string lineText = line.GetText();
-            Match match = _regex.Match(lineText);
-
-            if (match.Success)
-            {
-                Span span = new(line.Start + match.Index, match.Length);
-
-                if (match.Value.Contains("[ ]"))
-                {
-                    line.Snapshot.TextBuffer.Replace(span, "* [x]");
-                }
-                else
-                {
-                    line.Snapshot.TextBuffer.Replace(span, "* [ ]");
-                }
-
-                return true;
-            }
-
-            return false;
+            // We need to manually intercept the commenting command, because language services swallow these commands.
+            await VS.Commands.InterceptAsync(VSConstants.VSStd2KCmdID.COMPLETEWORD, Execute);
         }
 
-        public CommandState GetCommandState(CommitUniqueCompletionListItemCommandArgs args)
+        public static CommandProgression Execute()
         {
-            return CommandState.Available;
+            return ThreadHelper.JoinableTaskFactory.Run(async () =>
+            {
+                DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();
+
+                if (docView == null)
+                {
+                    return CommandProgression.Continue;
+                }
+
+                int position = docView.TextView.Caret.Position.BufferPosition.Position;
+                ITextSnapshotLine line = docView.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
+
+                string lineText = line.GetText();
+                Match match = _regex.Match(lineText);
+
+                if (match.Success)
+                {
+                    Span span = new(line.Start + match.Index, match.Length);
+
+                    if (match.Value.Contains("[ ]"))
+                    {
+                        line.Snapshot.TextBuffer.Replace(span, "* [x]");
+                    }
+                    else
+                    {
+                        line.Snapshot.TextBuffer.Replace(span, "* [ ]");
+                    }
+
+                    return CommandProgression.Stop;
+                }
+
+                return CommandProgression.Continue;
+            });
         }
     }
 }

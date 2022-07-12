@@ -39,6 +39,7 @@ namespace MarkdownEditor2022
 
             await this.RegisterCommandsAsync();
             await Commenting.InitializeAsync();
+            await ToggleTaskCommand.InitializeAsync();
         }
 
         // TODO: Remove this method if WebView2 doesn't benefit from it
