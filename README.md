@@ -22,6 +22,7 @@ A full featured Markdown editor with live preview and syntax highlighting. Suppo
 - Live preview window with scroll sync and dark theme support
     - Both vertical and horizontal layout supported
 - CommonMark and GitHub flavored Markdown + FrontMatter YAML
+- Mermaid and math notation rendering supported
 - Jump between Markdown Headings from the NavigationBar
 - Drag 'n drop of images supported
 - Paste image from clipboard directly onto document

@@ -359,6 +359,7 @@ namespace MarkdownEditor2022
     </div>
     <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/prism.js""></script>
     <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/mermaid.min.js""></script>
+    <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/mathjax.js""></script>
     <script>
         mermaid.initialize({mermaidJsParameters});
     </script>
