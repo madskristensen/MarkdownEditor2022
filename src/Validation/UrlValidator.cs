@@ -65,6 +65,7 @@ namespace MarkdownEditor2022.Validation
 
             try
             {
+                
                 string currentDir = Path.GetDirectoryName(file);
                 string path = Path.Combine(currentDir, uri.OriginalString);
 
@@ -73,12 +74,40 @@ namespace MarkdownEditor2022.Validation
                     return true;
                 }
 
+                // '#' can be part of a valid filePath, but since no path found, see if a fragmentless version exists.
+                // Also Uri.GetLeftPart(UriPartial.Path) doesn't work for relative or file paths.
+                if (TryStripFragmentFromPath(uri.OriginalString, out string uriSansFragment))
+                {
+                    path = Path.Combine(currentDir, uriSansFragment);
+                    if (File.Exists(path) || Directory.Exists(path))
+                    {
+                        return true;
+                    }
+                }
                 return false;
             }
             catch (Exception ex)
             {
                 ex.Log();
                 return true;
+            }
+
+            /// <summary>
+            /// If a '#' is found then returns true and processed is everything from the start up to but not including the '#'.
+            /// </summary>
+            static bool TryStripFragmentFromPath(string input, out string processed)
+            {
+                int fragmentStartIndex = input.IndexOf('#');
+                if (fragmentStartIndex != -1)
+                {
+                    processed = input.Substring(0, fragmentStartIndex);
+                    return true;
+                }
+                else 
+                {
+                    processed = null;
+                    return false;
+                }
             }
         }
     }
