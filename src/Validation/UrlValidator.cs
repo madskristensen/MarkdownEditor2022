@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using Markdig.Syntax.Inlines;
@@ -94,7 +93,7 @@ namespace MarkdownEditor2022.Validation
             }
 
             /// <summary>
-            /// If a '#' is found then returns everything up to that index.
+            /// If a '#' is found then returns true and processed is everything from the start up to but not including the '#'.
             /// </summary>
             static bool TryStripFragmentFromPath(string input, out string processed)
             {
