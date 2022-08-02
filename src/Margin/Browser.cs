@@ -310,7 +310,7 @@ namespace MarkdownEditor2022
                     // Makes sure that any code blocks get syntax highlighted by Prism
                     await _browser.ExecuteScriptAsync("Prism.highlightAll();");
                     await _browser.ExecuteScriptAsync("mermaid.init(undefined, document.querySelectorAll('.mermaid'));");
-                    await _browser.ExecuteScriptAsync("MathJax.Typeset();");
+                    //await _browser.ExecuteScriptAsync("MathJax.Typeset(['.math']);");
                     await _browser.ExecuteScriptAsync("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();");
 
                     // Adjust the anchors after and edit
@@ -361,7 +361,7 @@ namespace MarkdownEditor2022
     </div>
     <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/prism.js""></script>
     <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/mermaid.min.js""></script>
-    <script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/mathjax.js""></script>
+    <!--<script src=""http://{_mappedMarkdownEditorVirtualHostName}/margin/mathjax.js""></script>-->
     <script>
         mermaid.initialize({mermaidJsParameters});
     </script>
