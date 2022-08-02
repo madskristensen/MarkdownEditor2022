@@ -201,7 +201,7 @@ namespace MarkdownEditor2022
 
         private async Task SyncNavigationAsync(bool isTyping)
         {
-            if (!await IsHtmlTemplateLoadedAsync())
+            if (await IsHtmlTemplateLoadedAsync())
             {
                 if (_currentViewLine == 0)
                 {
@@ -248,7 +248,7 @@ namespace MarkdownEditor2022
 
         private async Task<bool> IsHtmlTemplateLoadedAsync()
         {
-            string hasContentResult = await _browser.ExecuteScriptAsync($@"document.getElementById(""___markdown-content___"") !== null && mermaid && Prism;");
+            string hasContentResult = await _browser.ExecuteScriptAsync($@"document.getElementById(""___markdown-content___"") !== null;");
             return hasContentResult == "true";
         }
 
@@ -309,6 +309,8 @@ namespace MarkdownEditor2022
 
                     // Makes sure that any code blocks get syntax highlighted by Prism
                     await _browser.ExecuteScriptAsync("Prism.highlightAll();");
+                    await _browser.ExecuteScriptAsync("mermaid.init(undefined, document.querySelectorAll('.mermaid'));");
+                    await _browser.ExecuteScriptAsync("MathJax.Typeset();");
                     await _browser.ExecuteScriptAsync("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();");
 
                     // Adjust the anchors after and edit
