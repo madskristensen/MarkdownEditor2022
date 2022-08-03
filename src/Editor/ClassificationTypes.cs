@@ -17,7 +17,8 @@ namespace MarkdownEditor2022
         public const string MarkdownQuote = "md_quote";
         public const string MarkdownHtml = "md_html";
         public const string MarkdownLink = "md_link";
-        public const string MarkdownComment = PredefinedClassificationTypeNames.Comment;
+        public const string MarkdownComment = PredefinedClassificationTypeNames.Comment; 
+            public const string MarkdownHighlight = "md_highlight";
 
         [Export, Name(MarkdownBold)]
         [BaseDefinition(PredefinedClassificationTypeNames.Text)]
@@ -48,6 +49,10 @@ namespace MarkdownEditor2022
         public static ClassificationTypeDefinition MarkdownClassificationHtml { get; set; }
 
         [Export, Name(MarkdownLink)]
+        [BaseDefinition(PredefinedClassificationTypeNames.Text)]
+        public static ClassificationTypeDefinition MarkdownClassificationLink { get; set; }
+        
+        [Export, Name(MarkdownHighlight)]
         [BaseDefinition(PredefinedClassificationTypeNames.Text)]
         public static ClassificationTypeDefinition MarkdownClassificationLink { get; set; }
     }
@@ -156,6 +161,20 @@ namespace MarkdownEditor2022
                 new TextDecoration(){ Location = TextDecorationLocation.Underline, PenOffset = 2 }
             };
             DisplayName = "Markdown Link";
+        }
+    }
+    
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHighlight)]
+    [Name(ClassificationTypes.MarkdownHighlight)]
+    [UserVisible(true)]
+    internal sealed class MarkdownHighlightFormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownHighlightFormatDefinition()
+        {
+            BackgroundColor = Colors.Yellow;
+            BackgroundOpacity = .4;
+            DisplayName = "Markdown Quote";
         }
     }
 }
