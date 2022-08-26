@@ -15,6 +15,7 @@ namespace MarkdownEditor2022
         private double _lastScrollPosition;
         private bool _isDisposed;
         private DateTime _lastEdit;
+        private static readonly Debouncer _debouncer = new();
 
         public FrameworkElement VisualElement => this;
         public double MarginSize => AdvancedOptions.Instance.PreviewWindowWidth;
@@ -36,7 +37,10 @@ namespace MarkdownEditor2022
 
         public void Dispose()
         {
-            if (_isDisposed) return;
+            if (_isDisposed)
+            {
+                return;
+            }
 
             Browser._browser.CoreWebView2InitializationCompleted -= OnBrowserInitCompleted;
             _document.Parsed -= UpdateBrowser;
@@ -50,17 +54,12 @@ namespace MarkdownEditor2022
             _isDisposed = true;
         }
 
-        protected override void OnInitialized(EventArgs e)
-        {
-            base.OnInitialized(e);
-
-            //Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
-            //Browser.InitializeBrowserCoreAsync().FireAndForget();
-        }
-
         private void OnBrowserInitCompleted(object sender, CoreWebView2InitializationCompletedEventArgs e)
         {
-            if (!e.IsSuccess) throw e.InitializationException;
+            if (!e.IsSuccess)
+            {
+                throw e.InitializationException;
+            }
 
             WebView2 view = sender as WebView2;
 
@@ -72,7 +71,7 @@ namespace MarkdownEditor2022
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             VSColorTheme.ThemeChanged += OnThemeChange;
 
-            UpdateBrowser(_document);
+            //UpdateBrowser(_document);
         }
 
         private void CreateMarginControls(WebView2 view)
@@ -220,7 +219,11 @@ namespace MarkdownEditor2022
         {
             if (!document.IsParsing)
             {
-                Browser.UpdateBrowserAsync().FireAndForget();
+                _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+                {
+                    _debouncer.Debounce(() => { _ = Browser.UpdateBrowserAsync(); });
+
+                }, VsTaskRunContext.UIThreadIdlePriority);
             }
         }
 

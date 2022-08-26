@@ -213,15 +213,15 @@ namespace MarkdownEditor2022
                     // When typing, scroll the edited element into view a bit under the top...
                     if (isTyping)
                     {
-                        string scrollScript = @$"
-                            let element = document.getElementById('pragma-line-{_currentViewLine}');
-                            let docElm = document.documentElement;
-                            // Do not scroll if element is already on screen
-                            if (element.offsetTop < scrollPos || element.offsetTop > scrollPos + windowHeight) return;
+                        //string scrollScript = @$"
+                        //    let element = document.getElementById('pragma-line-{_currentViewLine}');
+                        //    let docElm = document.documentElement;
+                        //    // Do not scroll if element is already on screen
+                        //    if (element.offsetTop < scrollPos || element.offsetTop > scrollPos + windowHeight) return;
 
-                            document.documentElement.scrollTop = element.offsetTop - 200;
-                            ";
-                        await _browser.ExecuteScriptAsync(scrollScript);
+                        //    document.documentElement.scrollTop = element.offsetTop - 200;
+                        //    ";
+                        //await _browser.ExecuteScriptAsync(scrollScript);
                     }
                     else
                     {
