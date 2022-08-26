@@ -237,7 +237,7 @@ namespace MarkdownEditor2022
             }
 
             // Making sure the line being edited is visible in the preview window
-            int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.Caret.Position.BufferPosition);
+            int line = Math.Max(_textView.TextSnapshot.GetLineNumberFromPosition(_textView.Caret.Position.BufferPosition) - 5, 0);
             Browser.UpdatePositionAsync(line, true).FireAndForget();
         }
 
