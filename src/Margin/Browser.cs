@@ -304,14 +304,14 @@ namespace MarkdownEditor2022
                 bool isInit = await IsHtmlTemplateLoadedAsync();
                 if (isInit)
                 {
-                    html = html.Replace("\r", "\\r").Replace("\n", "\\n").Replace("\"", "\\\"");
+                    html = html.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\"", "\\\"");
                     await _browser.ExecuteScriptAsync($@"document.getElementById(""___markdown-content___"").innerHTML=""{html}"";");
 
                     // Makes sure that any code blocks get syntax highlighted by Prism
                     await _browser.ExecuteScriptAsync("Prism.highlightAll();");
                     await _browser.ExecuteScriptAsync("mermaid.init(undefined, document.querySelectorAll('.mermaid'));");
                     //await _browser.ExecuteScriptAsync("MathJax.Typeset(['.math']);");
-                    await _browser.ExecuteScriptAsync("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();");
+                    //await _browser.ExecuteScriptAsync("if (typeof onMarkdownUpdate == 'function') onMarkdownUpdate();");
 
                     // Adjust the anchors after and edit
                     await AdjustAnchorsAsync();
