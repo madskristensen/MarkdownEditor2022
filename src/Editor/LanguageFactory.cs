@@ -6,11 +6,11 @@ namespace MarkdownEditor2022
 {
     [ComVisible(true)]
     [Guid(PackageGuids.EditorFactoryString)]
-    internal sealed class LanguageFactory : LanguageBase
+    internal sealed class MarkdownEditorV2 : LanguageBase
     {
         private DropdownBars _dropdownBars;
 
-        public LanguageFactory(object site) : base(site)
+        public MarkdownEditorV2(object site) : base(site)
         { }
 
         public override string Name => Constants.LanguageName;
