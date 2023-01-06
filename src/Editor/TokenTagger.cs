@@ -184,6 +184,7 @@ namespace MarkdownEditor2022
                 CodeBlock or CodeInline => ClassificationTypes.MarkdownCode,
                 QuoteBlock => ClassificationTypes.MarkdownQuote,
                 LinkInline => ClassificationTypes.MarkdownLink,
+                EmphasisInline ei when ei.DelimiterCount == 2 && ei.DelimiterChar == '=' => ClassificationTypes.MarkdownHighlight,
                 EmphasisInline ei when ei.DelimiterCount == 2 && ei.DelimiterChar == '~' => ClassificationTypes.MarkdownStrikethrough,
                 EmphasisInline ei when ei.DelimiterCount == 1 => ClassificationTypes.MarkdownItalic,
                 EmphasisInline ei when ei.DelimiterCount == 2 => ClassificationTypes.MarkdownBold,

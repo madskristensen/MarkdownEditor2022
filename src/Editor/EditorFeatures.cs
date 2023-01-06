@@ -33,6 +33,7 @@ namespace MarkdownEditor2022
             { ClassificationTypes.MarkdownStrikethrough, ClassificationTypes.MarkdownStrikethrough },
             { ClassificationTypes.MarkdownBold, ClassificationTypes.MarkdownBold },
             { ClassificationTypes.MarkdownQuote, ClassificationTypes.MarkdownQuote },
+            { ClassificationTypes.MarkdownHighlight, ClassificationTypes.MarkdownHighlight },
         };
     }
 
