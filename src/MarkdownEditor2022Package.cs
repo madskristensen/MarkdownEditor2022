@@ -24,7 +24,7 @@ namespace MarkdownEditor2022
     [ProvideEditorLogicalView(typeof(MarkdownEditorV2), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtension, 1000)]
 
-    [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.RegistrationScript")]
+    [ProvideFileIcon(Constants.FileExtension, "KnownMonikers.MarkdownFile")]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
     {
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
