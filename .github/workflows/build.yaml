@@ -22,7 +22,7 @@ jobs:
       VsixManifestSourcePath: src\source.extension.cs
       
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup .NET build dependencies
       uses: timheuer/bootstrap-dotnet@v1
@@ -33,7 +33,7 @@ jobs:
 
     - name: Increment VSIX version
       id: vsix_version
-      uses: timheuer/vsix-version-stamp@v1
+      uses: timheuer/vsix-version-stamp@v2
       with:
         manifest-file: ${{ env.VsixManifestPath }}
         vsix-token-source-file: ${{ env.VsixManifestSourcePath }}
@@ -48,13 +48,13 @@ jobs:
     #  run: dotnet test --no-build -c ${{ env.Configuration }} /p:OutDir=../_built /bl:"bin/build_logs/test.binlog" --filter "TestCategory!=FailsInCloudTest" -v n /p:CollectCoverage=true /m:1 --logger trx --settings "${{ github.workspace }}/.github/workflows/${{ runner.os }}.runsettings"
 
     - name: Setup test
-      uses: darenm/Setup-VSTest@v1
+      uses: darenm/Setup-VSTest@v1.2
 
     - name: Test
       run: vstest.console.exe \_built\*Tests.dll
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ github.event.repository.name }}.vsix
         path: /_built/**/*.vsix
@@ -65,10 +65,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Package artifact
-        uses: actions/download-artifact@v2 
+        uses: actions/download-artifact@v3
         with:
           name: ${{ github.event.repository.name }}.vsix
 
