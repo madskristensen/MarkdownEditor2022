@@ -46,17 +46,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Community.VisualStudio.Toolkit.17">
-      <Version>17.0.507</Version>
-    </PackageReference>
     <PackageReference Include="Markdig">
-      <Version>0.32.0</Version>
+      <Version>0.30.4</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.SDK">
+      <Version>17.0.31902.203</Version>
     </PackageReference>
     <PackageReference Include="MSTest.TestAdapter">
-      <Version>3.1.1</Version>
+      <Version>2.2.10</Version>
     </PackageReference>
     <PackageReference Include="MSTest.TestFramework">
-      <Version>3.1.1</Version>
+      <Version>2.2.10</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
