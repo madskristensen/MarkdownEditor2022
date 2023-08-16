@@ -11,7 +11,7 @@ namespace MarkdownEditor2022
         public const string Name = "Markdown Editor v2";
         public const string Description = @"A full featured Markdown editor with live preview and syntax highlighting. Supports GitHub flavored Markdown.";
         public const string Language = "en-US";
-        public const string Version = "2.0.1003";
+        public const string Version = "2.0.1005";
         public const string Author = "Mads Kristensen";
         public const string Tags = "markdown";
     }
