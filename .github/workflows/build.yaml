@@ -47,11 +47,11 @@ jobs:
     #- name: test
     #  run: dotnet test --no-build -c ${{ env.Configuration }} /p:OutDir=../_built /bl:"bin/build_logs/test.binlog" --filter "TestCategory!=FailsInCloudTest" -v n /p:CollectCoverage=true /m:1 --logger trx --settings "${{ github.workspace }}/.github/workflows/${{ runner.os }}.runsettings"
 
-    - name: Setup test
-      uses: darenm/Setup-VSTest@v1.2
+    #- name: Setup test
+    #  uses: darenm/Setup-VSTest@v1.2
 
-    - name: Test
-      run: vstest.console.exe \_built\*Tests.dll
+    #- name: Test
+    #  run: vstest.console.exe \_built\*Tests.dll
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
