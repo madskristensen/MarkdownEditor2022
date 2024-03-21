@@ -83,7 +83,7 @@ namespace MarkdownEditor2022
             {
                 _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedMarkdownEditorVirtualHostName, GetFolder(), CoreWebView2HostResourceAccessKind.Allow);
 
-                string baseHref = Path.GetDirectoryName(_file).Replace("\\", "/");
+                string baseHref = Path.GetDirectoryName(Path.GetDirectoryName(_file)).Replace("\\", "/");
                 _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, baseHref, CoreWebView2HostResourceAccessKind.Allow);
             }
         }
@@ -344,12 +344,12 @@ namespace MarkdownEditor2022
             bool useLightTheme = UseLightTheme();
             string css = ReadCSS(useLightTheme);
             string mermaidJsParameters = $"{{ 'securityLevel': 'loose', 'theme': '{(useLightTheme ? "forest" : "dark")}', startOnLoad: true, flowchart: {{ htmlLabels: false }} }}";
-
+            string dirName = new FileInfo(_file).Directory.Name;
             string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
-    <base href=""http://{_mappedBrowsingFileVirtualHostName}/"" />
+    <base href=""http://{_mappedBrowsingFileVirtualHostName}/{dirName}/"" />
     <style>
         html, body {{margin: 0; padding-bottom:10px}}
         {css}
