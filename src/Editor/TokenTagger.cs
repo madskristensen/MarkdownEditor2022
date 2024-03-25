@@ -92,33 +92,37 @@ namespace MarkdownEditor2022
             {
                 list.Add(new TagSpan<TokenTag>(span, tag));
             }
-
-            else if (item is YamlFrontMatterBlock yaml)
+            
+            if (item is YamlFrontMatterBlock yaml)
             {
-                foreach (StringLine line in yaml.Lines.Lines)
+                AddYamlFrontMatterTagsToList(list, yaml);
+            }
+        }
+
+        private void AddYamlFrontMatterTagsToList(List<ITagSpan<TokenTag>> list, YamlFrontMatterBlock yaml)
+        {
+            foreach (StringLine line in yaml.Lines.Lines)
+            {
+                string lineText = line.ToString();
+                string[] pair = lineText.Split(':');
+                int colon = line.ToString().IndexOf(':');
+
+                if (pair.Length == 2)
                 {
-                    string[] pair = line.ToString().Split(':');
-                    int colon = line.ToString().IndexOf(':');
+                    string name = pair[0].Trim();
 
-                    if (pair.Length == 2)
-                    {
-                        string name = pair[0].Trim();
-                        string value = pair[1].Trim();
+                    Span left = new Span(line.Position, name.Length);
+                    Span right = Span.FromBounds(line.Position + colon, line.Position + lineText.Length);
+                    SnapshotSpan keySpan = new(Buffer.CurrentSnapshot, left);
+                    SnapshotSpan valueSpan = new(Buffer.CurrentSnapshot, right);
 
-                        Span left = new Span(line.Position, name.Length);
-                        Span right = new Span(line.Position + colon, pair[1].Length);
-                        SnapshotSpan keySpan = new(Buffer.CurrentSnapshot, left);
-                        SnapshotSpan valueSpan = new(Buffer.CurrentSnapshot, right);
+                    TokenTag keyTag = CreateToken(ClassificationTypes.MarkdownBold, false, false, null);
+                    TokenTag valueTag = CreateToken(ClassificationTypes.MarkdownHtml, false, false, null);
 
-                        TokenTag keyTag = CreateToken(ClassificationTypes.MarkdownBold, false, false, null);
-                        TokenTag valueTag = CreateToken(ClassificationTypes.MarkdownHtml, false, false, null);
-
-                        list.Add(new TagSpan<TokenTag>(keySpan, keyTag));
-                        list.Add(new TagSpan<TokenTag>(valueSpan, valueTag));
-                    }
+                    list.Add(new TagSpan<TokenTag>(keySpan, keyTag));
+                    list.Add(new TagSpan<TokenTag>(valueSpan, valueTag));
                 }
             }
-
         }
 
         private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, IList<HeadingBlock> headings)
@@ -145,9 +149,9 @@ namespace MarkdownEditor2022
                     Span span = Span.FromBounds(heading.Span.Start, next.Span.Start);
                     SnapshotSpan ss = new(Buffer.CurrentSnapshot, span);
                     list.Add(new TagSpan<TokenTag>(ss, tag));
-                    
+
                     break;
-                }               
+                }
             }
         }
 
