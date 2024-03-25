@@ -2,12 +2,15 @@
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading.Tasks;
+using Markdig.Extensions.Yaml;
+using Markdig.Helpers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.VisualStudio.Core.Imaging;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Span = Microsoft.VisualStudio.Text.Span;
@@ -82,10 +85,40 @@ namespace MarkdownEditor2022
             bool supportsOutlining = item is FencedCodeBlock;
             IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
 
-            SnapshotSpan span = new(Buffer.CurrentSnapshot, GetApplicapleSpan(item));
+            SnapshotSpan span = new(Buffer.CurrentSnapshot, GetApplicableSpan(item));
             TokenTag tag = CreateToken(GetItemType(item), true, supportsOutlining, errors);
 
-            list.Add(new TagSpan<TokenTag>(span, tag));
+            if (tag.TokenType != null)
+            {
+                list.Add(new TagSpan<TokenTag>(span, tag));
+            }
+
+            else if (item is YamlFrontMatterBlock yaml)
+            {
+                foreach (StringLine line in yaml.Lines.Lines)
+                {
+                    string[] pair = line.ToString().Split(':');
+                    int colon = line.ToString().IndexOf(':');
+
+                    if (pair.Length == 2)
+                    {
+                        string name = pair[0].Trim();
+                        string value = pair[1].Trim();
+
+                        Span left = new Span(line.Position, name.Length);
+                        Span right = new Span(line.Position + colon, pair[1].Length);
+                        SnapshotSpan keySpan = new(Buffer.CurrentSnapshot, left);
+                        SnapshotSpan valueSpan = new(Buffer.CurrentSnapshot, right);
+
+                        TokenTag keyTag = CreateToken(ClassificationTypes.MarkdownBold, false, false, null);
+                        TokenTag valueTag = CreateToken(ClassificationTypes.MarkdownHtml, false, false, null);
+
+                        list.Add(new TagSpan<TokenTag>(keySpan, keyTag));
+                        list.Add(new TagSpan<TokenTag>(valueSpan, valueTag));
+                    }
+                }
+            }
+
         }
 
         private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, IList<HeadingBlock> headings)
@@ -156,7 +189,7 @@ namespace MarkdownEditor2022
             return Task.FromResult<object>(null);
         }
 
-        private static Span GetApplicapleSpan(MarkdownObject mdobj)
+        private static Span GetApplicableSpan(MarkdownObject mdobj)
         {
             if (mdobj is LinkInline link && link.UrlSpan != null)
             {
@@ -180,6 +213,7 @@ namespace MarkdownEditor2022
         {
             return mdobj switch
             {
+                YamlFrontMatterBlock => null,
                 HeadingBlock => ClassificationTypes.MarkdownHeader,
                 CodeBlock or CodeInline => ClassificationTypes.MarkdownCode,
                 QuoteBlock => ClassificationTypes.MarkdownQuote,
