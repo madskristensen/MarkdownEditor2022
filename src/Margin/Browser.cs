@@ -351,7 +351,7 @@ namespace MarkdownEditor2022
     <meta charset=""utf-8"" />
     <base href=""http://{_mappedBrowsingFileVirtualHostName}/{dirName}/"" />
     <style>
-        html, body {{margin: 0; padding-bottom:10px}}
+        html, body {{margin: 0; padding: 5px 5px 10px 5px}}
         {css}
     </style>";
 
