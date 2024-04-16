@@ -112,7 +112,7 @@ namespace MarkdownEditor2022
                 {
                     string file = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
-                    if (string.IsNullOrEmpty(file))
+                    if (string.IsNullOrEmpty(file) || !string.IsNullOrEmpty(uri.Fragment))
                     {
                         string fragment = uri.Fragment?.TrimStart('#');
                         await NavigateToFragmentAsync(fragment);
