@@ -16,7 +16,7 @@ namespace MarkdownEditor2022
         private string _draggedFileName;
         private readonly string _documentFileName;
         private const string _markdownLink = "[{0}]({1})";
-        private static readonly string[] _imageExtensions = { ".jpg", ".jpeg", ".bmp", ".png", ".gif", ".svg", ".tif", ".tiff" };
+        private static readonly string[] _imageExtensions = { ".jpg", ".jpeg", ".bmp", ".png", ".gif", ".svg", ".tif", ".tiff", ".webm" };
 
         public MarkdownDropHandler(IWpfTextView view)
         {

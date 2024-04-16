@@ -11,7 +11,7 @@ namespace MarkdownEditor2022
     [DropFormat("UnicodeText")]
     [DropFormat("VX Clipboard Descriptor Format")]
     [DropFormat("FileDrop")]
-    [Name("Image drop handler")]
+    [Name(nameof(MarkdownDropHandlerProvider))]
     [ContentType(Constants.LanguageName)]
     [Order(Before = "DefaultFileDropHandler")]
     internal class MarkdownDropHandlerProvider : IDropHandlerProvider
