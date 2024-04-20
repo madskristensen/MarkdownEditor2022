@@ -107,7 +107,7 @@ namespace MarkdownEditor2022
                 string[] pair = lineText.Split(':');
                 int colon = line.ToString().IndexOf(':');
 
-                if (pair.Length == 2)
+                if (pair.Length >= 2)
                 {
                     string name = pair[0].Trim();
 
