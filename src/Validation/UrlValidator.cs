@@ -58,7 +58,7 @@ namespace MarkdownEditor2022.Validation
                 return false;
             }
 
-            if (url.StartsWith("#") || (uri.IsAbsoluteUri && !uri.IsFile))
+            if (url.StartsWith("#") || url.StartsWith("/") || (uri.IsAbsoluteUri && !uri.IsFile))
             {
                 return true;
             }
