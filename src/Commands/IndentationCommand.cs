@@ -11,6 +11,7 @@ namespace MarkdownEditor2022
     [Export(typeof(ICommandHandler))]
     [Name(nameof(IndentationCommand))]
     [ContentType(Constants.LanguageName)]
+    [Order(After = "IntelliCodeTabCommandHandler")]
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class IndentationCommand : ICommandHandler<TabKeyCommandArgs>, ICommandHandler<BackTabKeyCommandArgs>
     {
