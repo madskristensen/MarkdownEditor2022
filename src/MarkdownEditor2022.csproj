@@ -171,10 +171,10 @@
     <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.507" ExcludeAssets="Runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.9.3174" PrivateAssets="all" />
-    <PackageReference Include="Markdig" Version="0.36.2" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.10.2179" PrivateAssets="all" />
+    <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="Microsoft.Web.WebView2">
-      <Version>1.0.2151.40</Version>
+      <Version>1.0.2535.41</Version>
     </PackageReference>
     <PackageReference Include="Slugify.Core">
       <Version>4.0.1</Version>

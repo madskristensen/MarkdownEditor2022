@@ -20,7 +20,7 @@ namespace MarkdownEditor2022
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(IClassificationTag))]
     [ContentType(Constants.LanguageName)]
-    public class SyntaxHighligting : TokenClassificationTaggerBase
+    public class SyntaxHighlighting : TokenClassificationTaggerBase
     {
         public override Dictionary<object, string> ClassificationMap { get; } = new()
         {
@@ -45,7 +45,7 @@ namespace MarkdownEditor2022
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(IErrorTag))]
     [ContentType(Constants.LanguageName)]
-    public class ErrorSquigglies : TokenErrorTaggerBase
+    public class ErrorSquiggles : TokenErrorTaggerBase
     { }
 
     [Export(typeof(IAsyncQuickInfoSourceProvider))]
@@ -115,7 +115,7 @@ namespace MarkdownEditor2022
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType(Constants.LanguageName)]
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
-    public class HideMargings : WpfTextViewCreationListener
+    public class HideMargins : WpfTextViewCreationListener
     {
         private static readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex _tocRegex = new(@"<!--TOC-->.+<!--/TOC-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
