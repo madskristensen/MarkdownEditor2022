@@ -210,6 +210,9 @@ namespace MarkdownEditor2022
             _dataSource.AddErrors(list);
         }
 
+        /// <summary>
+        /// Called when the IWpfTextView is closed.
+        /// </summary>
         protected override void Closed(IWpfTextView textView)
         {
             if (_openedDate.AddMinutes(2) < DateTime.Now)
