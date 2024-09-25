@@ -8,24 +8,24 @@ on:
     branches: [master]
   workflow_dispatch:
     branches: [master]
-      
+
 jobs:
   build:
     outputs:
       version: ${{ steps.vsix_version.outputs.version-number }}
-    name: Build 
+    name: Build
     runs-on: windows-2022
     env:
       Configuration: Release
       DeployExtension: False
       VsixManifestPath: src\source.extension.vsixmanifest
       VsixManifestSourcePath: src\source.extension.cs
-      
+
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup .NET build dependencies
-      uses: timheuer/bootstrap-dotnet@v1
+      uses: timheuer/bootstrap-dotnet@v2
       with:
         nuget: 'false'
         sdk: 'false'
@@ -54,7 +54,7 @@ jobs:
     #  run: vstest.console.exe \_built\*Tests.dll
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ github.event.repository.name }}.vsix
         path: /_built/**/*.vsix
@@ -65,10 +65,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download Package artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ github.event.repository.name }}.vsix
 
