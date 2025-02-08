@@ -36,5 +36,6 @@ namespace MarkdownEditor2022
         public const int ShowMarkdownReference = 0x1060;
         public const int Refresh = 0x1070;
         public const int GenerateTOC = 0x1080;
+        public const int TogglePreview = 0x1090;
     }
 }

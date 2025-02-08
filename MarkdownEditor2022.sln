@@ -5,13 +5,6 @@ VisualStudioVersion = 17.1.32024.52
 MinimumVisualStudioVersion = 17.0.31903.59
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownEditor2022", "src\MarkdownEditor2022.csproj", "{FEFC92E3-9CE6-4C8E-B308-2CD8E98F3DCE}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5DA1FF8-4D7C-433C-B14B-12BE00766739}"
-	ProjectSection(SolutionItems) = preProject
-		.github\workflows\build.yaml = .github\workflows\build.yaml
-		README.md = README.md
-		vs-publish.json = vs-publish.json
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownEditor2022.UnitTests", "test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj", "{F3039C96-4EDA-48E0-8B77-2CED114627FA}"
 EndProject
 Global

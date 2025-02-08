@@ -52,6 +52,7 @@
     <Compile Include="Commands\IndentationCommand.cs" />
     <Compile Include="Commands\InsertLinkCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
+    <Compile Include="Commands\TogglePreviewCommand.cs" />
     <Compile Include="Commands\RefreshCommand.cs" />
     <Compile Include="Commands\ShowMarkdownReferenceCommand.cs" />
     <Compile Include="Commands\ShowKeybindingsCommand.cs" />
@@ -174,7 +175,7 @@
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.12.2069" PrivateAssets="all" />
     <PackageReference Include="Markdig" Version="0.40.0" />
     <PackageReference Include="Microsoft.Web.WebView2">
-      <Version>1.0.2903.40</Version>
+      <Version>1.0.2957.106</Version>
     </PackageReference>
     <PackageReference Include="Slugify.Core">
       <Version>4.0.1</Version>
