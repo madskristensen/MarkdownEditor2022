@@ -52,6 +52,7 @@
     <Compile Include="Commands\IndentationCommand.cs" />
     <Compile Include="Commands\InsertLinkCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
+    <Compile Include="Commands\ToggleSpellCheckCommand.cs" />
     <Compile Include="Commands\TogglePreviewCommand.cs" />
     <Compile Include="Commands\RefreshCommand.cs" />
     <Compile Include="Commands\ShowMarkdownReferenceCommand.cs" />
