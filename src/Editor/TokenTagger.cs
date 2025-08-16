@@ -10,7 +10,6 @@ using Microsoft.VisualStudio.Core.Imaging;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
-using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Span = Microsoft.VisualStudio.Text.Span;
@@ -46,34 +45,32 @@ namespace MarkdownEditor2022
 
         public override Task TokenizeAsync()
         {
-            // Make sure this is running on a background thread.
             ThreadHelper.ThrowIfOnUIThread();
 
-            List<ITagSpan<TokenTag>> list = new();
+            List<ITagSpan<TokenTag>> list = [];
             IEnumerable<MarkdownObject> descendants = _document.Markdown.Descendants();
 
             foreach (MarkdownObject item in descendants)
             {
                 if (_document.IsParsing)
                 {
-                    // Abort and wait for the next parse event to finish
                     return Task.CompletedTask;
                 }
-
                 AddTagToList(list, item);
             }
 
-            List<HeadingBlock> headings = descendants.OfType<HeadingBlock>().ToList();
-
-            foreach (HeadingBlock heading in headings)
+            // Use analysis for headings to avoid duplicate descendant filtering
+            IReadOnlyList<HeadingBlock> headings = _document.Analysis?.Headings;
+            if (headings != null && headings.Count > 0)
             {
-                if (_document.IsParsing)
+                foreach (HeadingBlock heading in headings)
                 {
-                    // Abort and wait for the next parse event to finish
-                    return Task.CompletedTask;
+                    if (_document.IsParsing)
+                    {
+                        return Task.CompletedTask;
+                    }
+                    AddHeaderOutlining(list, heading, headings);
                 }
-
-                AddHeaderOutlining(list, heading, headings);
             }
 
             OnTagsUpdated(list);
@@ -92,7 +89,7 @@ namespace MarkdownEditor2022
             {
                 list.Add(new TagSpan<TokenTag>(span, tag));
             }
-            
+
             if (item is YamlFrontMatterBlock yaml)
             {
                 AddYamlFrontMatterTagsToList(list, yaml);
@@ -111,7 +108,7 @@ namespace MarkdownEditor2022
                 {
                     string name = pair[0].Trim();
 
-                    Span left = new Span(line.Position, name.Length);
+                    Span left = new(line.Position, name.Length);
                     Span right = Span.FromBounds(line.Position + colon, line.Position + lineText.Length);
                     SnapshotSpan keySpan = new(Buffer.CurrentSnapshot, left);
                     SnapshotSpan valueSpan = new(Buffer.CurrentSnapshot, right);
@@ -125,31 +122,41 @@ namespace MarkdownEditor2022
             }
         }
 
-        private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, IList<HeadingBlock> headings)
+        private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, IReadOnlyList<HeadingBlock> headings)
         {
             if (heading.Level == 1)
-                return;
-
-            if (heading == headings.Last())
             {
-                TokenTag tag = CreateToken("outlining", false, true, null);
-                Span span = Span.FromBounds(heading.Span.Start, Buffer.CurrentSnapshot.Length);
-                SnapshotSpan ss = new(Buffer.CurrentSnapshot, span);
-                list.Add(new TagSpan<TokenTag>(ss, tag));
                 return;
             }
 
-            int index = headings.IndexOf(heading);
-
-            foreach (HeadingBlock next in headings.Skip(index + 1))
+            if (ReferenceEquals(heading, headings[headings.Count - 1]))
             {
+                TokenTag tagLast = CreateToken("outlining", false, true, null);
+                Span spanLast = Span.FromBounds(heading.Span.Start, Buffer.CurrentSnapshot.Length);
+                SnapshotSpan ssLast = new(Buffer.CurrentSnapshot, spanLast);
+                list.Add(new TagSpan<TokenTag>(ssLast, tagLast));
+                return;
+            }
+
+            int index = -1;
+            for (int i = 0; i < headings.Count; i++)
+            {
+                if (ReferenceEquals(headings[i], heading)) { index = i; break; }
+            }
+            if (index == -1)
+            {
+                return;
+            }
+
+            for (int i = index + 1; i < headings.Count; i++)
+            {
+                HeadingBlock next = headings[i];
                 if (heading.Level >= next.Level)
                 {
                     TokenTag tag = CreateToken("outlining", false, true, null);
                     Span span = Span.FromBounds(heading.Span.Start, next.Span.Start);
                     SnapshotSpan ss = new(Buffer.CurrentSnapshot, span);
                     list.Add(new TagSpan<TokenTag>(ss, tag));
-
                     break;
                 }
             }
@@ -202,12 +209,9 @@ namespace MarkdownEditor2022
                     return new Span(link.Span.Start, link.Span.Length);
                 }
 
-                if (link.Reference == null)
-                {
-                    return new Span(link.UrlSpan.Start, link.UrlSpan.Length);
-                }
-
-                return new Span(link.LabelSpan.Start, link.LabelSpan.Length);
+                return link.Reference == null
+                    ? new Span(link.UrlSpan.Start, link.UrlSpan.Length)
+                    : new Span(link.LabelSpan.Start, link.LabelSpan.Length);
             }
 
             return mdobj.ToSpan();

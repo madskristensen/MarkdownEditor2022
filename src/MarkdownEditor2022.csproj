@@ -64,6 +64,7 @@
     <Compile Include="Commands\SmartIndentCommand.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Document.cs" />
+    <Compile Include="DocumentAnalysis.cs" />
     <Compile Include="DragDrop\MarkdownDropHandler.cs" />
     <Compile Include="DragDrop\MarkdownDropHandlerProvider.cs" />
     <Compile Include="Editor\IntelliSense.cs" />

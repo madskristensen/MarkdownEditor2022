@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Markdig.Helpers;
@@ -39,19 +38,16 @@ namespace MarkdownEditor2022
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(IStructureTag))]
     [ContentType(Constants.LanguageName)]
-    public class Outlining : TokenOutliningTaggerBase
-    { }
+    public class Outlining : TokenOutliningTaggerBase { }
 
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(IErrorTag))]
     [ContentType(Constants.LanguageName)]
-    public class ErrorSquiggles : TokenErrorTaggerBase
-    { }
+    public class ErrorSquiggles : TokenErrorTaggerBase { }
 
     [Export(typeof(IAsyncQuickInfoSourceProvider))]
     [ContentType(Constants.LanguageName)]
-    internal sealed class Tooltips : TokenQuickInfoBase
-    { }
+    internal sealed class Tooltips : TokenQuickInfoBase { }
 
     [Export(typeof(IBraceCompletionContextProvider))]
     [BracePair('(', ')')]
@@ -94,23 +90,18 @@ namespace MarkdownEditor2022
     [ContentType(Constants.LanguageName)]
     internal sealed class CompletionCommitManager : CompletionCommitManagerBase
     {
-        public override IEnumerable<char> CommitChars => new char[] { ' ', '\'', '"', ',', '.', ';', ':', '\\' };
+        public override IEnumerable<char> CommitChars => [' ', '\'', '"', ',', '.', ';', ':', '\\'];
     }
 
     [Export(typeof(IViewTaggerProvider))]
     [TagType(typeof(TextMarkerTag))]
     [ContentType(Constants.LanguageName)]
-    internal sealed class BraceMatchingTaggerProvider : BraceMatchingBase
-    {
-        // This will match parenthesis, curly brackets, and square brackets by default.
-        // Override the BraceList property to modify the list of braces to match.
-    }
+    internal sealed class BraceMatchingTaggerProvider : BraceMatchingBase { }
 
     [Export(typeof(IViewTaggerProvider))]
     [ContentType(Constants.LanguageName)]
     [TagType(typeof(TextMarkerTag))]
-    public class SameWordHighlighter : SameWordHighlighterBase
-    { }
+    public class SameWordHighlighter : SameWordHighlighterBase { }
 
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType(Constants.LanguageName)]
@@ -174,17 +165,16 @@ namespace MarkdownEditor2022
         {
             await TaskScheduler.Default;
 
-            IEnumerable<HtmlBlock> comments = _document.Markdown.Descendants<HtmlBlock>().Where(html => html.Type == HtmlBlockType.Comment);
-
-            if (!comments.Any())
+            DocumentAnalysis analysis = _document.Analysis;
+            if (analysis == null || analysis.CommentBlocks.Count == 0)
             {
                 _dataSource.CleanAllErrors();
                 return;
             }
 
-            List<ErrorListItem> list = new();
+            List<ErrorListItem> list = [];
 
-            foreach (HtmlBlock comment in comments)
+            foreach (HtmlBlock comment in analysis.CommentBlocks)
             {
                 SnapshotSpan span = new(_docView.TextBuffer.CurrentSnapshot, comment.ToSpan());
                 string text = span.GetText();
