@@ -56,5 +56,20 @@ namespace MarkdownEditor2022.UnitTests
             Assert.IsNotNull(error);
             Assert.AreEqual(1, error.Line);
         }
+
+        [DataRow("[link](https://example.com)")]
+        [DataRow("[link](http://example.com)")]
+        [DataTestMethod]
+        public void ValidUrl_NoError(string markdown)
+        {
+            MarkdownDocument doc = Parse(markdown);
+
+            LinkInline link = doc.Descendants().ElementAt(1) as LinkInline;
+            IEnumerable<ErrorListItem> errors = UrlValidator.GetErrors(link, "");
+            ErrorListItem error = errors.FirstOrDefault();
+
+            Assert.IsNotNull(link);
+            Assert.IsNull(error);
+        }
     }
 }
