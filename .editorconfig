@@ -12,6 +12,7 @@ end_of_line  = crlf
 # Code files
 [*.{cs,csx,vb,vbx,xaml}]
 indent_size = 4
+charset = utf-8
 
 # Xml project files
 [*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj}]
