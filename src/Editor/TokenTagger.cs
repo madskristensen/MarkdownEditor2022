@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading.Tasks;
@@ -83,7 +83,24 @@ namespace MarkdownEditor2022
             IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
 
             SnapshotSpan span = new(Buffer.CurrentSnapshot, GetApplicableSpan(item));
-            TokenTag tag = CreateToken(GetItemType(item), true, supportsOutlining, errors);
+            
+            // Special handling for HeadingBlock to differentiate levels
+            string tokenType = GetItemType(item);
+            if (item is HeadingBlock headingBlock)
+            {
+                tokenType = headingBlock.Level switch
+                {
+                    1 => ClassificationTypes.MarkdownHeader1,
+                    2 => ClassificationTypes.MarkdownHeader2,
+                    3 => ClassificationTypes.MarkdownHeader3,
+                    4 => ClassificationTypes.MarkdownHeader4,
+                    5 => ClassificationTypes.MarkdownHeader5,
+                    6 => ClassificationTypes.MarkdownHeader6,
+                    _ => ClassificationTypes.MarkdownHeader1
+                };
+            }
+
+            TokenTag tag = CreateToken(tokenType, true, supportsOutlining, errors);
 
             if (tag.TokenType != null)
             {
@@ -222,7 +239,16 @@ namespace MarkdownEditor2022
             return mdobj switch
             {
                 YamlFrontMatterBlock => null,
-                HeadingBlock => ClassificationTypes.MarkdownHeader,
+                HeadingBlock hb => hb.Level switch
+                {
+                    1 => ClassificationTypes.MarkdownHeader1,
+                    2 => ClassificationTypes.MarkdownHeader2,
+                    3 => ClassificationTypes.MarkdownHeader3,
+                    4 => ClassificationTypes.MarkdownHeader4,
+                    5 => ClassificationTypes.MarkdownHeader5,
+                    6 => ClassificationTypes.MarkdownHeader6,
+                    _ => ClassificationTypes.MarkdownHeader1
+                },
                 CodeBlock or CodeInline => ClassificationTypes.MarkdownCode,
                 QuoteBlock => ClassificationTypes.MarkdownQuote,
                 LinkInline => ClassificationTypes.MarkdownLink,

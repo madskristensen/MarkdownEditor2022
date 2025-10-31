@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.Composition;
+using System.ComponentModel.Composition;
 using System.Windows;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Language.StandardClassification;
@@ -12,7 +12,12 @@ namespace MarkdownEditor2022
         public const string MarkdownBold = "md_bold";
         public const string MarkdownItalic = "md_italic";
         public const string MarkdownStrikethrough = "md_strikethrough";
-        public const string MarkdownHeader = "md_header";
+        public const string MarkdownHeader1 = "md_header1";
+        public const string MarkdownHeader2 = "md_header2";
+        public const string MarkdownHeader3 = "md_header3";
+        public const string MarkdownHeader4 = "md_header4";
+        public const string MarkdownHeader5 = "md_header5";
+        public const string MarkdownHeader6 = "md_header6";
         public const string MarkdownCode = "md_code";
         public const string MarkdownQuote = "md_quote";
         public const string MarkdownHtml = "md_html";
@@ -31,9 +36,29 @@ namespace MarkdownEditor2022
         [BaseDefinition(PredefinedClassificationTypeNames.Text)]
         public static ClassificationTypeDefinition MarkdownClassificationStrikethrough { get; set; }
 
-        [Export, Name(MarkdownHeader)]
+        [Export, Name(MarkdownHeader1)]
         [BaseDefinition(PredefinedClassificationTypeNames.SymbolDefinition)]
-        public static ClassificationTypeDefinition MarkdownClassificationHeader { get; set; }
+        public static ClassificationTypeDefinition MarkdownClassificationHeader1 { get; set; }
+
+        [Export, Name(MarkdownHeader2)]
+        [BaseDefinition(PredefinedClassificationTypeNames.SymbolDefinition)]
+        public static ClassificationTypeDefinition MarkdownClassificationHeader2 { get; set; }
+
+        [Export, Name(MarkdownHeader3)]
+        [BaseDefinition(PredefinedClassificationTypeNames.SymbolDefinition)]
+        public static ClassificationTypeDefinition MarkdownClassificationHeader3 { get; set; }
+
+        [Export, Name(MarkdownHeader4)]
+        [BaseDefinition(PredefinedClassificationTypeNames.SymbolDefinition)]
+        public static ClassificationTypeDefinition MarkdownClassificationHeader4 { get; set; }
+
+        [Export, Name(MarkdownHeader5)]
+        [BaseDefinition(PredefinedClassificationTypeNames.SymbolDefinition)]
+        public static ClassificationTypeDefinition MarkdownClassificationHeader5 { get; set; }
+
+        [Export, Name(MarkdownHeader6)]
+        [BaseDefinition(PredefinedClassificationTypeNames.SymbolDefinition)]
+        public static ClassificationTypeDefinition MarkdownClassificationHeader6 { get; set; }
 
         [Export, Name(MarkdownCode)]
         [BaseDefinition(PredefinedClassificationTypeNames.Text)]
@@ -92,15 +117,86 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(EditorFormatDefinition))]
-    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader)]
-    [Name(ClassificationTypes.MarkdownHeader)]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader1)]
+    [Name(ClassificationTypes.MarkdownHeader1)]
     [UserVisible(true)]
-    internal sealed class MarkdownHeaderFormatDefinition : ClassificationFormatDefinition
+    internal sealed class MarkdownHeader1FormatDefinition : ClassificationFormatDefinition
     {
-        public MarkdownHeaderFormatDefinition()
+        public MarkdownHeader1FormatDefinition()
         {
             IsBold = true;
-            DisplayName = "Markdown Header";
+            DisplayName = "Markdown Header 1";
+            ForegroundColor = Color.FromRgb(0x00, 0x80, 0xFF);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader2)]
+    [Name(ClassificationTypes.MarkdownHeader2)]
+    [UserVisible(true)]
+    internal sealed class MarkdownHeader2FormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownHeader2FormatDefinition()
+        {
+            IsBold = true;
+            DisplayName = "Markdown Header 2";
+            ForegroundColor = Color.FromRgb(0xFD, 0x04, 0xDC);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader3)]
+    [Name(ClassificationTypes.MarkdownHeader3)]
+    [UserVisible(true)]
+    internal sealed class MarkdownHeader3FormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownHeader3FormatDefinition()
+        {
+            IsBold = true;
+            DisplayName = "Markdown Header 3";
+            ForegroundColor = Color.FromRgb(0xFF, 0x99, 0x00);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader4)]
+    [Name(ClassificationTypes.MarkdownHeader4)]
+    [UserVisible(true)]
+    internal sealed class MarkdownHeader4FormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownHeader4FormatDefinition()
+        {
+            IsBold = true;
+            DisplayName = "Markdown Header 4";
+            ForegroundColor = Color.FromRgb(0xFF, 0x00, 0x00);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader5)]
+    [Name(ClassificationTypes.MarkdownHeader5)]
+    [UserVisible(true)]
+    internal sealed class MarkdownHeader5FormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownHeader5FormatDefinition()
+        {
+            IsBold = true;
+            DisplayName = "Markdown Header 5";
+            ForegroundColor = Color.FromRgb(0x00, 0xFF, 0x00);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownHeader6)]
+    [Name(ClassificationTypes.MarkdownHeader6)]
+    [UserVisible(true)]
+    internal sealed class MarkdownHeader6FormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownHeader6FormatDefinition()
+        {
+            IsBold = true;
+            DisplayName = "Markdown Header 6";
+            ForegroundColor = Color.FromRgb(0xFF, 0xFF, 0x00);
         }
     }
 
