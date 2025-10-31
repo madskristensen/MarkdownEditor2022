@@ -126,7 +126,6 @@ namespace MarkdownEditor2022
         {
             IsBold = true;
             DisplayName = "Markdown Header 1";
-            ForegroundColor = Color.FromRgb(0x00, 0x80, 0xFF);
         }
     }
 
@@ -140,7 +139,6 @@ namespace MarkdownEditor2022
         {
             IsBold = true;
             DisplayName = "Markdown Header 2";
-            ForegroundColor = Color.FromRgb(0xFD, 0x04, 0xDC);
         }
     }
 
@@ -154,7 +152,6 @@ namespace MarkdownEditor2022
         {
             IsBold = true;
             DisplayName = "Markdown Header 3";
-            ForegroundColor = Color.FromRgb(0xFF, 0x99, 0x00);
         }
     }
 
@@ -168,7 +165,6 @@ namespace MarkdownEditor2022
         {
             IsBold = true;
             DisplayName = "Markdown Header 4";
-            ForegroundColor = Color.FromRgb(0xFF, 0x00, 0x00);
         }
     }
 
@@ -182,7 +178,6 @@ namespace MarkdownEditor2022
         {
             IsBold = true;
             DisplayName = "Markdown Header 5";
-            ForegroundColor = Color.FromRgb(0x00, 0xFF, 0x00);
         }
     }
 
@@ -196,7 +191,6 @@ namespace MarkdownEditor2022
         {
             IsBold = true;
             DisplayName = "Markdown Header 6";
-            ForegroundColor = Color.FromRgb(0xFF, 0xFF, 0x00);
         }
     }
 
