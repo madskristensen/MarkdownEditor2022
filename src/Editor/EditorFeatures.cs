@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -23,7 +23,12 @@ namespace MarkdownEditor2022
     {
         public override Dictionary<object, string> ClassificationMap { get; } = new()
         {
-            { ClassificationTypes.MarkdownHeader, ClassificationTypes.MarkdownHeader },
+            { ClassificationTypes.MarkdownHeader1, ClassificationTypes.MarkdownHeader1 },
+            { ClassificationTypes.MarkdownHeader2, ClassificationTypes.MarkdownHeader2 },
+            { ClassificationTypes.MarkdownHeader3, ClassificationTypes.MarkdownHeader3 },
+            { ClassificationTypes.MarkdownHeader4, ClassificationTypes.MarkdownHeader4 },
+            { ClassificationTypes.MarkdownHeader5, ClassificationTypes.MarkdownHeader5 },
+            { ClassificationTypes.MarkdownHeader6, ClassificationTypes.MarkdownHeader6 },
             { ClassificationTypes.MarkdownCode, ClassificationTypes.MarkdownCode },
             { ClassificationTypes.MarkdownHtml, ClassificationTypes.MarkdownHtml },
             { ClassificationTypes.MarkdownComment, ClassificationTypes.MarkdownComment },
