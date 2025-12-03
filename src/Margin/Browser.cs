@@ -420,8 +420,8 @@ namespace MarkdownEditor2022
     <meta charset=""utf-8"" />
     <base href=""http://{_mappedBrowsingFileVirtualHostName}/{dirName}/"" />
     <style>
-        html, body {{margin: 0; padding:0}}
-        #___markdown-content___ {{padding: 5px 5px 10px 5px;}}
+        html, body {{margin: 0; padding:0; min-height: 100%; display: block}}
+        #___markdown-content___ {{padding: 5px 5px 10px 5px; height: {_browser.ActualHeight - 15}px}}
         .markdown-alert {{padding: 1em 1em .5em 1em; margin-bottom: 1em; border-radius: 1em; background: #c0c0c022}}
         .markdown-alert-title {{font-weight: bold; color:inherit}}
         .markdown-alert-title svg {{margin-right: 5px; margin-top: -1px;}}
