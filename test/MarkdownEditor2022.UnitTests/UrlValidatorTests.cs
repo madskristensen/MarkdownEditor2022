@@ -21,7 +21,7 @@ namespace MarkdownEditor2022.UnitTests
         [DataRow("[link](ftp://example.com)")]
         [DataRow("[link](mailto:user@example.com)")]
         [DataRow("[link](https://example.com/path?query=1#fragment)")]
-        [DataTestMethod]
+        [TestMethod]
         public void Accepts_ValidUrls(string markdown)
         {
             LinkInline link = ParseLink(markdown);
@@ -32,7 +32,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [DataRow("[link](   )")]
         [DataRow("[link](http://)")]
-        [DataTestMethod]
+        [TestMethod]
         public void Rejects_InvalidUrls(string markdown)
         {
             LinkInline link = ParseLink(markdown);
@@ -43,7 +43,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [DataRow("[link](sftp://example.com)")]
         [DataRow("[link](tel:+1234567890)")]
-        [DataTestMethod]
+        [TestMethod]
         public void Accepts_UncommonValidSchemes(string markdown)
         {
             LinkInline link = ParseLink(markdown);
@@ -53,7 +53,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [DataRow("[link](http://example.com/very/long/path/that/keeps/going/and/going/and/going?query=1&another=2&more=3)")]
-        [DataTestMethod]
+        [TestMethod]
         public void Accepts_Urls_WithLongPathsAndQueries(string markdown)
         {
             LinkInline link = ParseLink(markdown);
@@ -64,7 +64,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [DataRow(null)]
         [DataRow("")]
-        [DataTestMethod]
+        [TestMethod]
         public void Handles_EmptyOrNullInput(string markdown)
         {
             LinkInline link = null;
@@ -77,7 +77,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [DataRow("[link](http://example.com/path%20with%20spaces)")]
-        [DataTestMethod]
+        [TestMethod]
         public void Accepts_Urls_WithEncodedCharacters(string markdown)
         {
             LinkInline link = ParseLink(markdown);
@@ -88,7 +88,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [DataRow("[link](./relative/path)")]
         [DataRow("[link](../parent/path)")]
-        [DataTestMethod]
+        [TestMethod]
         public void Accepts_RelativeUrls(string markdown)
         {
             LinkInline link = ParseLink(markdown);

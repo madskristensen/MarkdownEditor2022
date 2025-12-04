@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Community.VisualStudio.Toolkit;
 using Markdig;
@@ -26,7 +26,7 @@ namespace MarkdownEditor2022.UnitTests
         [DataRow("[link](http://)")]
         [DataRow("[link]()")]
         [DataRow("[link]( )")]
-        [DataTestMethod]
+        [TestMethod]
         public void InvalidUrl(string markdown)
         {
             MarkdownDocument doc = Parse(markdown);
@@ -43,7 +43,7 @@ namespace MarkdownEditor2022.UnitTests
         [DataRow("# header 1\r\n### header 2")]
         [DataRow("# header 1\r\n#### header 2")]
         [DataRow("## header 1\r\n#### header 2")]
-        [DataTestMethod]
+        [TestMethod]
         public void InvalidHeadingIncrement(string markdown)
         {
             MarkdownDocument doc = Parse(markdown);
@@ -59,7 +59,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [DataRow("[link](https://example.com)")]
         [DataRow("[link](http://example.com)")]
-        [DataTestMethod]
+        [TestMethod]
         public void ValidUrl_NoError(string markdown)
         {
             MarkdownDocument doc = Parse(markdown);
