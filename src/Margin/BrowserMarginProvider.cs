@@ -5,7 +5,7 @@ using Microsoft.VisualStudio.Utilities;
 namespace MarkdownEditor2022
 {
     [Export(typeof(IWpfTextViewMarginProvider))]
-    [Name(BrowserMargin.MarginName)]
+    [Name(nameof(PreviewMarginVerticalProvider))]
     [Order(After = PredefinedMarginNames.RightControl)]
     [MarginContainer(PredefinedMarginNames.Right)]
     [ContentType(Constants.LanguageName)]
@@ -23,7 +23,7 @@ namespace MarkdownEditor2022
 
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView);
+            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, marginName: nameof(PreviewMarginVerticalProvider));
 
             return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
         }
@@ -42,7 +42,7 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(IWpfTextViewMarginProvider))]
-    [Name(BrowserMargin.MarginName)]
+    [Name(nameof(PreviewMarginHorizontalProvider))]
     [Order(After = PredefinedMarginNames.BottomControl)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
     [ContentType(Constants.LanguageName)]
@@ -60,7 +60,7 @@ namespace MarkdownEditor2022
 
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView);
+            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, marginName: nameof(PreviewMarginHorizontalProvider));
 
             return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
         }
