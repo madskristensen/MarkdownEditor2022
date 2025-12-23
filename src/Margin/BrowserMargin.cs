@@ -17,6 +17,8 @@ namespace MarkdownEditor2022
         private DateTime _lastEdit;
         private static readonly Debouncer _debouncer = new(150); // Reduced debounce time for better responsiveness
 
+        internal const string MarginName = nameof(BrowserMargin);
+
         public FrameworkElement VisualElement => this;
         public double MarginSize => AdvancedOptions.Instance.PreviewWindowWidth;
         public bool Enabled => true;
@@ -256,7 +258,7 @@ namespace MarkdownEditor2022
 
         public ITextViewMargin GetTextViewMargin(string marginName)
         {
-            return this;
+            return string.Equals(marginName, MarginName, StringComparison.OrdinalIgnoreCase) ? this : null;
         }
 
         private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
