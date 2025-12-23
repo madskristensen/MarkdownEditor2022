@@ -5,7 +5,7 @@ using Microsoft.VisualStudio.Utilities;
 namespace MarkdownEditor2022
 {
     [Export(typeof(IWpfTextViewMarginProvider))]
-    [Name(nameof(PreviewMarginVerticalProvider))]
+    [Name(BrowserMargin.MarginName)]
     [Order(After = PredefinedMarginNames.RightControl)]
     [MarginContainer(PredefinedMarginNames.Right)]
     [ContentType(Constants.LanguageName)]
@@ -42,7 +42,7 @@ namespace MarkdownEditor2022
     }
 
     [Export(typeof(IWpfTextViewMarginProvider))]
-    [Name(nameof(PreviewMarginHorizontalProvider))]
+    [Name(BrowserMargin.MarginName)]
     [Order(After = PredefinedMarginNames.BottomControl)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
     [ContentType(Constants.LanguageName)]
