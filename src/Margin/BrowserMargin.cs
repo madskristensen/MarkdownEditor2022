@@ -12,21 +12,21 @@ namespace MarkdownEditor2022
     {
         private readonly Document _document;
         private readonly ITextView _textView;
+        private readonly string _marginName;
         private double _lastScrollPosition;
         private bool _isDisposed;
         private DateTime _lastEdit;
         private static readonly Debouncer _debouncer = new(150); // Reduced debounce time for better responsiveness
-
-        internal const string MarginName = nameof(BrowserMargin);
 
         public FrameworkElement VisualElement => this;
         public double MarginSize => AdvancedOptions.Instance.PreviewWindowWidth;
         public bool Enabled => true;
         public Browser Browser { get; private set; }
 
-        public BrowserMargin(ITextView textview)
+        public BrowserMargin(ITextView textview, string marginName)
         {
             _textView = textview;
+            _marginName = marginName;
             _document = textview.TextBuffer.GetDocument();
             Visibility = AdvancedOptions.Instance.EnablePreviewWindow ? Visibility.Visible : Visibility.Collapsed;
 
@@ -258,7 +258,7 @@ namespace MarkdownEditor2022
 
         public ITextViewMargin GetTextViewMargin(string marginName)
         {
-            return string.Equals(marginName, MarginName, StringComparison.OrdinalIgnoreCase) ? this : null;
+            return string.Equals(marginName, _marginName, StringComparison.OrdinalIgnoreCase) ? this : null;
         }
 
         private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
