@@ -23,7 +23,7 @@ namespace MarkdownEditor2022
 
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView);
+            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, marginName: nameof(PreviewMarginVerticalProvider));
 
             return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
         }
@@ -60,7 +60,7 @@ namespace MarkdownEditor2022
 
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView);
+            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, marginName: nameof(PreviewMarginHorizontalProvider));
 
             return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
         }
