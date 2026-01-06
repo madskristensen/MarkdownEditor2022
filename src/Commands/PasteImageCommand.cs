@@ -64,29 +64,13 @@ namespace MarkdownEditor2022
 
             if (isLink)
             {
-                string rawUrl = (string)data.GetData(DataFormats.Text);
-                string linkText = "link text";
+                LinkPasteResult result = ExtractLinkFromClipboard(data);
 
-                // Edge Browser copies html links by default - https://support.microsoft.com/en-us/microsoft-edge/improved-copy-and-paste-of-urls-in-microsoft-edge-d3bd3956-603a-0033-1fbc-9588a30645b4
-                if (data.GetDataPresent(DataFormats.Html))
-                {
-                    string html = (string)data.GetData(DataFormats.Html);
-
-                    // Use regex to extract: <a href="rawUrl">linktext</a>
-                    Match match = Regex.Match(html, @"<a[^>]+href=""([^""]+)""[^>]*>([^<]+)</a>");
-                    if (match.Success)
-                    {
-                        rawUrl = match.Groups[1].Value;
-                        linkText = match.Groups[2].Value;
-                    }
-                }
-
-                string link = $"[{linkText}]({rawUrl})";
                 int position = _view.Caret.Position.BufferPosition.Position;
 
                 // First insert raw url so user can undo
-                _view.TextBuffer.Insert(position, rawUrl);
-                _view.TextBuffer.Replace(new Span(position, rawUrl.Length), link);
+                _view.TextBuffer.Insert(position, result.RawUrl);
+                _view.TextBuffer.Replace(new Span(position, result.RawUrl.Length), result.MarkdownLink);
 
                 return true;
             }
@@ -116,6 +100,51 @@ namespace MarkdownEditor2022
             }
 
             return true;
+        }
+
+        protected class LinkPasteResult
+        {
+            public string RawUrl
+            {
+                get; set;
+            }
+            public string LinkText
+            {
+                get; set;
+            }
+            public string MarkdownLink
+            {
+                get; set;
+            }
+        }
+
+        protected static LinkPasteResult ExtractLinkFromClipboard(IDataObject data)
+        {
+            string rawUrl = (string)data.GetData(DataFormats.Text);
+            string linkText = "link text";
+
+            // Edge Browser copies html links by default - https://support.microsoft.com/en-us/microsoft-edge/improved-copy-and-paste-of-urls-in-microsoft-edge-d3bd3956-603a-0033-1fbc-9588a30645b4
+            if (data.GetDataPresent(DataFormats.Html))
+            {
+                string html = (string)data.GetData(DataFormats.Html);
+
+                // Use regex to extract: <a href="rawUrl">linktext</a>
+                Match match = Regex.Match(html, @"<a[^>]+href=""([^""]+)""[^>]*>([^<]+)</a>");
+                if (match.Success)
+                {
+                    rawUrl = match.Groups[1].Value;
+                    linkText = match.Groups[2].Value;
+                }
+            }
+
+            string markdownLink = $"[{linkText}]({rawUrl})";
+
+            return new LinkPasteResult
+            {
+                RawUrl = rawUrl,
+                LinkText = linkText,
+                MarkdownLink = markdownLink
+            };
         }
 
         private bool GetPastedFileName(IDataObject data, out string fileName)
