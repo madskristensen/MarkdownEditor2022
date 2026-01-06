@@ -129,7 +129,7 @@ namespace MarkdownEditor2022
                 string html = (string)data.GetData(DataFormats.Html);
 
                 // Use regex to extract: <a href="rawUrl">linktext</a>
-                Match match = Regex.Match(html, @"<a[^>]+href=""([^""]+)""[^>]*>([^<]+)</a>");
+                Match match = Regex.Match(html, @"<a[^>]+href=""([^""]+)""[^>]*>([^<]*)</a>");
                 if (match.Success)
                 {
                     rawUrl = match.Groups[1].Value;
