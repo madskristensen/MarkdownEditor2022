@@ -67,7 +67,7 @@ namespace MarkdownEditor2022
                 string rawUrl = (string)data.GetData(DataFormats.Text);
                 string linkText = "link text";
 
-                // Edge copies html links by default - https://support.microsoft.com/en-us/microsoft-edge/improved-copy-and-paste-of-urls-in-microsoft-edge-d3bd3956-603a-0033-1fbc-9588a30645b4
+                // Edge Browser copies html links by default - https://support.microsoft.com/en-us/microsoft-edge/improved-copy-and-paste-of-urls-in-microsoft-edge-d3bd3956-603a-0033-1fbc-9588a30645b4
                 if (data.GetDataPresent(DataFormats.Html))
                 {
                     string html = (string)data.GetData(DataFormats.Html);
