@@ -102,7 +102,7 @@ namespace MarkdownEditor2022
             return true;
         }
 
-        protected class LinkPasteResult
+        public class LinkPasteResult
         {
             public string RawUrl
             {
@@ -118,7 +118,7 @@ namespace MarkdownEditor2022
             }
         }
 
-        protected static LinkPasteResult ExtractLinkFromClipboard(IDataObject data)
+        public static LinkPasteResult ExtractLinkFromClipboard(IDataObject data)
         {
             string rawUrl = (string)data.GetData(DataFormats.Text);
             string linkText = "link text";
