@@ -132,7 +132,7 @@ namespace MarkdownEditor2022
                     }
 
                     // Delay resetting isDragging to prevent immediate auto-resize
-                    Dispatcher.BeginInvoke(new Action(() => isDragging = false), System.Windows.Threading.DispatcherPriority.Background);
+                    _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() => isDragging = false);
                 };
 
                 grid.Children.Add(splitter);
@@ -162,7 +162,7 @@ namespace MarkdownEditor2022
                     finally
                     {
                         // Delay resetting the flag to ignore the cascading viewport change
-                        Dispatcher.BeginInvoke(new Action(() => isUpdating = false), System.Windows.Threading.DispatcherPriority.Background);
+                        _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() => isUpdating = false);
                     }
                 }
 
@@ -189,7 +189,7 @@ namespace MarkdownEditor2022
                 _textView.ViewportWidthChanged += OnViewportWidthChanged;
 
                 // Set initial width once loaded
-                Dispatcher.BeginInvoke(new Action(UpdateWidthFromPercentage), System.Windows.Threading.DispatcherPriority.Loaded);
+                _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(UpdateWidthFromPercentage);
             }
 
             void CreateBottomMarginControls(WebView2 view)
@@ -297,10 +297,10 @@ namespace MarkdownEditor2022
             Browser.UpdatePositionAsync(line, true).FireAndForget();
         }
 
-        public ITextViewMargin GetTextViewMargin(string marginName)
-        {
-            return string.Equals(marginName, _marginName, StringComparison.OrdinalIgnoreCase) ? this : null;
-        }
+                public ITextViewMargin GetTextViewMargin(string marginName)
+                {
+                    return string.Equals(marginName, _marginName, StringComparison.OrdinalIgnoreCase) ? this : null;
+                }
 
                 private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
                 {
