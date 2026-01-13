@@ -19,7 +19,7 @@ namespace MarkdownEditor2022
         private static readonly Debouncer _debouncer = new(150); // Reduced debounce time for better responsiveness
 
         public FrameworkElement VisualElement => this;
-        public double MarginSize => AdvancedOptions.Instance.PreviewWindowWidth;
+        public double MarginSize => 400; // Initial size, actual size is calculated from percentage
         public bool Enabled => true;
         public Browser Browser { get; private set; }
 
@@ -91,12 +91,10 @@ namespace MarkdownEditor2022
 
             void CreateRightMarginControls(WebView2 view)
             {
-                int width = AdvancedOptions.Instance.PreviewWindowWidth;
-
                 Grid grid = new();
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(0, GridUnitType.Star) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(5, GridUnitType.Pixel) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(width, GridUnitType.Pixel), MinWidth = 150 });
+                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(400, GridUnitType.Pixel), MinWidth = 150 }); // Initial width, will be updated
                 grid.RowDefinitions.Add(new RowDefinition());
                 grid.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
 
@@ -106,6 +104,10 @@ namespace MarkdownEditor2022
                 Grid.SetColumn(view, 2);
                 Grid.SetRow(view, 0);
 
+                bool isUpdating = false;
+                bool isDragging = false;
+                System.Windows.Threading.DispatcherTimer resizeTimer = null;
+
                 GridSplitter splitter = new()
                 {
                     Width = 5,
@@ -114,41 +116,80 @@ namespace MarkdownEditor2022
                     HorizontalAlignment = HorizontalAlignment.Stretch
                 };
                 splitter.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
-                splitter.DragCompleted += SplitterDragCompleted;
+                splitter.DragStarted += (s, e) => isDragging = true;
+                splitter.DragCompleted += (s, e) =>
+                {
+                    // Save the new percentage
+                    if (!double.IsNaN(Browser._browser.ActualWidth))
+                    {
+                        double totalWidth = _textView.ViewportWidth + Browser._browser.ActualWidth;
+                        if (totalWidth > 0)
+                        {
+                            double percentage = (Browser._browser.ActualWidth / totalWidth) * 100;
+                            AdvancedOptions.Instance.PreviewWindowWidthPercentage = Math.Max(10, Math.Min(90, percentage));
+                            AdvancedOptions.Instance.Save();
+                        }
+                    }
+
+                    // Delay resetting isDragging to prevent immediate auto-resize
+                    Dispatcher.BeginInvoke(new Action(() => isDragging = false), System.Windows.Threading.DispatcherPriority.Background);
+                };
 
                 grid.Children.Add(splitter);
                 Grid.SetColumn(splitter, 1);
                 Grid.SetRow(splitter, 0);
 
-                Action fixWidth = new(() =>
+                void UpdateWidthFromPercentage()
                 {
-                    // previewWindow maxWidth = current total width - textView minWidth
-                    double newWidth = _textView.ViewportWidth + grid.ActualWidth - 150;
+                    if (isUpdating || isDragging || _textView.ViewportWidth <= 0)
+                        return;
 
-                    // preveiwWindow maxWidth < previewWindow minWidth
-                    if (newWidth < 150)
-                    {
-                        // Call 'get before 'set for performance
-                        if (grid.ColumnDefinitions[2].MinWidth != 0)
-                        {
-                            grid.ColumnDefinitions[2].MinWidth = 0;
-                            grid.ColumnDefinitions[2].MaxWidth = 0;
-                        }
-                    }
-                    else
-                    {
-                        grid.ColumnDefinitions[2].MaxWidth = newWidth;
-                        // Call 'get before 'set for performance
-                        if (grid.ColumnDefinitions[2].MinWidth == 0)
-                        {
-                            grid.ColumnDefinitions[2].MinWidth = 150;
-                        }
-                    }
-                });
+                    isUpdating = true;
 
-                // Listen sizeChanged event of both marginGrid and textView
-                grid.SizeChanged += (e, s) => fixWidth();
-                _textView.ViewportWidthChanged += (e, s) => fixWidth();
+                    try
+                    {
+                        double currentPreviewWidth = grid.ColumnDefinitions[2].ActualWidth;
+                        if (currentPreviewWidth <= 0)
+                            currentPreviewWidth = 400;
+
+                        double totalWidth = _textView.ViewportWidth + currentPreviewWidth;
+                        double percentage = AdvancedOptions.Instance.PreviewWindowWidthPercentage / 100.0;
+                        double previewWidth = totalWidth * percentage;
+                        previewWidth = Math.Max(150, previewWidth);
+
+                        grid.ColumnDefinitions[2].Width = new GridLength(previewWidth, GridUnitType.Pixel);
+                    }
+                    finally
+                    {
+                        // Delay resetting the flag to ignore the cascading viewport change
+                        Dispatcher.BeginInvoke(new Action(() => isUpdating = false), System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                }
+
+                // Debounced resize handler
+                void OnViewportWidthChanged(object s, EventArgs e)
+                {
+                    if (isUpdating || isDragging)
+                        return;
+
+                    // Reset timer on each event
+                    resizeTimer?.Stop();
+                    resizeTimer = new System.Windows.Threading.DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(50)
+                    };
+                    resizeTimer.Tick += (_, __) =>
+                    {
+                        resizeTimer.Stop();
+                        UpdateWidthFromPercentage();
+                    };
+                    resizeTimer.Start();
+                }
+
+                _textView.ViewportWidthChanged += OnViewportWidthChanged;
+
+                // Set initial width once loaded
+                Dispatcher.BeginInvoke(new Action(UpdateWidthFromPercentage), System.Windows.Threading.DispatcherPriority.Loaded);
             }
 
             void CreateBottomMarginControls(WebView2 view)
@@ -261,18 +302,14 @@ namespace MarkdownEditor2022
             return string.Equals(marginName, _marginName, StringComparison.OrdinalIgnoreCase) ? this : null;
         }
 
-        private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
-        {
-            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical && !double.IsNaN(Browser._browser.ActualWidth))
-            {
-                AdvancedOptions.Instance.PreviewWindowWidth = (int)Browser._browser.ActualWidth;
-                AdvancedOptions.Instance.Save();
-            }
-            else if (!double.IsNaN(Browser._browser.ActualHeight))
-            {
-                AdvancedOptions.Instance.PreviewWindowHeight = (int)Browser._browser.ActualHeight;
-                AdvancedOptions.Instance.Save();
+                private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+                {
+                    // Only handle bottom margin here - vertical margin is handled in CreateRightMarginControls
+                    if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Horizontal && !double.IsNaN(Browser._browser.ActualHeight))
+                    {
+                        AdvancedOptions.Instance.PreviewWindowHeight = (int)Browser._browser.ActualHeight;
+                        AdvancedOptions.Instance.Save();
+                    }
+                }
             }
         }
-    }
-}
