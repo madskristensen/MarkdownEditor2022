@@ -297,19 +297,19 @@ namespace MarkdownEditor2022
             Browser.UpdatePositionAsync(line, true).FireAndForget();
         }
 
-                public ITextViewMargin GetTextViewMargin(string marginName)
-                {
-                    return string.Equals(marginName, _marginName, StringComparison.OrdinalIgnoreCase) ? this : null;
-                }
+        public ITextViewMargin GetTextViewMargin(string marginName)
+        {
+            return string.Equals(marginName, _marginName, StringComparison.OrdinalIgnoreCase) ? this : null;
+        }
 
-                private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
-                {
-                    // Only handle bottom margin here - vertical margin is handled in CreateRightMarginControls
-                    if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Horizontal && !double.IsNaN(Browser._browser.ActualHeight))
-                    {
-                        AdvancedOptions.Instance.PreviewWindowHeight = (int)Browser._browser.ActualHeight;
-                        AdvancedOptions.Instance.Save();
-                    }
-                }
+        private void SplitterDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            // Only handle bottom margin here - vertical margin is handled in CreateRightMarginControls
+            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Horizontal && !double.IsNaN(Browser._browser.ActualHeight))
+            {
+                AdvancedOptions.Instance.PreviewWindowHeight = (int)Browser._browser.ActualHeight;
+                AdvancedOptions.Instance.Save();
             }
         }
+    }
+}
