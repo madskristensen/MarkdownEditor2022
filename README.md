@@ -16,16 +16,19 @@ This extension delivers a full featured Markdown editor with live preview, synta
 
 > This is a complete rewrite of the original [Markdown Editor](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownEditor64) with tons of fixes, tweaks, and performance improvements. A few little-used features are not being ported to this new extension, so if you rely on them you should keep using the original.
 
+For linting and validation rules, this extension integrates with the [Markdown Lint](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownLint) extension.
+
 ## Getting Started
 
 1. Install the extension from the [Visual Studio Marketplace][marketplace] or grab the latest [CI build][vsixgallery].
 2. Open any `.md` file in Visual Studio to enable the Markdown editor.
 3. Press `F7` to show or hide the synchronized preview window while you edit.
-4. Visit **Tools -> Options -> Text Editor -> Markdown** to tune fonts, preview behavior, validation, and custom assets.
+4. Visit **Tools -> Options -> Text Editor -> Markdown** to tune fonts, preview behavior, and custom assets.
 
 ## Feature Highlights
 
 ### Editing essentials
+
 - Powered by [Markdig](https://github.com/lunet-io/markdig), providing the best available Markdown parser.
 - Syntax highlighting powered by Prism.js keeps fenced code blocks readable.
 - Supports CommonMark, GitHub flavored Markdown, FrontMatter YAML, Mermaid, and math notation.
@@ -48,7 +51,6 @@ This extension delivers a full featured Markdown editor with live preview, synta
 
 ### Productivity tools
 - Extensive keyboard shortcuts speed up formatting, linking, commenting, and checklist maintenance.
-- Relative URL validation shows squiggles and Error List entries before you push broken links.
 - VS command URL links trigger Visual Studio commands straight from the preview pane.
 
 The sections below dive deeper into each area and include screenshots for quick orientation.
@@ -130,14 +132,7 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 
 **Ctrl+PgDown** moves caret to next heading-->
 
-## Validation and automation
-
-### Relative URL validation
-Relative URLs are validated and will show a red squiggly when they can't be resolved.
-
-![Error](art/error.png)
-
-The errors will also be listed in the Error List so you can fix them before committing.
+## Automation
 
 ### VS command URL scheme support
 The markdown editor now supports executing Visual Studio commands directly from links in the preview window using the `vscmd://` URL scheme.
