@@ -69,12 +69,6 @@ namespace MarkdownEditor2022
         [DefaultValue(true)]
         public bool ValidateUrls { get; set; } = true;
 
-        [Category("Validation")]
-        [DisplayName("Validate header increments")]
-        [Description("This rule is triggered when you skip heading levels in a markdown document.")]
-        [DefaultValue(true)]
-        public bool ValidateHeaderIncrements { get; set; } = true;
-
         [Browsable(false)]
         public int RatingRequests { get; set; }
     }

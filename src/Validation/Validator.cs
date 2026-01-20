@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -15,11 +15,6 @@ namespace MarkdownEditor2022
             if (item is LinkInline link && AdvancedOptions.Instance.ValidateUrls)
             {
                 errors = UrlValidator.GetErrors(link, fileName);
-            }
-
-            else if (item is HeadingBlock header && AdvancedOptions.Instance.ValidateHeaderIncrements)
-            {
-                errors = HeadingValidator.GetErrors(header);
             }
 
             return errors?.ToArray().AddFilename(fileName);

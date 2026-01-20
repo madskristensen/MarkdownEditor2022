@@ -27,8 +27,9 @@ namespace MarkdownEditor2022.UnitTests
         [DataRow("[link]()")]
         [DataRow("[link]( )")]
         [TestMethod]
-        public void InvalidUrl(string markdown)
+        public void EmptyUrl_NoError(string markdown)
         {
+            // Empty links (MD042) are now handled by Markdown Lint extension
             MarkdownDocument doc = Parse(markdown);
 
             LinkInline link = doc.Descendants().ElementAt(1) as LinkInline;
@@ -36,25 +37,7 @@ namespace MarkdownEditor2022.UnitTests
             ErrorListItem error = errors.FirstOrDefault();
 
             Assert.IsNotNull(link);
-            Assert.IsNotNull(error);
-            Assert.AreEqual(0, error.Line);
-        }
-
-        [DataRow("# header 1\r\n### header 2")]
-        [DataRow("# header 1\r\n#### header 2")]
-        [DataRow("## header 1\r\n#### header 2")]
-        [TestMethod]
-        public void InvalidHeadingIncrement(string markdown)
-        {
-            MarkdownDocument doc = Parse(markdown);
-
-            HeadingBlock header2 = doc.FindBlockAtPosition(16) as HeadingBlock;
-            IEnumerable<ErrorListItem> errors = HeadingValidator.GetErrors(header2);
-            ErrorListItem error = errors.FirstOrDefault(e => e.ErrorCode == "MD001");
-
-            Assert.IsNotNull(header2);
-            Assert.IsNotNull(error);
-            Assert.AreEqual(1, error.Line);
+            Assert.IsNull(error);
         }
 
         [DataRow("[link](https://example.com)")]

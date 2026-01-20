@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using Markdig.Syntax.Inlines;
@@ -12,37 +12,24 @@ namespace MarkdownEditor2022.Validation
         {
             if (string.IsNullOrEmpty(link.Url))
             {
+                yield break;
+            }
+
+            string url = WebUtility.UrlDecode(link.Url);
+
+            if (!IsUrlValid(fileName, url))
+            {
                 yield return new ErrorListItem()
                 {
                     ProjectName = "",
-                    Message = $"No empty links.",
-                    ErrorCategory = PredefinedErrorTypeNames.SyntaxError,
-                    Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_ERROR,
+                    Message = $"The file \"{link.Url}\" could not be resolved.",
+                    ErrorCategory = PredefinedErrorTypeNames.Warning,
+                    Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_WARNING,
                     Line = link.Line,
                     Column = link.Column,
                     BuildTool = Vsix.Name,
-                    ErrorCode = "MD042",
-                    HelpLink = "https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md042---no-empty-links",
+                    ErrorCode = "MD002"
                 };
-            }
-            else
-            {
-                string url = WebUtility.UrlDecode(link.Url);
-
-                if (!IsUrlValid(fileName, url))
-                {
-                    yield return new ErrorListItem()
-                    {
-                        ProjectName = "",
-                        Message = $"The file \"{link.Url}\" could not be resolved.",
-                        ErrorCategory = PredefinedErrorTypeNames.Warning,
-                        Severity = Microsoft.VisualStudio.Shell.Interop.__VSERRORCATEGORY.EC_WARNING,
-                        Line = link.Line,
-                        Column = link.Column,
-                        BuildTool = Vsix.Name,
-                        ErrorCode = "MD002"
-                    };
-                }
             }
         }
 

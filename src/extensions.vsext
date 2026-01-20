@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "extensions": [
+    {
+      "name": "Markdown Lint",
+      "vsixId": "MarkdownLintVS.86d3a7c7-0313-4f57-ad29-3cb41e022405"
+    }
+  ]
+}

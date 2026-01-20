@@ -96,7 +96,6 @@
     <Compile Include="SuggestedActions\Actions\ConvertToUnorderedList.cs" />
     <Compile Include="SuggestedActions\SuggestedActionsSource.cs" />
     <Compile Include="SuggestedActions\SuggestedActionsSourceProvider.cs" />
-    <Compile Include="Validation\HeadingValidator.cs" />
     <Compile Include="Validation\UrlValidator.cs" />
     <Compile Include="Validation\Validator.cs" />
     <Compile Include="VSCommandTable.cs">
@@ -120,6 +119,9 @@
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="Margin\mermaid.min.js.map" />
+    <Content Include="extensions.vsext">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
       <Generator>VsixManifestGenerator</Generator>
