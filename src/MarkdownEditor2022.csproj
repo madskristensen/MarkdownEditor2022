@@ -50,6 +50,7 @@
     <Compile Include="Commands\CommentCommand.cs" />
     <Compile Include="Commands\EmphasizeTextCommand.cs" />
     <Compile Include="Commands\EnablePreviewSyncCommand.cs" />
+    <Compile Include="Commands\FormatTableCommand.cs" />
     <Compile Include="Commands\GenerateTocCommand.cs" />
     <Compile Include="Commands\IndentationCommand.cs" />
     <Compile Include="Commands\InsertLinkCommand.cs" />
