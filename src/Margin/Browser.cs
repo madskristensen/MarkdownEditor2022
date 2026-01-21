@@ -6,6 +6,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -278,88 +279,104 @@ namespace MarkdownEditor2022
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                string html = await RenderHtmlDocumentAsync(_document.Markdown);
+                // Wait for initial parsing to complete before rendering (fixes #127, #142)
+                // Use a timeout to prevent indefinite waiting
+                using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+                await _document.WaitForInitialParseAsync(timeoutCts.Token);
+
+                MarkdownDocument markdown = _document.Markdown;
+                if (markdown == null)
+                {
+                    return; // Document not yet parsed or parsing failed
+                }
+
+                string html = await RenderHtmlDocumentAsync(markdown);
                 await UpdateContentAsync(html);
                 await SyncNavigationAsync(isTyping: false);
             }
-            catch
+            catch (OperationCanceledException)
             {
+                // Timeout waiting for initial parse - ignore
             }
-
-            async static Task<string> RenderHtmlDocumentAsync(MarkdownDocument md)
+            catch (Exception ex)
             {
-                StringWriter htmlWriter = null;
-                try
-                {
-                    htmlWriter = (_htmlWriterStatic ??= new StringWriter(GetOrCreateStringBuilder()));
-                    htmlWriter.GetStringBuilder().Clear();
+                await ex.LogAsync();
+            }
+        }
 
-                    HtmlRenderer htmlRenderer = new(htmlWriter);
-                    Document.Pipeline.Setup(htmlRenderer);
-                    htmlRenderer.UseNonAsciiNoEscape = true;
-                    htmlRenderer.Render(md);
+        private static async Task<string> RenderHtmlDocumentAsync(MarkdownDocument md)
+        {
+            StringWriter htmlWriter = null;
+            try
+            {
+                htmlWriter = (_htmlWriterStatic ??= new StringWriter(GetOrCreateStringBuilder()));
+                htmlWriter.GetStringBuilder().Clear();
 
-                    await htmlWriter.FlushAsync();
-                    string html = htmlWriter.ToString();
-                    html = _languageRegex.Replace(html, "\"language-csharp\"");
-                    return html;
-                }
-                catch (Exception ex)
+                HtmlRenderer htmlRenderer = new(htmlWriter);
+                Document.Pipeline.Setup(htmlRenderer);
+                htmlRenderer.UseNonAsciiNoEscape = true;
+                htmlRenderer.Render(md);
+
+                await htmlWriter.FlushAsync();
+                string html = htmlWriter.ToString();
+                html = _languageRegex.Replace(html, "\"language-csharp\"");
+                return html;
+            }
+            catch (Exception ex)
+            {
+                return "<p>An unexpected exception occurred:</p><pre>" + WebUtility.HtmlEncode(ex.ToString()) + "</pre>";
+            }
+            finally
+            {
+                if (htmlWriter?.GetStringBuilder() is StringBuilder sb && sb.Capacity <= 8192)
                 {
-                    return "<p>An unexpected exception occurred:</p><pre>" + WebUtility.HtmlEncode(ex.ToString()) + "</pre>";
-                }
-                finally
-                {
-                    if (htmlWriter?.GetStringBuilder() is StringBuilder sb && sb.Capacity <= 8192)
-                    {
-                        sb.Clear();
-                        _stringBuilderPool.Enqueue(sb);
-                    }
+                    sb.Clear();
+                    _stringBuilderPool.Enqueue(sb);
                 }
             }
+        }
 
-            async Task UpdateContentAsync(string html)
+        private async Task UpdateContentAsync(string html)
+        {
+            bool isInit = await IsHtmlTemplateLoadedAsync();
+
+            // Feature detection
+            bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 || html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (isInit)
             {
-                bool isInit = await IsHtmlTemplateLoadedAsync();
+                string escapedHtml = EscapeForJavaScript(html);
 
-                // Feature detection
-                bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
-                bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 || html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+                // Batch innerHTML assignment + optional feature activation + anchor adjustment into one script call
+                StringBuilder script = new();
+                script.Append("(function(){var c=document.getElementById('___markdown-content___'); if(c){c.innerHTML=\"").Append(escapedHtml).Append("\";}");
 
-                if (isInit)
+                if (needsPrism)
                 {
-                    string escapedHtml = EscapeForJavaScript(html);
-
-                    // Batch innerHTML assignment + optional feature activation + anchor adjustment into one script call
-                    StringBuilder script = new();
-                    script.Append("(function(){var c=document.getElementById('___markdown-content___'); if(c){c.innerHTML=\"").Append(escapedHtml).Append("\";}");
-
-                    if (needsPrism)
-                    {
-                        // Prism already loaded? highlight. Otherwise, attempt lazy load once.
-                        script.Append(@"if(!window.Prism && !window.__prismLoading){window.__prismLoading=true;var sp=document.createElement('script');sp.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/prism.js';sp.onload=function(){if(window.Prism) Prism.highlightAll();};document.head.appendChild(sp);} else if(window.Prism){Prism.highlightAll();}");
-                    }
-                    if (needsMermaid)
-                    {
-                        string mermaidTheme = GetMermaidTheme();
-                        script.Append(@"if(!window.mermaid && !window.__mermaidLoading){window.__mermaidLoading=true;var sm=document.createElement('script');sm.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mermaid.min.js';sm.onload=function(){try{mermaid.initialize({ securityLevel: 'loose', theme: '").Append(mermaidTheme).Append(@"', flowchart:{ htmlLabels:false }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}};document.head.appendChild(sm);} else if(window.mermaid){try{mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}}");
-                    }
-
-                    // Inline anchor adjustment to avoid extra round-trip
-                    script.Append(@"(function(){for (const anchor of document.links){try{if(anchor && anchor.protocol==='file:'){var pathName=null,hash=anchor.hash;if(hash){pathName=anchor.pathname;anchor.hash=null;anchor.pathname='';}anchor.protocol='about:';if(hash){if(pathName==null||pathName.endsWith('/')){pathName='blank';}anchor.pathname=pathName;anchor.hash=hash;}}}catch(e){}}})();");
-                    script.Append("})();");
-
-                    await _browser.ExecuteScriptAsync(script.ToString());
+                    // Prism already loaded? highlight. Otherwise, attempt lazy load once.
+                    script.Append(@"if(!window.Prism && !window.__prismLoading){window.__prismLoading=true;var sp=document.createElement('script');sp.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/prism.js';sp.onload=function(){if(window.Prism) Prism.highlightAll();};document.head.appendChild(sp);} else if(window.Prism){Prism.highlightAll();}");
                 }
-                else
+                if (needsMermaid)
                 {
-                    // Initial navigation path: build scripts only for needed features.
-                    string htmlTemplate = GetHtmlTemplate();
-                    string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
-                    html = string.Format(CultureInfo.InvariantCulture, "{0}", html);
-                    html = htmlTemplate.Replace("[content]", html).Replace("[scripts]", scripts);
-                    _browser.NavigateToString(html);
+                    string mermaidTheme = GetMermaidTheme();
+                    script.Append(@"if(!window.mermaid && !window.__mermaidLoading){window.__mermaidLoading=true;var sm=document.createElement('script');sm.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mermaid.min.js';sm.onload=function(){try{mermaid.initialize({ securityLevel: 'loose', theme: '").Append(mermaidTheme).Append(@"', flowchart:{ htmlLabels:false }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}};document.head.appendChild(sm);} else if(window.mermaid){try{mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}}");
                 }
+
+                // Inline anchor adjustment to avoid extra round-trip
+                script.Append(@"(function(){for (const anchor of document.links){try{if(anchor && anchor.protocol==='file:'){var pathName=null,hash=anchor.hash;if(hash){pathName=anchor.pathname;anchor.hash=null;anchor.pathname='';}anchor.protocol='about:';if(hash){if(pathName==null||pathName.endsWith('/')){pathName='blank';}anchor.pathname=pathName;anchor.hash=hash;}}}catch(e){}}})();");
+                script.Append("})();");
+
+                await _browser.ExecuteScriptAsync(script.ToString());
+            }
+            else
+            {
+                // Initial navigation path: build scripts only for needed features.
+                string htmlTemplate = GetHtmlTemplate();
+                string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
+                html = string.Format(CultureInfo.InvariantCulture, "{0}", html);
+                html = htmlTemplate.Replace("[content]", html).Replace("[scripts]", scripts);
+                _browser.NavigateToString(html);
             }
         }
 

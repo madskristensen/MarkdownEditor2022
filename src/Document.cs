@@ -15,6 +15,7 @@ namespace MarkdownEditor2022
         private readonly SemaphoreSlim _parseSemaphore = new(1, 1);
         private CancellationTokenSource _parseCts = new();
         private readonly CancellationTokenSource _disposalTokenSource = new();
+        private readonly TaskCompletionSource<bool> _initialParseCompletionSource = new();
         private bool _isDisposed;
         private string _lastParsedText;
         private int _lastParsedVersion;
@@ -54,6 +55,19 @@ namespace MarkdownEditor2022
         public bool IsParsing { get; private set; }
 
         public DocumentAnalysis Analysis { get; private set; }
+
+        /// <summary>
+        /// Waits for the initial parse to complete. Returns immediately if already parsed.
+        /// </summary>
+        public Task WaitForInitialParseAsync(CancellationToken cancellationToken = default)
+        {
+            if (Markdown != null)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _initialParseCompletionSource.Task.WithCancellation(cancellationToken);
+        }
 
         private void BufferChanged(object sender, TextContentChangedEventArgs e)
         {
@@ -141,6 +155,8 @@ namespace MarkdownEditor2022
 
                     if (success && !localToken.IsCancellationRequested)
                     {
+                        // Signal that initial parsing is complete (only sets once, subsequent calls are ignored)
+                        _initialParseCompletionSource.TrySetResult(true);
                         Parsed?.Invoke(this);
                     }
                 }
