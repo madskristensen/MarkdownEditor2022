@@ -1,4 +1,4 @@
-﻿body {
+body {
     background: #1f1f1f
 }
 .markdown-body {
@@ -945,4 +945,71 @@
 
     .markdown-body ::-webkit-calendar-picker-indicator {
         filter: invert(50%);
+    }
+
+    /* GitHub Alert Blockquotes */
+    .markdown-body .markdown-alert {
+        padding: 0.5rem 1rem;
+        margin-bottom: 16px;
+        color: inherit;
+        border-left: .25em solid #30363d;
+    }
+
+    .markdown-body .markdown-alert > :first-child {
+        margin-top: 0;
+    }
+
+    .markdown-body .markdown-alert > :last-child {
+        margin-bottom: 0;
+    }
+
+    .markdown-body .markdown-alert .markdown-alert-title {
+        display: flex;
+        font-weight: 500;
+        align-items: center;
+        line-height: 1;
+    }
+
+    .markdown-body .markdown-alert .markdown-alert-title .octicon {
+        margin-right: 0.5rem;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-note {
+        border-left-color: #58a6ff;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-note .markdown-alert-title {
+        color: #58a6ff;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-tip {
+        border-left-color: #3fb950;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-tip .markdown-alert-title {
+        color: #3fb950;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-important {
+        border-left-color: #a371f7;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-important .markdown-alert-title {
+        color: #a371f7;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-warning {
+        border-left-color: #d29922;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-warning .markdown-alert-title {
+        color: #d29922;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-caution {
+        border-left-color: #f85149;
+    }
+
+    .markdown-body .markdown-alert.markdown-alert-caution .markdown-alert-title {
+        color: #f85149;
     }
