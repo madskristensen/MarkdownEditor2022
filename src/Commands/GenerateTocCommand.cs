@@ -1,10 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Text;
-using Slugify;
 
 namespace MarkdownEditor2022
 {
@@ -12,7 +11,10 @@ namespace MarkdownEditor2022
     internal sealed class GenerateTocCommand : BaseCommand<GenerateTocCommand>
     {
         private static readonly Regex _regex = new(@"#* (<a(.*)\sname=(?:""(?<url>[^""]+)""|'([^']+)').*?>(?<title>.*?)</a>|(?<title>[^\{]+)(\{#(?<url>[^\s]+)\}))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly SlugHelper _slugHelper = new();
+
+        // Regex to match characters that GitHub removes from anchors (keeps letters, numbers, spaces, and hyphens)
+        private static readonly Regex _githubSlugCleanup = new(@"[^\p{L}\p{N}\s-]", RegexOptions.Compiled);
+        private static readonly Regex _multipleSpaces = new(@"\s+", RegexOptions.Compiled);
 
         protected override Task InitializeCompletedAsync()
         {
@@ -41,6 +43,7 @@ namespace MarkdownEditor2022
         {
             StringBuilder sb = new();
             sb.AppendLine("<!--TOC-->");
+            sb.AppendLine();
 
             IEnumerable<HeadingBlock> headers = doc.Markdown.Descendants<HeadingBlock>().Where(h => h.Span.Start > position);
 
@@ -54,6 +57,7 @@ namespace MarkdownEditor2022
                 sb.AppendLine($"{indent}- [{title}](#{url})");
             }
 
+            sb.AppendLine();
             sb.AppendLine("<!--/TOC-->");
             return sb.ToString().Trim();
         }
@@ -76,7 +80,37 @@ namespace MarkdownEditor2022
             }
 
             title = title.Trim();
-            url = _slugHelper.GenerateSlug(url);
+            url = GenerateGitHubSlug(url);
+        }
+
+        /// <summary>
+        /// Generates a GitHub-compatible anchor slug from header text.
+        /// GitHub's algorithm:
+        /// 1. Convert to lowercase
+        /// 2. Remove anything that isn't a letter, number, space, or hyphen
+        /// 3. Replace spaces with hyphens
+        /// 4. Do NOT collapse consecutive hyphens (e.g., " - " becomes "---")
+        /// </summary>
+        private static string GenerateGitHubSlug(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            // Trim and convert to lowercase
+            string slug = text.Trim().ToLowerInvariant();
+
+            // Remove characters that GitHub strips (keeps letters, numbers, spaces, and hyphens)
+            slug = _githubSlugCleanup.Replace(slug, string.Empty);
+
+            // Collapse multiple spaces into one
+            slug = _multipleSpaces.Replace(slug, " ");
+
+            // Replace spaces with hyphens (but don't collapse consecutive hyphens)
+            slug = slug.Replace(" ", "-");
+
+            return slug;
         }
     }
 }
