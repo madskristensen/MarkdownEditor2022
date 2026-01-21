@@ -40,11 +40,13 @@ namespace MarkdownEditor2022
 
         private void ReParse(Document document)
         {
+            System.Diagnostics.Debug.WriteLine($"ReParse triggered");
             _ = TokenizeAsync();
         }
 
         public override Task TokenizeAsync()
         {
+            System.Diagnostics.Debug.WriteLine($"TokenizeAsync called, IsParsing={_document.IsParsing}");
             ThreadHelper.ThrowIfOnUIThread();
 
             List<ITagSpan<TokenTag>> list = [];
@@ -141,55 +143,111 @@ namespace MarkdownEditor2022
 
         private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, IReadOnlyList<HeadingBlock> headings)
         {
-            if (heading.Level == 1)
+            try
             {
-                return;
-            }
+                int snapshotLength = Buffer.CurrentSnapshot.Length;
+                int headingStart = heading.Span.Start;
+                int headingEnd = heading.Span.End;
 
-            if (ReferenceEquals(heading, headings[headings.Count - 1]))
-            {
-                TokenTag tagLast = CreateToken("outlining", false, true, null);
-                Span spanLast = Span.FromBounds(heading.Span.Start, Buffer.CurrentSnapshot.Length);
-                SnapshotSpan ssLast = new(Buffer.CurrentSnapshot, spanLast);
-                list.Add(new TagSpan<TokenTag>(ssLast, tagLast));
-                return;
-            }
+                System.Diagnostics.Debug.WriteLine($"AddHeaderOutlining: Level={heading.Level}, Start={headingStart}, End={headingEnd}, SnapshotLength={snapshotLength}");
 
-            int index = -1;
-            for (int i = 0; i < headings.Count; i++)
-            {
-                if (ReferenceEquals(headings[i], heading)) { index = i; break; }
-            }
-            if (index == -1)
-            {
-                return;
-            }
-
-            for (int i = index + 1; i < headings.Count; i++)
-            {
-                HeadingBlock next = headings[i];
-                if (heading.Level >= next.Level)
+                // Need at least 2 characters after heading: newline + content
+                if (headingEnd + 2 > snapshotLength)
                 {
+                    System.Diagnostics.Debug.WriteLine($"  Skipped: headingEnd + 2 ({headingEnd + 2}) > snapshotLength ({snapshotLength})");
+                    return;
+                }
+
+                // Determine where this heading's collapsible region should end
+                int regionEnd = snapshotLength;
+
+                // Find the index of the current heading
+                int index = -1;
+                for (int i = 0; i < headings.Count; i++)
+                {
+                    if (ReferenceEquals(headings[i], heading))
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+
+                if (index == -1)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Skipped: heading not found in list");
+                    return;
+                }
+
+                // Look for the next heading at the same or higher level (lower number)
+                for (int i = index + 1; i < headings.Count; i++)
+                {
+                    HeadingBlock next = headings[i];
+                    if (heading.Level >= next.Level)
+                    {
+                        regionEnd = next.Span.Start;
+                        break;
+                    }
+                }
+
+                System.Diagnostics.Debug.WriteLine($"  RegionEnd={regionEnd}, Check: regionEnd > headingEnd + 2 = {regionEnd} > {headingEnd + 2} = {regionEnd > headingEnd + 2}");
+
+                // Only create outlining if there's meaningful content after the heading line
+                if (regionEnd > headingEnd + 2)
+                {
+                    // Workaround for VS issue with spans starting at position 0:
+                    // Start the span at position 1 instead to avoid the edge case
+                    int spanStart = headingStart == 0 ? 1 : headingStart;
+
                     TokenTag tag = CreateToken("outlining", false, true, null);
-                    Span span = Span.FromBounds(heading.Span.Start, next.Span.Start);
+                    Span span = Span.FromBounds(spanStart, regionEnd);
+                    System.Diagnostics.Debug.WriteLine($"  Creating span: Start={spanStart}, End={regionEnd}, Length={span.Length}");
                     SnapshotSpan ss = new(Buffer.CurrentSnapshot, span);
                     list.Add(new TagSpan<TokenTag>(ss, tag));
-                    break;
                 }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Skipped: no meaningful content after heading");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AddHeaderOutlining ERROR: {ex}");
+                ex.Log();
             }
         }
 
         public override string GetOutliningText(string text)
         {
-            string firstLine = text.Split('\n').FirstOrDefault()?.Trim();
-            string language = "";
-
-            if (firstLine.Length > 3)
+            try
             {
-                language = " " + firstLine.Substring(3).Trim();
-            }
+                System.Diagnostics.Debug.WriteLine($"GetOutliningText called with text length: {text?.Length ?? -1}");
+                string firstLine = text.Split('\n').FirstOrDefault()?.Trim() ?? string.Empty;
+                System.Diagnostics.Debug.WriteLine($"  FirstLine: '{firstLine}'");
 
-            return $"{language} ";
+                // Check if this is a markdown heading (starts with #)
+                if (firstLine.StartsWith("#"))
+                {
+                    string result = $"{firstLine} ";
+                    System.Diagnostics.Debug.WriteLine($"  Returning heading: '{result}'");
+                    return result;
+                }
+
+                // For code blocks (```language), extract the language
+                string language = "";
+                if (firstLine.Length > 3)
+                {
+                    language = " " + firstLine.Substring(3).Trim();
+                }
+
+                System.Diagnostics.Debug.WriteLine($"  Returning code block: '{language} '");
+                return $"{language} ";
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetOutliningText ERROR: {ex}");
+                ex.Log();
+                return "...";
+            }
         }
 
         public override Task<object> GetTooltipAsync(SnapshotPoint triggerPoint)
