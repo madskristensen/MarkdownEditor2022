@@ -436,7 +436,6 @@ namespace MarkdownEditor2022
                 // Initial navigation path: build scripts only for needed features.
                 string htmlTemplate = GetHtmlTemplate();
                 string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
-                html = string.Format(CultureInfo.InvariantCulture, "{0}", html);
                 html = htmlTemplate.Replace("[content]", html).Replace("[scripts]", scripts);
                 _browser.NavigateToString(html);
             }

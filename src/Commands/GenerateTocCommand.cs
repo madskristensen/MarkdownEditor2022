@@ -46,10 +46,22 @@ namespace MarkdownEditor2022
             sb.AppendLine();
 
             IEnumerable<HeadingBlock> headers = doc.Markdown.Descendants<HeadingBlock>().Where(h => h.Span.Start > position);
+            Dictionary<string, int> headerCounts = new(StringComparer.OrdinalIgnoreCase);
 
             foreach (HeadingBlock header in headers)
             {
                 GetHeader(docView.TextBuffer.CurrentSnapshot, header, out string title, out string url);
+
+                // Track duplicate headers and append suffix (GitHub-style)
+                if (headerCounts.TryGetValue(url, out int count))
+                {
+                    headerCounts[url] = count + 1;
+                    url = $"{url}-{count}";
+                }
+                else
+                {
+                    headerCounts[url] = 1;
+                }
 
                 int level = (header.Level - 1) * 2;
                 string indent = "".PadLeft(level, ' ');
