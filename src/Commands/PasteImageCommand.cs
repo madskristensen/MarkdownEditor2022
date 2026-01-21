@@ -64,15 +64,22 @@ namespace MarkdownEditor2022
 
             if (isLink)
             {
-                LinkPasteResult result = ExtractLinkFromClipboard(data);
+                // Check if user wants automatic link formatting
+                if (AdvancedOptions.Instance.FormatPastedUrlsAsLinks)
+                {
+                    LinkPasteResult result = ExtractLinkFromClipboard(data);
 
-                int position = _view.Caret.Position.BufferPosition.Position;
+                    int position = _view.Caret.Position.BufferPosition.Position;
 
-                // First insert raw url so user can undo
-                _view.TextBuffer.Insert(position, result.RawUrl);
-                _view.TextBuffer.Replace(new Span(position, result.RawUrl.Length), result.MarkdownLink);
+                    // First insert raw url so user can undo
+                    _view.TextBuffer.Insert(position, result.RawUrl);
+                    _view.TextBuffer.Replace(new Span(position, result.RawUrl.Length), result.MarkdownLink);
 
-                return true;
+                    return true;
+                }
+
+                // User disabled link formatting - let default paste handle it (pastes raw URL)
+                return false;
             }
 
             if (!hasBitmap && !trueBitmap || textFormat)

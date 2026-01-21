@@ -17,6 +17,12 @@ namespace MarkdownEditor2022
         [DefaultValue(true)]
         public bool EnableEmojiIntelliSense { get; set; } = true;
 
+        [Category("Editor")]
+        [DisplayName("Format pasted URLs as links")]
+        [Description("When enabled, pasting a URL from a browser will automatically format it as a markdown link [title](url). When disabled, only the raw URL is pasted.")]
+        [DefaultValue(true)]
+        public bool FormatPastedUrlsAsLinks { get; set; } = true;
+
         [Category("Preview Window")]
         [DisplayName("Enable preview window")]
         [Description("Determines if the preview window should be shown.")]
