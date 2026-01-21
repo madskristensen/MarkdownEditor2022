@@ -132,39 +132,75 @@ namespace MarkdownEditor2022
                     return;
                 }
 
-                // If it's a file-based anchor we converted, open the related file if possible
-                if (uri.Authority == "browsing-file-host")
+                // Handle browsing-file-host links (relative links and internal anchors)
+                if (uri.Authority == _mappedBrowsingFileVirtualHostName)
                 {
-                    string file = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    string localPath = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/'));
+                    string fragment = uri.Fragment?.TrimStart('#');
+                    bool hasFragment = !string.IsNullOrEmpty(fragment);
 
-                    if (string.IsNullOrEmpty(file) || !string.IsNullOrEmpty(uri.Fragment))
+                    // Check if this is an internal anchor link (fragment-only, no file path change)
+                    // Internal links will have the same directory as the base href
+                    string currentDir = Path.GetDirectoryName(_file);
+                    string currentDirName = new DirectoryInfo(currentDir).Name;
+
+                    // If the local path is just the current directory name (or empty), it's an internal anchor
+                    bool isInternalAnchor = string.IsNullOrEmpty(localPath) || 
+                                            localPath.Equals(currentDirName, StringComparison.OrdinalIgnoreCase) ||
+                                            localPath.Equals(currentDirName + "/", StringComparison.OrdinalIgnoreCase);
+
+                    if (isInternalAnchor && hasFragment)
                     {
-                        string fragment = uri.Fragment?.TrimStart('#');
+                        // Navigate to the fragment within the current document
                         await NavigateToFragmentAsync(fragment);
                         return;
                     }
 
-                    if (!File.Exists(file))
+                    // This is a link to another file
+                    if (!string.IsNullOrEmpty(localPath) && !isInternalAnchor)
                     {
-                        string currentDir = Path.GetDirectoryName(_file);
-                        FileInfo localFile = new(Path.Combine(currentDir, file));
-                        //string ext = null;
+                        string file = localPath.Replace('/', Path.DirectorySeparatorChar);
+                        string targetPath = null;
 
-                        // If the file has no extension, see if one exists with a markdown extension.  If so,
-                        // treat it as the file to open.
-                        //if (string.IsNullOrEmpty(Path.GetExtension(file)))
-                        //{
-                        //    ext = LanguageFactory. ContentTypeDefinition.MarkdownExtensions.FirstOrDefault(fx => File.Exists(file + fx));
-                        //}
-
-                        if (localFile.Exists)
+                        // Try to resolve the file path relative to the current document's directory
+                        string relativePath = Path.Combine(currentDir, file);
+                        if (File.Exists(relativePath))
                         {
-                            VS.Documents.OpenInPreviewTabAsync(localFile.FullName).FireAndForget();
+                            targetPath = Path.GetFullPath(relativePath);
                         }
-                    }
-                    else
-                    {
-                        VS.Documents.OpenInPreviewTabAsync(file).FireAndForget();
+                        else
+                        {
+                            // Try relative to the parent directory (where browsing-file-host is mapped)
+                            DirectoryInfo parentDir = new DirectoryInfo(currentDir).Parent;
+                            if (parentDir != null)
+                            {
+                                string parentRelativePath = Path.Combine(parentDir.FullName, file);
+                                if (File.Exists(parentRelativePath))
+                                {
+                                    targetPath = Path.GetFullPath(parentRelativePath);
+                                }
+                            }
+                        }
+
+                        // If still not found, try adding common markdown extensions
+                        if (targetPath == null && string.IsNullOrEmpty(Path.GetExtension(file)))
+                        {
+                            string[] mdExtensions = { ".md", ".markdown", ".mdown", ".mkd" };
+                            foreach (string ext in mdExtensions)
+                            {
+                                string withExt = Path.Combine(currentDir, file + ext);
+                                if (File.Exists(withExt))
+                                {
+                                    targetPath = Path.GetFullPath(withExt);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (targetPath != null)
+                        {
+                            VS.Documents.OpenInPreviewTabAsync(targetPath).FireAndForget();
+                        }
                     }
                 }
                 else if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
@@ -176,7 +212,33 @@ namespace MarkdownEditor2022
 
         private async Task NavigateToFragmentAsync(string fragmentId)
         {
-            await _browser.ExecuteScriptAsync($"document.getElementById(\"{fragmentId}\").scrollIntoView(true)");
+            if (string.IsNullOrEmpty(fragmentId))
+            {
+                return;
+            }
+
+            // Escape the fragment ID for use in JavaScript (handle special characters)
+            string escapedId = fragmentId.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+            // Try multiple selectors: getElementById, name attribute, and href anchor
+            // This handles footnotes (fn:xxx, fnref:xxx) and regular anchors
+            string script = $@"
+                (function() {{
+                    var el = document.getElementById('{escapedId}');
+                    if (!el) {{
+                        el = document.querySelector('[name=""{escapedId}""]');
+                    }}
+                    if (!el) {{
+                        el = document.querySelector('a[href=""#{escapedId}""]');
+                    }}
+                    if (el) {{
+                        el.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+                        return true;
+                    }}
+                    return false;
+                }})();";
+
+            await _browser.ExecuteScriptAsync(script);
         }
 
         /// <summary>
