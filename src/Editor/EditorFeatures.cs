@@ -72,6 +72,13 @@ namespace MarkdownEditor2022
                 return false;
             }
 
+            // Don't auto-close * at column 0 (start of line) - it's likely a bullet point
+            ITextSnapshotLine line = openingPoint.GetContainingLine();
+            if (openingPoint == line.Start)
+            {
+                return false;
+            }
+
             bool isPrevOk = true;
             bool isNextOk = true;
 
