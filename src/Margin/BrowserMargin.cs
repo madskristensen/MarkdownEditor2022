@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -26,16 +27,16 @@ namespace MarkdownEditor2022
         public bool Enabled => true;
         public Browser Browser { get; private set; }
 
-        public BrowserMargin(ITextView textview, string marginName)
+        public BrowserMargin(ITextView textview, IEditorFormatMapService formatMapService, string marginName)
         {
             _textView = textview;
             _marginName = marginName;
             _document = textview.TextBuffer.GetDocument();
             Visibility = AdvancedOptions.Instance.EnablePreviewWindow ? Visibility.Visible : Visibility.Collapsed;
 
-            SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+            SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
 
-            Browser = new Browser(textview.TextBuffer.GetFileName(), _document);
+            Browser = new Browser(textview.TextBuffer.GetFileName(), _document, textview as IWpfTextView, formatMapService);
             Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
 
             CreateMarginControls(Browser._browser);
@@ -47,6 +48,7 @@ namespace MarkdownEditor2022
                 InitializeAutoHideMonitorAsync().FireAndForget();
             }
         }
+
 
         private async Task InitializeAutoHideMonitorAsync()
         {
@@ -133,7 +135,7 @@ namespace MarkdownEditor2022
 
             WebView2 view = sender as WebView2;
 
-            view.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+            view.SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
 
             _document.Parsed += UpdateBrowser;
             _textView.LayoutChanged += UpdatePosition;
@@ -162,7 +164,7 @@ namespace MarkdownEditor2022
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(5, GridUnitType.Pixel) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(400, GridUnitType.Pixel), MinWidth = 150 }); // Initial width, will be updated
                 grid.RowDefinitions.Add(new RowDefinition());
-                grid.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+                grid.SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
 
                 Children.Add(grid);
 
@@ -179,9 +181,10 @@ namespace MarkdownEditor2022
                     Width = 5,
                     ResizeDirection = GridResizeDirection.Columns,
                     VerticalAlignment = VerticalAlignment.Stretch,
-                    HorizontalAlignment = HorizontalAlignment.Stretch
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Cursor = System.Windows.Input.Cursors.SizeWE,
+                    Style = CreateSplitterStyle()
                 };
-                splitter.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
                 splitter.DragStarted += (s, e) => isDragging = true;
                 splitter.DragCompleted += (s, e) =>
                 {
@@ -267,7 +270,7 @@ namespace MarkdownEditor2022
                 grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(5, GridUnitType.Pixel) });
                 grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(height, GridUnitType.Pixel) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition());
-                grid.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+                grid.SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
 
                 Children.Add(grid);
 
@@ -280,15 +283,36 @@ namespace MarkdownEditor2022
                     Height = 5,
                     ResizeDirection = GridResizeDirection.Rows,
                     VerticalAlignment = VerticalAlignment.Stretch,
-                    HorizontalAlignment = HorizontalAlignment.Stretch
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Cursor = System.Windows.Input.Cursors.SizeNS,
+                    Style = CreateSplitterStyle()
                 };
-                splitter.SetResourceReference(BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
                 splitter.DragCompleted += SplitterDragCompleted;
 
                 grid.Children.Add(splitter);
                 Grid.SetColumn(splitter, 0);
                 Grid.SetRow(splitter, 1);
             }
+        }
+
+        private static Style CreateSplitterStyle()
+        {
+            Style style = new(typeof(GridSplitter));
+
+            // Create a simple template that just uses a Border with the scrollbar background color
+            // This matches the editor margin/scrollbar track color
+            FrameworkElementFactory border = new(typeof(System.Windows.Controls.Border));
+            border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, EnvironmentColors.ScrollBarBackgroundBrushKey);
+
+            ControlTemplate template = new(typeof(GridSplitter))
+            {
+                VisualTree = border
+            };
+
+            style.Setters.Add(new Setter(Control.TemplateProperty, template));
+            style.Setters.Add(new Setter(Control.FocusVisualStyleProperty, null));
+
+            return style;
         }
 
         private void AdvancedOptions_Saved(AdvancedOptions options)

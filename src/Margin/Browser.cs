@@ -14,6 +14,8 @@ using System.Windows.Media;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
@@ -24,6 +26,8 @@ namespace MarkdownEditor2022
     {
         private readonly string _file;
         private readonly Document _document;
+        private readonly IWpfTextView _textView;
+        private readonly IEditorFormatMapService _formatMapService;
         private int _currentViewLine;
         private double _cachedPosition = 0,
                        _cachedHeight = 0,
@@ -39,25 +43,85 @@ namespace MarkdownEditor2022
         private static readonly ConcurrentQueue<StringBuilder> _stringBuilderPool = new();
         private static readonly Regex _languageRegex = new("\"language-(c#|C#|cs|dotnet)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _escapeRegex = new(@"[\\\r\n""]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex _bgColorRegex = new(@"background(-color)?\s*:\s*#[0-9a-fA-F]{3,8}\b", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
 
-        public Browser(string file, Document document)
+        public Browser(string file, Document document, IWpfTextView textView, IEditorFormatMapService formatMapService)
         {
             _file = file;
             _document = document;
+            _textView = textView;
+            _formatMapService = formatMapService;
             _currentViewLine = -1;
 
             _browser.Initialized += BrowserInitialized;
             _browser.NavigationStarting += BrowserNavigationStarting;
 
-            _browser.SetResourceReference(Control.BackgroundProperty, VsBrushes.ToolWindowBackgroundKey);
+            _browser.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
+
+            // Listen for VS theme changes to update preview colors
+            VSColorTheme.ThemeChanged += OnThemeChanged;
         }
 
         public void Dispose()
         {
+            VSColorTheme.ThemeChanged -= OnThemeChanged;
             _browser.Initialized -= BrowserInitialized;
             _browser.NavigationStarting -= BrowserNavigationStarting;
             _browser.Dispose();
+        }
+
+        private void OnThemeChanged(ThemeChangedEventArgs e)
+        {
+            // Clear template cache so new theme colors and CSS files are picked up
+            _templateCache.Clear();
+
+            // Force full page reload to load new CSS (not just innerHTML update)
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                await ForceFullRefreshAsync();
+            }).FireAndForget();
+        }
+
+        /// <summary>
+        /// Forces a full HTML reload including CSS, used when theme changes.
+        /// </summary>
+        private async Task ForceFullRefreshAsync()
+        {
+            try
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+                await _document.WaitForInitialParseAsync(timeoutCts.Token);
+
+                MarkdownDocument markdown = _document.Markdown;
+                if (markdown == null)
+                {
+                    return;
+                }
+
+                string html = await RenderHtmlDocumentAsync(markdown);
+
+                // Feature detection
+                bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 || html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                // Always do full navigation to reload CSS
+                string htmlTemplate = GetHtmlTemplate();
+                string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
+                html = htmlTemplate.Replace("[content]", html).Replace("[scripts]", scripts);
+                _browser.NavigateToString(html);
+            }
+            catch (OperationCanceledException)
+            {
+                // Timeout - ignore
+            }
+            catch (Exception ex)
+            {
+                await ex.LogAsync();
+            }
         }
 
         private void BrowserInitialized(object sender, EventArgs e)
@@ -471,7 +535,8 @@ namespace MarkdownEditor2022
 
         private string GetHtmlTemplate()
         {
-            bool useLightTheme = UseLightTheme();
+            (bool useLightTheme, string themeBgColor, string themeFgColor) = GetThemeColors();
+            string scrollbarColor = GetScrollbarColor(useLightTheme, themeBgColor);
             bool spellCheck = AdvancedOptions.Instance.EnableSpellCheck;
             string templateFileName = GetHtmlTemplateFileNameFromResource();
 
@@ -483,26 +548,43 @@ namespace MarkdownEditor2022
             long highlightTicks = SafeGetWriteTime(highlightSourcePath).Ticks;
             long prismTicks = SafeGetWriteTime(prismSourcePath).Ticks;
 
-            string cacheKey = string.Join("|", useLightTheme ? "light" : "dark", spellCheck ? "spell" : "plain", templateFileName, templateTicks, highlightSourcePath, highlightTicks, prismSourcePath, prismTicks);
+            // Include theme colors in cache key so template updates when VS theme changes
+            string cacheKey = string.Join("|", useLightTheme ? "light" : "dark", spellCheck ? "spell" : "plain", templateFileName, templateTicks, highlightSourcePath, highlightTicks, prismSourcePath, prismTicks, themeBgColor, themeFgColor, scrollbarColor);
 
             if (!_templateCache.TryGetValue(cacheKey, out string cachedTemplate))
             {
                 string templateRaw = File.ReadAllText(templateFileName);
                 string cssHighlight = File.ReadAllText(highlightSourcePath);
                 string cssPrism = File.ReadAllText(prismSourcePath);
+
+                // Strip hardcoded background colors from CSS so theme colors take effect
+                cssHighlight = _bgColorRegex.Replace(cssHighlight, "background-color:inherit");
+                cssPrism = _bgColorRegex.Replace(cssPrism, "background-color:inherit");
+
                 string css = cssHighlight + cssPrism;
                 string dirName = new FileInfo(_file).Directory.Name;
+
+                // Scrollbar styling for WebView2 (Chromium-based)
+                string scrollbarCss = $@"
+        ::-webkit-scrollbar {{ width: 14px; height: 14px; }}
+        ::-webkit-scrollbar-track {{ background: {themeBgColor}; }}
+        ::-webkit-scrollbar-thumb {{ background: {scrollbarColor}; border: 3px solid {themeBgColor}; border-radius: 7px; }}
+        ::-webkit-scrollbar-thumb:hover {{ background: {themeFgColor}80; }}
+        ::-webkit-scrollbar-corner {{ background: {themeBgColor}; }}";
+
                 string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
     <base href=""http://{_mappedBrowsingFileVirtualHostName}/{dirName}/"" />
     <style>
-        html, body {{margin: 0; padding:0; min-height: 100%; display: block}}
+        html, body {{margin: 0; padding:0; min-height: 100%; display: block; background-color: {themeBgColor}; color: {themeFgColor};}}
+        .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}
         #___markdown-content___ {{padding: 5px 5px 10px 5px; min-height: {_browser.ActualHeight - 15}px}}
         .markdown-alert {{padding: 1em 1em .5em 1em; margin-bottom: 1em; border-radius: 1em; background: #c0c0c022}}
         .markdown-alert-title {{font-weight: bold; color:inherit}}
         .markdown-alert-title svg {{margin-right: 5px; margin-top: -1px;}}
+        {scrollbarCss}
         {css}
     </style>";
                 string defaultContent = @"
@@ -514,7 +596,8 @@ namespace MarkdownEditor2022
                 string processed = templateRaw
                     .Replace("<head>", defaultHeadBeg)
                     .Replace("[content]", defaultContent)
-                    .Replace("[title]", "Markdown Preview");
+                    .Replace("[title]", "Markdown Preview")
+                    .Replace("<body>", $"<body style=\"background-color:{themeBgColor};color:{themeFgColor}\">");
                 _templateCache[cacheKey] = processed;
                 cachedTemplate = processed;
             }
@@ -525,17 +608,123 @@ namespace MarkdownEditor2022
             {
                 try { return File.GetLastWriteTimeUtc(path); } catch { return DateTime.MinValue; }
             }
-            static bool UseLightTheme()
+        }
+
+        private static string GetScrollbarColor(bool useLightTheme, string themeBgColor)
+        {
+            // Create a semi-transparent scrollbar thumb that contrasts with the background
+            // For light themes, use a darker color; for dark themes, use a lighter color
+            return useLightTheme ? "#00000040" : "#ffffff40";
+        }
+
+        private (bool useLightTheme, string bgColor, string fgColor) GetThemeColors()
+        {
+            Color bgColor = default;
+            Color fgColor = default;
+            bool foundBg = false;
+            bool foundFg = false;
+
+            // Use IEditorFormatMap to get the actual editor background color
+            // The background is typically in "TextView Background", not "Plain Text"
+            if (_formatMapService != null && _textView != null)
             {
-                bool light = AdvancedOptions.Instance.Theme == Theme.Light;
-                if (AdvancedOptions.Instance.Theme == Theme.Automatic)
+                try
                 {
-                    SolidColorBrush brush = (SolidColorBrush)Application.Current.Resources[CommonControlsColors.TextBoxBackgroundBrushKey];
-                    ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(brush.Color);
-                    light = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
+                    IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
+
+                    // Try multiple format map keys for background - "TextView Background" is the actual editor surface
+                    string[] bgKeys = { "TextView Background", "text", "Plain Text" };
+                    foreach (string key in bgKeys)
+                    {
+                        if (foundBg) break;
+                        ResourceDictionary props = formatMap.GetProperties(key);
+                        if (props != null)
+                        {
+                            if (props.Contains(EditorFormatDefinition.BackgroundBrushId) &&
+                                props[EditorFormatDefinition.BackgroundBrushId] is SolidColorBrush bgBrush &&
+                                bgBrush.Color.A > 0) // Ensure not transparent
+                            {
+                                bgColor = bgBrush.Color;
+                                foundBg = true;
+                            }
+                            else if (props.Contains(EditorFormatDefinition.BackgroundColorId) &&
+                                     props[EditorFormatDefinition.BackgroundColorId] is Color bgColorVal &&
+                                     bgColorVal.A > 0)
+                            {
+                                bgColor = bgColorVal;
+                                foundBg = true;
+                            }
+                        }
+                    }
+
+                    // Get foreground from Plain Text
+                    ResourceDictionary plainTextProps = formatMap.GetProperties("Plain Text");
+                    if (plainTextProps != null)
+                    {
+                        if (plainTextProps.Contains(EditorFormatDefinition.ForegroundBrushId) &&
+                            plainTextProps[EditorFormatDefinition.ForegroundBrushId] is SolidColorBrush fgBrush &&
+                            fgBrush.Color.A > 0)
+                        {
+                            fgColor = fgBrush.Color;
+                            foundFg = true;
+                        }
+                        else if (plainTextProps.Contains(EditorFormatDefinition.ForegroundColorId) &&
+                                 plainTextProps[EditorFormatDefinition.ForegroundColorId] is Color fgColorVal &&
+                                 fgColorVal.A > 0)
+                        {
+                            fgColor = fgColorVal;
+                            foundFg = true;
+                        }
+                    }
                 }
-                return light;
+                catch
+                {
+                    // Fall back to other methods if format map access fails
+                }
             }
+
+            // Try IWpfTextView.Background as second option (may have actual rendered background)
+            if (!foundBg && _textView?.Background is SolidColorBrush viewBgBrush && viewBgBrush.Color.A > 0)
+            {
+                bgColor = viewBgBrush.Color;
+                foundBg = true;
+            }
+
+            // Fallback to environment colors
+            if (!foundBg)
+            {
+                SolidColorBrush envBgBrush = Application.Current.Resources[EnvironmentColors.EnvironmentBackgroundBrushKey] as SolidColorBrush;
+                if (envBgBrush != null)
+                {
+                    bgColor = envBgBrush.Color;
+                    foundBg = true;
+                }
+            }
+
+            if (!foundFg)
+            {
+                SolidColorBrush envFgBrush = Application.Current.Resources[EnvironmentColors.PanelTextBrushKey] as SolidColorBrush;
+                if (envFgBrush != null)
+                {
+                    fgColor = envFgBrush.Color;
+                    foundFg = true;
+                }
+            }
+
+            // Ultimate fallback
+            if (!foundBg) bgColor = Colors.White;
+            if (!foundFg) fgColor = Colors.Black;
+
+            bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
+            if (AdvancedOptions.Instance.Theme == Theme.Automatic)
+            {
+                ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(bgColor);
+                useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
+            }
+
+            return (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
+
+            static string ColorToHex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
         }
 
         private static StringBuilder GetOrCreateStringBuilder()

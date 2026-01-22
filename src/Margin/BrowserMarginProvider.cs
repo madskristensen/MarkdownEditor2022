@@ -1,4 +1,5 @@
 using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 
@@ -12,6 +13,9 @@ namespace MarkdownEditor2022
     [TextViewRole(PredefinedTextViewRoles.Debuggable)] // This is to prevent the margin from loading in the diff view
     public class PreviewMarginVerticalProvider : IWpfTextViewMarginProvider
     {
+        [Import]
+        internal IEditorFormatMapService FormatMapService { get; set; }
+
         private BrowserMargin _browserMargin;
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
@@ -23,7 +27,7 @@ namespace MarkdownEditor2022
 
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, marginName: nameof(PreviewMarginVerticalProvider));
+            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, FormatMapService, marginName: nameof(PreviewMarginVerticalProvider));
 
             return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
         }
@@ -49,6 +53,9 @@ namespace MarkdownEditor2022
     [TextViewRole(PredefinedTextViewRoles.Debuggable)] // This is to prevent the margin from loading in the diff view
     public class PreviewMarginHorizontalProvider : IWpfTextViewMarginProvider
     {
+        [Import]
+        internal IEditorFormatMapService FormatMapService { get; set; }
+
         private BrowserMargin _browserMargin;
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
@@ -60,7 +67,7 @@ namespace MarkdownEditor2022
 
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, marginName: nameof(PreviewMarginHorizontalProvider));
+            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, FormatMapService, marginName: nameof(PreviewMarginHorizontalProvider));
 
             return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
         }
