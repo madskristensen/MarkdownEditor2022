@@ -12,8 +12,8 @@ namespace MarkdownEditor2022
     {
         private static readonly Regex _regex = new(@"#* (<a(.*)\sname=(?:""(?<url>[^""]+)""|'([^']+)').*?>(?<title>.*?)</a>|(?<title>[^\{]+)(\{#(?<url>[^\s]+)\}))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        // Regex to match characters that GitHub removes from anchors (keeps letters, numbers, spaces, and hyphens)
-        private static readonly Regex _githubSlugCleanup = new(@"[^\p{L}\p{N}\s-]", RegexOptions.Compiled);
+        // Regex to match characters that GitHub removes from anchors (keeps letters, numbers, spaces, hyphens, and underscores)
+        private static readonly Regex _githubSlugCleanup = new(@"[^\p{L}\p{N}\s_-]", RegexOptions.Compiled);
         private static readonly Regex _multipleSpaces = new(@"\s+", RegexOptions.Compiled);
 
         protected override Task InitializeCompletedAsync()
