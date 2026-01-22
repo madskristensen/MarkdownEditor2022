@@ -18,6 +18,12 @@ namespace MarkdownEditor2022
         public bool EnableEmojiIntelliSense { get; set; } = true;
 
         [Category("Editor")]
+        [DisplayName("File path IntelliSense")]
+        [Description("Determines if IntelliSense for file paths should be shown when typing links or images.")]
+        [DefaultValue(true)]
+        public bool EnableFilePathIntelliSense { get; set; } = true;
+
+        [Category("Editor")]
         [DisplayName("Format pasted URLs as links")]
         [Description("When enabled, pasting a URL from a browser will automatically format it as a markdown link [title](url). When disabled, only the raw URL is pasted.")]
         [DefaultValue(true)]

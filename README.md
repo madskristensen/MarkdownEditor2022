@@ -84,11 +84,61 @@ All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Color
 Advanced markdown extensions are supported to give more features to the syntax. This includes pipe tables, emoji, mathematics and a lot
 more.
 
+### Table formatting
+
+Use Visual Studio's standard format commands to align and beautify pipe tables:
+
+**Ctrl+K, Ctrl+D** formats all tables in the document.
+
+**Ctrl+K, Ctrl+F** formats tables within the current selection.
+
+The formatter aligns columns, pads cells to consistent widths, and respects column alignment markers (`:---`, `:---:`, `---:`).
+
+Before:
+
+```markdown
+| Name | Description | Price |
+|---|:---:|---:|
+| Widget | A small gadget | $9.99 |
+| Gizmo | A larger device | $24.95 |
+```
+
+After:
+
+```markdown
+| Name   | Description      |  Price |
+|--------|:----------------:|-------:|
+| Widget | A small gadget   |  $9.99 |
+| Gizmo  | A larger device  | $24.95 |
+```
+
 ### IntelliSense
+
+#### Emoji IntelliSense
 
 You get full IntelliSense for over 1,600 emoji and smiley characters.
 
 ![Markdown Emoji Intellisense](art/emoji.gif)
+
+#### File path IntelliSense
+
+When typing links `[text](` or images `![alt](`, IntelliSense provides completions for files and folders relative to the current document. This makes it easy to link to other markdown files or insert images without remembering exact paths.
+
+- Folders are shown with a folder icon and automatically append `/` for continued navigation
+- Typing `/` after selecting a folder retriggers completion to show contents of that folder
+- Image files are prioritized when completing image links `![]()`
+- Markdown files are prioritized when completing regular links `[]()`
+- Supports relative paths including `./` and `../` navigation
+
+#### Anchor IntelliSense
+
+Type `#` inside a link to get completions for all headings in the current document:
+
+```markdown
+[Jump to section](#heading-name)
+```
+
+Headings are shown with their level indicator (##, ###, etc.) and automatically generate GitHub-compatible anchor slugs. Duplicate headings are handled with `-1`, `-2` suffixes.
 
 ### Heading-based navigation
 

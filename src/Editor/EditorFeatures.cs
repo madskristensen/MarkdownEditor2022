@@ -62,6 +62,7 @@ namespace MarkdownEditor2022
     [BracePair('*', '*')]
     [BracePair(':', ':')]
     [ContentType(Constants.LanguageName)]
+    [Order(Before = "default")]
     [ProvideBraceCompletion(Constants.LanguageName)]
     internal sealed class BraceCompletion : BraceCompletionBase
     {
