@@ -53,7 +53,7 @@ namespace MarkdownEditor2022
 
         private static IEnumerable<Table> GetTablesToFormat(DocumentView docView, Document document, bool formatSelection)
         {
-            List<Table> allTables = document.Markdown.Descendants<Table>().ToList();
+            List<Table> allTables = [.. document.Markdown.Descendants<Table>()];
 
             if (!formatSelection)
             {

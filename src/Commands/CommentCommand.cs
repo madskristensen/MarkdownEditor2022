@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Markdig.Syntax;
 using Microsoft.VisualStudio;
@@ -34,7 +34,7 @@ namespace MarkdownEditor2022
 
         private static void Comment(DocumentView doc)
         {
-            List<SnapshotSpan> list = new();
+            List<SnapshotSpan> list = [];
 
             foreach (SnapshotSpan span in doc.TextView.Selection.SelectedSpans.Reverse())
             {

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Windows.Threading;
 using Microsoft.VisualStudio.Shell.Interop;
 
 namespace MarkdownEditor2022
@@ -18,9 +19,13 @@ namespace MarkdownEditor2022
         private volatile bool _isDisposed;
 
         // Track visible auto-hide frames
-        private readonly HashSet<IVsWindowFrame> _visibleAutoHideFrames = new();
+        private readonly HashSet<IVsWindowFrame> _visibleAutoHideFrames = [];
 
-        private readonly List<IAutoHideWindowListener> _listeners = new();
+        private readonly List<IAutoHideWindowListener> _listeners = [];
+
+        // Timer to periodically check if tracked frames have been docked
+        // This is needed because VS doesn't fire events when frame mode changes
+        private DispatcherTimer _frameModeCheckTimer;
 
         /// <summary>
         /// Interface for listeners that want to be notified of auto-hide window state changes.
@@ -116,6 +121,92 @@ namespace MarkdownEditor2022
             }
         }
 
+        /// <summary>
+        /// Starts a timer to periodically check if tracked frames have changed mode (e.g., docked).
+        /// VS doesn't fire events when frame mode changes, so we need to poll.
+        /// </summary>
+        private void StartFrameModeCheckTimer()
+        {
+            if (_frameModeCheckTimer != null)
+            {
+                return; // Already running
+            }
+
+            _frameModeCheckTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(250)
+            };
+            _frameModeCheckTimer.Tick += OnFrameModeCheckTimerTick;
+            _frameModeCheckTimer.Start();
+        }
+
+        /// <summary>
+        /// Stops the frame mode check timer when no frames are being tracked.
+        /// </summary>
+        private void StopFrameModeCheckTimer()
+        {
+            if (_frameModeCheckTimer != null)
+            {
+                _frameModeCheckTimer.Stop();
+                _frameModeCheckTimer.Tick -= OnFrameModeCheckTimerTick;
+                _frameModeCheckTimer = null;
+            }
+        }
+
+        /// <summary>
+        /// Timer callback that checks if any tracked frames have changed from auto-hide to another mode.
+        /// </summary>
+        private void OnFrameModeCheckTimerTick(object sender, EventArgs e)
+        {
+            if (_isDisposed)
+            {
+                StopFrameModeCheckTimer();
+                return;
+            }
+
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            // Check if any of our tracked frames are no longer in auto-hide mode
+            List<IVsWindowFrame> framesToRemove = null;
+
+            lock (_lock)
+            {
+                foreach (IVsWindowFrame frame in _visibleAutoHideFrames)
+                {
+                    if (!IsAutoHideToolWindow(frame))
+                    {
+                        framesToRemove ??= [];
+                        framesToRemove.Add(frame);
+                    }
+                }
+            }
+
+            if (framesToRemove != null)
+            {
+                bool shouldNotify;
+
+                lock (_lock)
+                {
+                    foreach (IVsWindowFrame frame in framesToRemove)
+                    {
+                        _visibleAutoHideFrames.Remove(frame);
+                    }
+                    shouldNotify = _visibleAutoHideFrames.Count == 0;
+
+                    // Stop timer if no more frames to track
+                    if (_visibleAutoHideFrames.Count == 0)
+                    {
+                        StopFrameModeCheckTimer();
+                    }
+                }
+
+                if (shouldNotify)
+                {
+                    NotifyListeners(false);
+                }
+            }
+        }
+
         private void NotifyListeners(bool anyVisible)
         {
             if (_isDisposed)
@@ -126,7 +217,7 @@ namespace MarkdownEditor2022
             IAutoHideWindowListener[] listenersCopy;
             lock (_lock)
             {
-                listenersCopy = _listeners.ToArray();
+                listenersCopy = [.. _listeners];
             }
 
             foreach (IAutoHideWindowListener listener in listenersCopy)
@@ -199,13 +290,20 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            bool wasVisible;
+            bool shouldNotify = false;
             lock (_lock)
             {
-                wasVisible = _visibleAutoHideFrames.Remove(frame);
+                if (_visibleAutoHideFrames.Remove(frame))
+                {
+                    shouldNotify = _visibleAutoHideFrames.Count == 0;
+                    if (_visibleAutoHideFrames.Count == 0)
+                    {
+                        StopFrameModeCheckTimer();
+                    }
+                }
             }
 
-            if (wasVisible && !IsAnyAutoHideWindowVisible)
+            if (shouldNotify)
             {
                 NotifyListeners(false);
             }
@@ -222,7 +320,7 @@ namespace MarkdownEditor2022
             ThreadHelper.ThrowIfNotOnUIThread();
 
             bool shouldNotify = false;
-            bool anyVisible;
+            bool startTimer = false;
 
             lock (_lock)
             {
@@ -238,6 +336,7 @@ namespace MarkdownEditor2022
                     {
                         // First auto-hide window became visible
                         shouldNotify = _visibleAutoHideFrames.Count == 1;
+                        startTimer = _visibleAutoHideFrames.Count == 1;
                     }
                 }
                 else
@@ -247,14 +346,22 @@ namespace MarkdownEditor2022
                     {
                         // Last auto-hide window became hidden
                         shouldNotify = _visibleAutoHideFrames.Count == 0;
+                        if (_visibleAutoHideFrames.Count == 0)
+                        {
+                            StopFrameModeCheckTimer();
+                        }
                     }
                 }
-                anyVisible = _visibleAutoHideFrames.Count > 0;
+            }
+
+            if (startTimer)
+            {
+                StartFrameModeCheckTimer();
             }
 
             if (shouldNotify)
             {
-                NotifyListeners(anyVisible);
+                NotifyListeners(_visibleAutoHideFrames.Count > 0);
             }
         }
 
@@ -271,7 +378,7 @@ namespace MarkdownEditor2022
             ThreadHelper.ThrowIfNotOnUIThread();
 
             bool shouldNotify = false;
-            bool anyVisible;
+            bool startTimer = false;
 
             lock (_lock)
             {
@@ -287,6 +394,7 @@ namespace MarkdownEditor2022
                     {
                         // First auto-hide window became visible
                         shouldNotify = _visibleAutoHideFrames.Count == 1;
+                        startTimer = _visibleAutoHideFrames.Count == 1;
                     }
                 }
                 else
@@ -296,14 +404,22 @@ namespace MarkdownEditor2022
                     {
                         // Last auto-hide window became hidden
                         shouldNotify = _visibleAutoHideFrames.Count == 0;
+                        if (_visibleAutoHideFrames.Count == 0)
+                        {
+                            StopFrameModeCheckTimer();
+                        }
                     }
                 }
-                anyVisible = _visibleAutoHideFrames.Count > 0;
+            }
+
+            if (startTimer)
+            {
+                StartFrameModeCheckTimer();
             }
 
             if (shouldNotify)
             {
-                NotifyListeners(anyVisible);
+                NotifyListeners(_visibleAutoHideFrames.Count > 0);
             }
         }
 
@@ -320,6 +436,9 @@ namespace MarkdownEditor2022
 
             // Set disposed flag first to stop all event processing immediately
             _isDisposed = true;
+
+            // Stop the timer
+            StopFrameModeCheckTimer();
 
             // Unsubscribe from VS events first to prevent any more callbacks
             if (_uiShell != null && _cookie != 0)

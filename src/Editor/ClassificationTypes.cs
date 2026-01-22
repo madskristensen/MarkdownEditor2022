@@ -108,10 +108,10 @@ namespace MarkdownEditor2022
     {
         public MarkdownStrikethroughFormatDefinition()
         {
-            TextDecorations = new TextDecorationCollection()
-            {
+            TextDecorations =
+            [
                 new TextDecoration(){ Location = TextDecorationLocation.Strikethrough }
-            };
+            ];
             DisplayName = "Markdown Strikethrough";
         }
     }
@@ -241,10 +241,10 @@ namespace MarkdownEditor2022
     {
         public MarkdownLinkFormatDefinition()
         {
-            TextDecorations = new TextDecorationCollection()
-            {
+            TextDecorations =
+            [
                 new TextDecoration(){ Location = TextDecorationLocation.Underline, PenOffset = 2 }
-            };
+            ];
             DisplayName = "Markdown Link";
         }
     }

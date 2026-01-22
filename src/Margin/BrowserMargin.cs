@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.VisualStudio.PlatformUI;
@@ -90,8 +89,10 @@ namespace MarkdownEditor2022
             }
 
             // Must update UI on dispatcher thread
-            _ = Browser._browser.Dispatcher.InvokeAsync(() =>
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
                 if (anyAutoHideWindowVisible)
                 {
                     // Auto-hide window is sliding in - hide preview to prevent overlap

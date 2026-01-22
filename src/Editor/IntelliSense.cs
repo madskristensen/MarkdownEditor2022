@@ -334,7 +334,7 @@ namespace MarkdownEditor2022
                 || fullTypedPath == ".."
                 || fullTypedPath.All(c => c == '.' || c == '/');
 
-            List<CompletionItem> items = new();
+            List<CompletionItem> items = [];
 
             try
             {

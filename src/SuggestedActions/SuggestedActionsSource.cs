@@ -34,7 +34,7 @@ namespace MarkdownEditor2022
             int selectionEnd = _view.Selection.End.Position.Position;
             SnapshotSpan SelectedSpan = new(span.Snapshot, selectionStart, selectionEnd - selectionStart);
 
-            List<SuggestedActionSet> list = new();
+            List<SuggestedActionSet> list = [];
 
             if (!_view.Selection.IsEmpty && startLine == endLine)
             {
