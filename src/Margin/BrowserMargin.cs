@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.VisualStudio.PlatformUI;
@@ -8,7 +9,7 @@ using Microsoft.Web.WebView2.Wpf;
 
 namespace MarkdownEditor2022
 {
-    public class BrowserMargin : DockPanel, IWpfTextViewMargin
+    public class BrowserMargin : DockPanel, IWpfTextViewMargin, AutoHideWindowMonitor.IAutoHideWindowListener
     {
         private readonly Document _document;
         private readonly ITextView _textView;
@@ -17,6 +18,7 @@ namespace MarkdownEditor2022
         private bool _isDisposed;
         private DateTime _lastEdit;
         private static readonly Debouncer _debouncer = new(150); // Reduced debounce time for better responsiveness
+        private bool _isPreviewHiddenByAutoHide;
 
         public FrameworkElement VisualElement => this;
         public double MarginSize => 400; // Initial size, actual size is calculated from percentage
@@ -36,6 +38,21 @@ namespace MarkdownEditor2022
             Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
 
             CreateMarginControls(Browser._browser);
+
+            // Subscribe to auto-hide window monitor to hide preview when auto-hide tool windows slide in
+            // This mitigates the WebView2 airspace issue where HWND-based controls overlap WPF content
+            if (AdvancedOptions.Instance.AutoHideOnFocusLoss)
+            {
+                InitializeAutoHideMonitorAsync().FireAndForget();
+            }
+        }
+
+        private async Task InitializeAutoHideMonitorAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            AutoHideWindowMonitor monitor = AutoHideWindowMonitor.GetInstance();
+            monitor.Initialize();
+            monitor.AddListener(this);
         }
 
         public void Dispose()
@@ -52,10 +69,48 @@ namespace MarkdownEditor2022
             VSColorTheme.ThemeChanged -= OnThemeChange;
             AdvancedOptions.Saved -= AdvancedOptions_Saved;
 
+            // Unsubscribe from auto-hide monitor
+            AutoHideWindowMonitor.GetInstance().RemoveListener(this);
+
             Browser.Dispose();
             _debouncer?.Dispose();
 
             _isDisposed = true;
+        }
+
+        /// <summary>
+        /// Called when an auto-hide tool window's visibility changes.
+        /// Hides the WebView2 preview when auto-hide windows slide into view to prevent overlap.
+        /// </summary>
+        public void OnAutoHideWindowVisibilityChanged(bool anyAutoHideWindowVisible)
+        {
+            if (!AdvancedOptions.Instance.AutoHideOnFocusLoss)
+            {
+                return;
+            }
+
+            // Must update UI on dispatcher thread
+            _ = Browser._browser.Dispatcher.InvokeAsync(() =>
+            {
+                if (anyAutoHideWindowVisible)
+                {
+                    // Auto-hide window is sliding in - hide preview to prevent overlap
+                    if (Browser._browser.Visibility == Visibility.Visible)
+                    {
+                        _isPreviewHiddenByAutoHide = true;
+                        Browser._browser.Visibility = Visibility.Hidden;
+                    }
+                }
+                else
+                {
+                    // All auto-hide windows are hidden - restore preview
+                    if (_isPreviewHiddenByAutoHide)
+                    {
+                        _isPreviewHiddenByAutoHide = false;
+                        Browser._browser.Visibility = Visibility.Visible;
+                    }
+                }
+            });
         }
 
         private void OnBrowserInitCompleted(object sender, CoreWebView2InitializationCompletedEventArgs e)

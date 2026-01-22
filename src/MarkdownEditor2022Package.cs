@@ -48,6 +48,17 @@ namespace MarkdownEditor2022
             await FormatTableCommand.InitializeAsync();
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Dispose the auto-hide window monitor to stop event processing during shutdown
+                AutoHideWindowMonitor.GetInstance().Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
         public static bool IsActiveDocumentMarkdown()
         {
             string ext = Path.GetExtension(_dte?.ActiveDocument?.FullName ?? "").ToLowerInvariant();

@@ -55,6 +55,12 @@ namespace MarkdownEditor2022
         public bool EnableScrollSync { get; set; } = true;
 
         [Category("Preview Window")]
+        [DisplayName("Auto-hide for tool windows")]
+        [Description("Automatically hides the preview window when auto-hide tool windows slide into view. This works around a display issue where the preview overlaps tool windows.")]
+        [DefaultValue(false)]
+        public bool AutoHideOnFocusLoss { get; set; } = false;
+
+        [Category("Preview Window")]
         [DisplayName("Dark theme support")]
         [Description("Determines if the preview window should render in dark mode when a dark Visual Studio theme is in use.")]
         [DefaultValue(Theme.Automatic)]
