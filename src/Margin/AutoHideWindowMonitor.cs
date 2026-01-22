@@ -311,6 +311,21 @@ namespace MarkdownEditor2022
 
         public void OnFrameIsVisibleChanged(IVsWindowFrame frame, bool newIsVisible)
         {
+            HandleFrameVisibilityChange(frame, newIsVisible);
+        }
+
+        public void OnFrameIsOnScreenChanged(IVsWindowFrame frame, bool newIsOnScreen)
+        {
+            // Also handle on-screen changes - this is more reliable for auto-hide windows
+            // that physically slide in/out of view
+            HandleFrameVisibilityChange(frame, newIsOnScreen);
+        }
+
+        /// <summary>
+        /// Common handler for frame visibility/on-screen changes.
+        /// </summary>
+        private void HandleFrameVisibilityChange(IVsWindowFrame frame, bool isNowVisible)
+        {
             // Skip processing during shutdown to avoid COM calls on disposed objects
             if (_isDisposed)
             {
@@ -324,7 +339,7 @@ namespace MarkdownEditor2022
 
             lock (_lock)
             {
-                if (newIsVisible)
+                if (isNowVisible)
                 {
                     // Only track auto-hide tool windows when they become visible
                     if (!IsAutoHideToolWindow(frame))
@@ -361,65 +376,7 @@ namespace MarkdownEditor2022
 
             if (shouldNotify)
             {
-                NotifyListeners(_visibleAutoHideFrames.Count > 0);
-            }
-        }
-
-        public void OnFrameIsOnScreenChanged(IVsWindowFrame frame, bool newIsOnScreen)
-        {
-            // Skip processing during shutdown to avoid COM calls on disposed objects
-            if (_isDisposed)
-            {
-                return;
-            }
-
-            // Also handle on-screen changes - this is more reliable for auto-hide windows
-            // that physically slide in/out of view
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            bool shouldNotify = false;
-            bool startTimer = false;
-
-            lock (_lock)
-            {
-                if (newIsOnScreen)
-                {
-                    // Only track auto-hide tool windows when they come on screen
-                    if (!IsAutoHideToolWindow(frame))
-                    {
-                        return;
-                    }
-
-                    if (_visibleAutoHideFrames.Add(frame))
-                    {
-                        // First auto-hide window became visible
-                        shouldNotify = _visibleAutoHideFrames.Count == 1;
-                        startTimer = _visibleAutoHideFrames.Count == 1;
-                    }
-                }
-                else
-                {
-                    // Always try to remove - the frame mode may have changed since it came on screen
-                    if (_visibleAutoHideFrames.Remove(frame))
-                    {
-                        // Last auto-hide window became hidden
-                        shouldNotify = _visibleAutoHideFrames.Count == 0;
-                        if (_visibleAutoHideFrames.Count == 0)
-                        {
-                            StopFrameModeCheckTimer();
-                        }
-                    }
-                }
-            }
-
-            if (startTimer)
-            {
-                StartFrameModeCheckTimer();
-            }
-
-            if (shouldNotify)
-            {
-                NotifyListeners(_visibleAutoHideFrames.Count > 0);
+                NotifyListeners(isNowVisible);
             }
         }
 

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.VisualStudio.PlatformUI;
@@ -18,6 +19,7 @@ namespace MarkdownEditor2022
         private DateTime _lastEdit;
         private static readonly Debouncer _debouncer = new(150); // Reduced debounce time for better responsiveness
         private bool _isPreviewHiddenByAutoHide;
+        private bool _isRegisteredWithAutoHideMonitor;
 
         public FrameworkElement VisualElement => this;
         public double MarginSize => 400; // Initial size, actual size is calculated from percentage
@@ -52,6 +54,7 @@ namespace MarkdownEditor2022
             AutoHideWindowMonitor monitor = AutoHideWindowMonitor.GetInstance();
             monitor.Initialize();
             monitor.AddListener(this);
+            _isRegisteredWithAutoHideMonitor = true;
         }
 
         public void Dispose()
@@ -68,8 +71,12 @@ namespace MarkdownEditor2022
             VSColorTheme.ThemeChanged -= OnThemeChange;
             AdvancedOptions.Saved -= AdvancedOptions_Saved;
 
-            // Unsubscribe from auto-hide monitor
-            AutoHideWindowMonitor.GetInstance().RemoveListener(this);
+            // Unsubscribe from auto-hide monitor only if we registered
+            if (_isRegisteredWithAutoHideMonitor)
+            {
+                AutoHideWindowMonitor.GetInstance().RemoveListener(this);
+                _isRegisteredWithAutoHideMonitor = false;
+            }
 
             Browser.Dispose();
             _debouncer?.Dispose();
@@ -83,15 +90,18 @@ namespace MarkdownEditor2022
         /// </summary>
         public void OnAutoHideWindowVisibilityChanged(bool anyAutoHideWindowVisible)
         {
-            if (!AdvancedOptions.Instance.AutoHideOnFocusLoss)
+            if (_isDisposed || !AdvancedOptions.Instance.AutoHideOnFocusLoss)
             {
                 return;
             }
 
             // Must update UI on dispatcher thread
-            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = Browser._browser.Dispatcher.InvokeAsync(() =>
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (_isDisposed)
+                {
+                    return;
+                }
 
                 if (anyAutoHideWindowVisible)
                 {
