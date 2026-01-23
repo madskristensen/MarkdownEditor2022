@@ -113,7 +113,10 @@ namespace MarkdownEditor2022
             _browser.Initialized -= BrowserInitialized;
             _browser.NavigationStarting -= BrowserNavigationStarting;
 
-            _browser.CoreWebView2?.WebMessageReceived -= OnWebMessageReceived;
+            if (_browser.CoreWebView2 != null)
+            {
+                _browser.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+            }
 
             _browser.Dispose();
         }
