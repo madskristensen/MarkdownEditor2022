@@ -55,6 +55,12 @@ namespace MarkdownEditor2022
         public bool EnableScrollSync { get; set; } = true;
 
         [Category("Preview Window")]
+        [DisplayName("Enable click sync")]
+        [Description("When enabled, clicking on an element in the preview window will navigate the editor to the corresponding line in the markdown source.")]
+        [DefaultValue(true)]
+        public bool EnablePreviewClickSync { get; set; } = true;
+
+        [Category("Preview Window")]
         [DisplayName("Auto-hide for tool windows")]
         [Description("Automatically hides the preview window when auto-hide tool windows slide into view. This works around a display issue where the preview overlaps tool windows.")]
         [DefaultValue(false)]

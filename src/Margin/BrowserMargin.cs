@@ -34,10 +34,11 @@ namespace MarkdownEditor2022
             _document = textview.TextBuffer.GetDocument();
             Visibility = AdvancedOptions.Instance.EnablePreviewWindow ? Visibility.Visible : Visibility.Collapsed;
 
-            SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
+            SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
             Browser = new Browser(textview.TextBuffer.GetFileName(), _document, textview as IWpfTextView, formatMapService);
             Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
+            Browser.LineNavigationRequested += OnLineNavigationRequested;
 
             CreateMarginControls(Browser._browser);
 
@@ -67,6 +68,7 @@ namespace MarkdownEditor2022
             }
 
             Browser._browser.CoreWebView2InitializationCompleted -= OnBrowserInitCompleted;
+            Browser.LineNavigationRequested -= OnLineNavigationRequested;
             _document.Parsed -= UpdateBrowser;
             _textView.LayoutChanged -= UpdatePosition;
             _textView.TextBuffer.Changed -= OnTextBufferChange;
@@ -135,7 +137,7 @@ namespace MarkdownEditor2022
 
             WebView2 view = sender as WebView2;
 
-            view.SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
+            view.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
             _document.Parsed += UpdateBrowser;
             _textView.LayoutChanged += UpdatePosition;
@@ -144,6 +146,57 @@ namespace MarkdownEditor2022
             VSColorTheme.ThemeChanged += OnThemeChange;
 
             //UpdateBrowser(_document);
+        }
+
+        /// <summary>
+        /// Handles line navigation requests from the preview browser.
+        /// Navigates the editor to the specified line when the user clicks in the preview.
+        /// </summary>
+        private void OnLineNavigationRequested(object sender, int lineNumber)
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                if (_isDisposed || _textView.IsClosed)
+                {
+                    return;
+                }
+
+                try
+                {
+                    ITextSnapshot snapshot = _textView.TextSnapshot;
+
+                    // Convert 1-based line number to 0-based
+                    int targetLine = lineNumber - 1;
+
+                    if (targetLine < 0 || targetLine >= snapshot.LineCount)
+                    {
+                        return;
+                    }
+
+                    ITextSnapshotLine line = snapshot.GetLineFromLineNumber(targetLine);
+                    SnapshotPoint point = line.Start;
+
+                    // Move the caret to the target line
+                    _textView.Caret.MoveTo(point);
+
+                    // Make sure the line is visible
+                    _textView.ViewScroller.EnsureSpanVisible(
+                        new SnapshotSpan(point, point),
+                        EnsureSpanVisibleOptions.AlwaysCenter);
+
+                    // Set focus to the editor
+                    if (_textView is IWpfTextView wpfTextView)
+                    {
+                        wpfTextView.VisualElement.Focus();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await ex.LogAsync();
+                }
+            }).FireAndForget();
         }
 
         private void CreateMarginControls(WebView2 view)
@@ -164,7 +217,7 @@ namespace MarkdownEditor2022
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(5, GridUnitType.Pixel) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(400, GridUnitType.Pixel), MinWidth = 150 }); // Initial width, will be updated
                 grid.RowDefinitions.Add(new RowDefinition());
-                grid.SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
+                grid.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
                 Children.Add(grid);
 
@@ -270,7 +323,7 @@ namespace MarkdownEditor2022
                 grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(5, GridUnitType.Pixel) });
                 grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(height, GridUnitType.Pixel) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition());
-                grid.SetResourceReference(BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
+                grid.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
                 Children.Add(grid);
 

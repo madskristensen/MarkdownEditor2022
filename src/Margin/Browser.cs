@@ -38,6 +38,22 @@ namespace MarkdownEditor2022
 
         public readonly WebView2 _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
 
+        /// <summary>
+        /// Raised when the user clicks on an element in the preview and navigation to the source line is requested.
+        /// The event argument is the 1-based line number from the pragma-line-X id.
+        /// </summary>
+        public event EventHandler<int> LineNavigationRequested;
+
+        /// <summary>
+        /// Timestamp of the last click-to-navigate action. Used to suppress scroll sync briefly after navigation.
+        /// </summary>
+        private DateTime _lastClickNavigationTime = DateTime.MinValue;
+
+        /// <summary>
+        /// Duration to suppress scroll sync after a click navigation to prevent the preview from scrolling away.
+        /// </summary>
+        private static readonly TimeSpan ScrollSyncSuppressionDuration = TimeSpan.FromMilliseconds(1000);
+
         // Cache StringBuilder and Regex for better performance
         private static StringWriter _htmlWriterStatic;
         private static readonly ConcurrentQueue<StringBuilder> _stringBuilderPool = new();
@@ -57,7 +73,8 @@ namespace MarkdownEditor2022
             _browser.Initialized += BrowserInitialized;
             _browser.NavigationStarting += BrowserNavigationStarting;
 
-            _browser.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.EnvironmentBackgroundBrushKey);
+            // Set the WPF Background to match VS theme (WebView2 DefaultBackgroundColor is set after init)
+            _browser.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
             // Listen for VS theme changes to update preview colors
             VSColorTheme.ThemeChanged += OnThemeChanged;
@@ -68,6 +85,12 @@ namespace MarkdownEditor2022
             VSColorTheme.ThemeChanged -= OnThemeChanged;
             _browser.Initialized -= BrowserInitialized;
             _browser.NavigationStarting -= BrowserNavigationStarting;
+
+            if (_browser.CoreWebView2 != null)
+            {
+                _browser.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+            }
+
             _browser.Dispose();
         }
 
@@ -80,6 +103,14 @@ namespace MarkdownEditor2022
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                // Update the WebView2 default background color to match the new theme
+                if (_browser.CoreWebView2 != null)
+                {
+                    Color bgColor = GetPreviewBackgroundColor();
+                    _browser.DefaultBackgroundColor = System.Drawing.Color.FromArgb(bgColor.A, bgColor.R, bgColor.G, bgColor.B);
+                }
+
                 await ForceFullRefreshAsync();
             }).FireAndForget();
         }
@@ -149,6 +180,14 @@ namespace MarkdownEditor2022
                 CoreWebView2Environment webView2Environment = await CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: null);
 
                 await _browser.EnsureCoreWebView2Async(webView2Environment);
+
+                // Set the default background color to match the editor/tool window background
+                // This prevents white flash before content loads
+                Color bgColor = GetPreviewBackgroundColor();
+                _browser.DefaultBackgroundColor = System.Drawing.Color.FromArgb(bgColor.A, bgColor.R, bgColor.G, bgColor.B);
+
+                // Subscribe to messages from JavaScript for click-to-sync feature
+                _browser.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
             }
 
             void SetVirtualFolderMapping()
@@ -209,7 +248,7 @@ namespace MarkdownEditor2022
                     string currentDirName = new DirectoryInfo(currentDir).Name;
 
                     // If the local path is just the current directory name (or empty), it's an internal anchor
-                    bool isInternalAnchor = string.IsNullOrEmpty(localPath) || 
+                    bool isInternalAnchor = string.IsNullOrEmpty(localPath) ||
                                             localPath.Equals(currentDirName, StringComparison.OrdinalIgnoreCase) ||
                                             localPath.Equals(currentDirName + "/", StringComparison.OrdinalIgnoreCase);
 
@@ -337,6 +376,13 @@ namespace MarkdownEditor2022
 
         public Task UpdatePositionAsync(int line, bool isTyping)
         {
+            // Suppress scroll sync briefly after a click-to-navigate action
+            // to prevent the preview from scrolling away from where the user clicked
+            if (DateTime.UtcNow - _lastClickNavigationTime < ScrollSyncSuppressionDuration)
+            {
+                return Task.CompletedTask;
+            }
+
             return _currentViewLine == line
                 ? Task.CompletedTask
                 : ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
@@ -592,12 +638,15 @@ namespace MarkdownEditor2022
         [content]
     </div>
     [scripts]
+    [clicksyncscript]
     ";
+                string clickSyncScript = AdvancedOptions.Instance.EnablePreviewClickSync ? GetClickToSyncScript() : string.Empty;
                 string processed = templateRaw
                     .Replace("<head>", defaultHeadBeg)
                     .Replace("[content]", defaultContent)
                     .Replace("[title]", "Markdown Preview")
-                    .Replace("<body>", $"<body style=\"background-color:{themeBgColor};color:{themeFgColor}\">");
+                    .Replace("<body>", $"<body style=\"background-color:{themeBgColor};color:{themeFgColor}\">")
+                    .Replace("[clicksyncscript]", clickSyncScript);
                 _templateCache[cacheKey] = processed;
                 cachedTemplate = processed;
             }
@@ -727,6 +776,78 @@ namespace MarkdownEditor2022
             static string ColorToHex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
         }
 
+        /// <summary>
+        /// Gets the Visual Studio background color that should be used for the preview.
+        /// Uses the editor background if available, falls back to environment colors.
+        /// </summary>
+        private Color GetPreviewBackgroundColor()
+        {
+            // Try to get the editor background color from the format map
+            if (_formatMapService != null && _textView != null)
+            {
+                try
+                {
+                    IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
+                    string[] bgKeys = { "TextView Background", "text", "Plain Text" };
+                    foreach (string key in bgKeys)
+                    {
+                        ResourceDictionary props = formatMap.GetProperties(key);
+                        if (props != null)
+                        {
+                            if (props.Contains(EditorFormatDefinition.BackgroundBrushId) &&
+                                props[EditorFormatDefinition.BackgroundBrushId] is SolidColorBrush bgBrush &&
+                                bgBrush.Color.A > 0)
+                            {
+                                return bgBrush.Color;
+                            }
+                            else if (props.Contains(EditorFormatDefinition.BackgroundColorId) &&
+                                     props[EditorFormatDefinition.BackgroundColorId] is Color bgColorVal &&
+                                     bgColorVal.A > 0)
+                            {
+                                return bgColorVal;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Fall through to other methods
+                }
+            }
+
+            // Try IWpfTextView.Background
+            if (_textView?.Background is SolidColorBrush viewBgBrush && viewBgBrush.Color.A > 0)
+            {
+                return viewBgBrush.Color;
+            }
+
+            // Try VS theme service
+            try
+            {
+                System.Drawing.Color themeColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
+                if (themeColor != System.Drawing.Color.Empty && themeColor.A > 0)
+                {
+                    return Color.FromArgb(themeColor.A, themeColor.R, themeColor.G, themeColor.B);
+                }
+            }
+            catch
+            {
+                // Fall through
+            }
+
+            // Fallback to WPF resource lookup
+            if (Application.Current?.Resources != null)
+            {
+                SolidColorBrush envBgBrush = Application.Current.Resources[EnvironmentColors.ToolWindowBackgroundBrushKey] as SolidColorBrush;
+                if (envBgBrush != null)
+                {
+                    return envBgBrush.Color;
+                }
+            }
+
+            return Colors.White;
+        }
+
         private static StringBuilder GetOrCreateStringBuilder()
         {
             if (_stringBuilderPool.TryDequeue(out StringBuilder sb))
@@ -772,6 +893,120 @@ namespace MarkdownEditor2022
                 dir = dir.Parent;
             } while (dir != null);
             return fallbackFileName;
+        }
+
+        private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            try
+            {
+                string message = e.TryGetWebMessageAsString();
+                if (string.IsNullOrEmpty(message))
+                {
+                    return;
+                }
+
+                // Expected format: "navigate:123" where 123 is the line number
+                if (message.StartsWith("navigate:", StringComparison.OrdinalIgnoreCase))
+                {
+                    string lineStr = message.Substring("navigate:".Length);
+                    if (int.TryParse(lineStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int lineNumber) && lineNumber > 0)
+                    {
+                        // Record the time of this navigation to suppress scroll sync briefly
+                        _lastClickNavigationTime = DateTime.UtcNow;
+                        LineNavigationRequested?.Invoke(this, lineNumber);
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore malformed messages
+            }
+        }
+
+        /// <summary>
+        /// Gets the JavaScript click handler script for preview-to-editor sync.
+        /// When a user clicks in the preview, it finds the nearest element with a pragma-line-X id
+        /// and posts a message to navigate to that line.
+        /// Ignores clicks on interactive elements like links, form elements, and expanders.
+        /// </summary>
+        private static string GetClickToSyncScript()
+        {
+            return @"<script>
+                (function() {
+                    if (window.__clickSyncInitialized) return;
+                    window.__clickSyncInitialized = true;
+
+                    // Interactive elements that should not trigger navigation
+                    var interactiveTags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'SUMMARY', 'LABEL', 'OPTION', 'DETAILS'];
+
+                    function isInteractiveElement(el) {
+                        while (el && el !== document.body) {
+                            if (interactiveTags.indexOf(el.tagName) !== -1) return true;
+                            if (el.hasAttribute && (el.hasAttribute('onclick') || el.hasAttribute('tabindex') || el.getAttribute('role') === 'button')) return true;
+                            if (el.isContentEditable) return true;
+                            el = el.parentElement;
+                        }
+                        return false;
+                    }
+
+                    function getPragmaLine(el) {
+                        if (el && el.id && el.id.startsWith('pragma-line-')) {
+                            return el.id.substring('pragma-line-'.length);
+                        }
+                        return null;
+                    }
+
+                    function findNearestPragmaLine(clickedEl, clickY) {
+                        // First, try walking up the DOM tree from the clicked element
+                        var target = clickedEl;
+                        while (target && target !== document.body) {
+                            var line = getPragmaLine(target);
+                            if (line) return line;
+                            target = target.parentElement;
+                        }
+
+                        // If no ancestor has pragma-line, find the closest element by position
+                        var content = document.getElementById('___markdown-content___');
+                        if (!content) return null;
+
+                        var pragmaElements = content.querySelectorAll('[id^=""pragma-line-""]');
+                        if (pragmaElements.length === 0) return null;
+
+                        var closest = null;
+                        var closestDistance = Infinity;
+
+                        for (var i = 0; i < pragmaElements.length; i++) {
+                            var el = pragmaElements[i];
+                            var rect = el.getBoundingClientRect();
+                            // Use the top of the element for comparison
+                            var distance = Math.abs(rect.top - clickY);
+                            // Prefer elements that are at or above the click position
+                            if (rect.top <= clickY) {
+                                distance = clickY - rect.top;
+                            } else {
+                                distance = (rect.top - clickY) + 10000; // Penalize elements below click
+                            }
+                            if (distance < closestDistance) {
+                                closestDistance = distance;
+                                closest = el;
+                            }
+                        }
+
+                        return closest ? getPragmaLine(closest) : null;
+                    }
+
+                    document.addEventListener('click', function(e) {
+                        // Skip if clicking on an interactive element
+                        if (isInteractiveElement(e.target)) return;
+
+                        var lineNumber = findNearestPragmaLine(e.target, e.clientY);
+
+                        if (lineNumber) {
+                            window.chrome.webview.postMessage('navigate:' + lineNumber);
+                        }
+                    });
+                })();
+            </script>";
         }
     }
 }
