@@ -80,7 +80,7 @@ namespace MarkdownEditor2022
         private static readonly object _prewarmLock = new();
 
         // Pre-computed HTML template ready for content insertion (computed on first use per theme)
-        private Task<string> _precomputedTemplateTask;
+        private readonly Task<string> _precomputedTemplateTask;
 
         public Browser(string file, Document document, IWpfTextView textView, IEditorFormatMapService formatMapService)
         {
@@ -98,7 +98,7 @@ namespace MarkdownEditor2022
             PrewarmStaticResources();
 
             // Start template preparation in parallel with WebView2 init
-            _precomputedTemplateTask = Task.Run(() => GetHtmlTemplate());
+            _precomputedTemplateTask = Task.Run(GetHtmlTemplate);
 
             _browser.Initialized += BrowserInitialized;
             _browser.NavigationStarting += BrowserNavigationStarting;
@@ -113,10 +113,7 @@ namespace MarkdownEditor2022
             _browser.Initialized -= BrowserInitialized;
             _browser.NavigationStarting -= BrowserNavigationStarting;
 
-            if (_browser.CoreWebView2 != null)
-            {
-                _browser.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
-            }
+            _browser.CoreWebView2?.WebMessageReceived -= OnWebMessageReceived;
 
             _browser.Dispose();
         }
@@ -338,6 +335,15 @@ namespace MarkdownEditor2022
                     return;
                 }
 
+                // Handle about: protocol links (internal anchors converted by AdjustAnchorsAsync)
+                // These have format about:blank#fragment or about:pathname#fragment
+                if (uri.Scheme == "about" && !string.IsNullOrEmpty(uri.Fragment))
+                {
+                    string fragment = uri.Fragment.TrimStart('#');
+                    await NavigateToFragmentAsync(fragment);
+                    return;
+                }
+
                 // Handle browsing-file-host links (relative links and internal anchors)
                 if (uri.Authority == _mappedBrowsingFileVirtualHostName)
                 {
@@ -481,12 +487,9 @@ namespace MarkdownEditor2022
         {
             // Suppress scroll sync briefly after a click-to-navigate action
             // to prevent the preview from scrolling away from where the user clicked
-            if (DateTime.UtcNow - _lastClickNavigationTime < _scrollSyncSuppressionDuration)
-            {
-                return Task.CompletedTask;
-            }
-
-            return _currentViewLine == line
+            return DateTime.UtcNow - _lastClickNavigationTime < _scrollSyncSuppressionDuration
+                ? Task.CompletedTask
+                : _currentViewLine == line
                 ? Task.CompletedTask
                 : ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
@@ -656,7 +659,11 @@ namespace MarkdownEditor2022
 
         private static string BuildInitialScriptTags(bool prism, bool mermaid)
         {
-            if (!prism && !mermaid) return string.Empty;
+            if (!prism && !mermaid)
+            {
+                return string.Empty;
+            }
+
             StringBuilder sb = new();
             if (prism)
             {
@@ -758,9 +765,7 @@ namespace MarkdownEditor2022
             static string GetTemplateContent(string templatePath)
             {
                 string defaultPath = Path.Combine(GetFolder(), "Margin", "md-template.html");
-                if (templatePath == defaultPath && _cachedDefaultTemplate != null)
-                    return _cachedDefaultTemplate;
-                return File.ReadAllText(templatePath);
+                return templatePath == defaultPath && _cachedDefaultTemplate != null ? _cachedDefaultTemplate : File.ReadAllText(templatePath);
             }
 
             static string GetHighlightCss(bool useLightTheme, bool isCustom, string path)
@@ -769,7 +774,9 @@ namespace MarkdownEditor2022
                 {
                     string cached = useLightTheme ? _cachedHighlightCssLight : _cachedHighlightCssDark;
                     if (cached != null)
+                    {
                         return cached;
+                    }
                 }
                 string content = File.ReadAllText(path);
                 return _bgColorRegex.Replace(content, "background-color:inherit");
@@ -779,7 +786,10 @@ namespace MarkdownEditor2022
             {
                 string cached = useLightTheme ? _cachedPrismCssLight : _cachedPrismCssDark;
                 if (cached != null)
+                {
                     return cached;
+                }
+
                 string content = File.ReadAllText(path);
                 return _bgColorRegex.Replace(content, "background-color:inherit");
             }
@@ -822,7 +832,11 @@ namespace MarkdownEditor2022
                     string[] bgKeys = ["TextView Background", "text", "Plain Text"];
                     foreach (string key in bgKeys)
                     {
-                        if (foundBg) break;
+                        if (foundBg)
+                        {
+                            break;
+                        }
+
                         ResourceDictionary props = formatMap.GetProperties(key);
                         if (props != null)
                         {
@@ -896,8 +910,15 @@ namespace MarkdownEditor2022
             }
 
             // Ultimate fallback
-            if (!foundBg) bgColor = Colors.White;
-            if (!foundFg) fgColor = Colors.Black;
+            if (!foundBg)
+            {
+                bgColor = Colors.White;
+            }
+
+            if (!foundFg)
+            {
+                fgColor = Colors.Black;
+            }
 
             bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
             if (AdvancedOptions.Instance.Theme == Theme.Automatic)
@@ -906,11 +927,14 @@ namespace MarkdownEditor2022
                 useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
             }
 
-            var result = (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
+            (bool useLightTheme, string, string) result = (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
             _cachedThemeColors = result;
             return result;
 
-            static string ColorToHex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+            static string ColorToHex(Color c)
+            {
+                return $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+            }
         }
 
         /// <summary>
@@ -986,17 +1010,14 @@ namespace MarkdownEditor2022
 
         private static StringBuilder GetOrCreateStringBuilder()
         {
-            if (_stringBuilderPool.TryDequeue(out StringBuilder sb))
-            {
-                return sb;
-            }
-            return new StringBuilder(2048);
+            return _stringBuilderPool.TryDequeue(out StringBuilder sb) ? sb : new StringBuilder(2048);
         }
 
         private static string EscapeForJavaScript(string input)
         {
-            if (string.IsNullOrEmpty(input)) return input;
-            return _escapeRegex.Replace(input, m => m.Value switch
+            return string.IsNullOrEmpty(input)
+                ? input
+                : _escapeRegex.Replace(input, m => m.Value switch
             {
                 "\\" => "\\\\",
                 "\r" => "\\r",
@@ -1065,15 +1086,29 @@ namespace MarkdownEditor2022
                     string defaultTemplatePath = Path.Combine(folder, "Margin", "md-template.html");
 
                     if (File.Exists(highlightLightPath))
+                    {
                         _cachedHighlightCssLight = _bgColorRegex.Replace(File.ReadAllText(highlightLightPath), "background-color:inherit");
+                    }
+
                     if (File.Exists(highlightDarkPath))
+                    {
                         _cachedHighlightCssDark = _bgColorRegex.Replace(File.ReadAllText(highlightDarkPath), "background-color:inherit");
+                    }
+
                     if (File.Exists(prismLightPath))
+                    {
                         _cachedPrismCssLight = _bgColorRegex.Replace(File.ReadAllText(prismLightPath), "background-color:inherit");
+                    }
+
                     if (File.Exists(prismDarkPath))
+                    {
                         _cachedPrismCssDark = _bgColorRegex.Replace(File.ReadAllText(prismDarkPath), "background-color:inherit");
+                    }
+
                     if (File.Exists(defaultTemplatePath))
+                    {
                         _cachedDefaultTemplate = File.ReadAllText(defaultTemplatePath);
+                    }
                 }
                 catch
                 {
@@ -1094,12 +1129,20 @@ namespace MarkdownEditor2022
 
         private static string FindFileRecursively(string folder, string fileName, string fallbackFileName)
         {
-            if (string.IsNullOrEmpty(folder)) return fallbackFileName;
+            if (string.IsNullOrEmpty(folder))
+            {
+                return fallbackFileName;
+            }
+
             DirectoryInfo dir = new(folder);
             do
             {
                 string candidate = Path.Combine(dir.FullName, fileName);
-                if (File.Exists(candidate)) return candidate;
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
                 dir = dir.Parent;
             } while (dir != null);
             return fallbackFileName;

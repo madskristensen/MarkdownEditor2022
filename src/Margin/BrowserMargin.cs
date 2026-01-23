@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.VisualStudio.PlatformUI;
@@ -45,6 +44,11 @@ namespace MarkdownEditor2022
 
         private async Task InitializeAutoHideMonitorAsync()
         {
+            if (_isRegisteredWithAutoHideMonitor)
+            {
+                return;
+            }
+
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             AutoHideWindowMonitor monitor = AutoHideWindowMonitor.GetInstance();
             monitor.Initialize();
@@ -236,7 +240,7 @@ namespace MarkdownEditor2022
                     VerticalAlignment = VerticalAlignment.Stretch,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     Cursor = System.Windows.Input.Cursors.SizeWE,
-                    Style = CreateSplitterStyle()
+                    Style = ThemeHelper.CreateSplitterStyle()
                 };
                 splitter.DragStarted += (s, e) => isDragging = true;
                 splitter.DragCompleted += (s, e) =>
@@ -247,7 +251,7 @@ namespace MarkdownEditor2022
                         double totalWidth = _textView.ViewportWidth + Browser._browser.ActualWidth;
                         if (totalWidth > 0)
                         {
-                            double percentage = (Browser._browser.ActualWidth / totalWidth) * 100;
+                            double percentage = Browser._browser.ActualWidth / totalWidth * 100;
                             AdvancedOptions.Instance.PreviewWindowWidthPercentage = Math.Max(10, Math.Min(90, percentage));
                             AdvancedOptions.Instance.Save();
                         }
@@ -264,7 +268,9 @@ namespace MarkdownEditor2022
                 void UpdateWidthFromPercentage()
                 {
                     if (isUpdating || isDragging || _textView.ViewportWidth <= 0)
+                    {
                         return;
+                    }
 
                     isUpdating = true;
 
@@ -272,7 +278,9 @@ namespace MarkdownEditor2022
                     {
                         double currentPreviewWidth = grid.ColumnDefinitions[2].ActualWidth;
                         if (currentPreviewWidth <= 0)
+                        {
                             currentPreviewWidth = 400;
+                        }
 
                         double totalWidth = _textView.ViewportWidth + currentPreviewWidth;
                         double percentage = AdvancedOptions.Instance.PreviewWindowWidthPercentage / 100.0;
@@ -292,7 +300,9 @@ namespace MarkdownEditor2022
                 void OnViewportWidthChanged(object s, EventArgs e)
                 {
                     if (isUpdating || isDragging)
+                    {
                         return;
+                    }
 
                     // Reset timer on each event
                     resizeTimer?.Stop();
@@ -338,7 +348,7 @@ namespace MarkdownEditor2022
                     VerticalAlignment = VerticalAlignment.Stretch,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     Cursor = System.Windows.Input.Cursors.SizeNS,
-                    Style = CreateSplitterStyle()
+                    Style = ThemeHelper.CreateSplitterStyle()
                 };
                 splitter.DragCompleted += SplitterDragCompleted;
 
@@ -346,26 +356,6 @@ namespace MarkdownEditor2022
                 Grid.SetColumn(splitter, 0);
                 Grid.SetRow(splitter, 1);
             }
-        }
-
-        private static Style CreateSplitterStyle()
-        {
-            Style style = new(typeof(GridSplitter));
-
-            // Create a simple template that just uses a Border with the scrollbar background color
-            // This matches the editor margin/scrollbar track color
-            FrameworkElementFactory border = new(typeof(System.Windows.Controls.Border));
-            border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, EnvironmentColors.ScrollBarBackgroundBrushKey);
-
-            ControlTemplate template = new(typeof(GridSplitter))
-            {
-                VisualTree = border
-            };
-
-            style.Setters.Add(new Setter(Control.TemplateProperty, template));
-            style.Setters.Add(new Setter(Control.FocusVisualStyleProperty, null));
-
-            return style;
         }
 
         private void AdvancedOptions_Saved(AdvancedOptions options)

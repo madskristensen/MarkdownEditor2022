@@ -80,6 +80,7 @@
     <Compile Include="Margin\BrowserMargin.cs" />
     <Compile Include="Margin\BrowserMarginProvider.cs" />
     <Compile Include="Margin\Debouncer.cs" />
+    <Compile Include="Margin\ThemeHelper.cs" />
     <Compile Include="Options\AdvancedOptions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MarkdownEditor2022Package.cs" />

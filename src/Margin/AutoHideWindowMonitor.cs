@@ -257,6 +257,10 @@ namespace MarkdownEditor2022
                         return false; // Not a tool window
                     }
                 }
+                else
+                {
+                    return false; // Could not determine window type - assume not auto-hide tool window
+                }
 
                 // Check frame mode for auto-hide flag - this tells us if the window is 
                 // CONFIGURED for auto-hide behavior (value 4 means auto-hide)
@@ -386,6 +390,7 @@ namespace MarkdownEditor2022
 
         public void Dispose()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             if (_isDisposed)
             {
                 return;
