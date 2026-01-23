@@ -52,7 +52,7 @@ namespace MarkdownEditor2022
         /// <summary>
         /// Duration to suppress scroll sync after a click navigation to prevent the preview from scrolling away.
         /// </summary>
-        private static readonly TimeSpan ScrollSyncSuppressionDuration = TimeSpan.FromMilliseconds(1000);
+        private static readonly TimeSpan _scrollSyncSuppressionDuration = TimeSpan.FromMilliseconds(1000);
 
         // Cache StringBuilder and Regex for better performance
         private static StringWriter _htmlWriterStatic;
@@ -288,7 +288,7 @@ namespace MarkdownEditor2022
                         // If still not found, try adding common markdown extensions
                         if (targetPath == null && string.IsNullOrEmpty(Path.GetExtension(file)))
                         {
-                            string[] mdExtensions = { ".md", ".markdown", ".mdown", ".mkd" };
+                            string[] mdExtensions = [".md", ".markdown", ".mdown", ".mkd"];
                             foreach (string ext in mdExtensions)
                             {
                                 string withExt = Path.Combine(currentDir, file + ext);
@@ -378,7 +378,7 @@ namespace MarkdownEditor2022
         {
             // Suppress scroll sync briefly after a click-to-navigate action
             // to prevent the preview from scrolling away from where the user clicked
-            if (DateTime.UtcNow - _lastClickNavigationTime < ScrollSyncSuppressionDuration)
+            if (DateTime.UtcNow - _lastClickNavigationTime < _scrollSyncSuppressionDuration)
             {
                 return Task.CompletedTask;
             }
@@ -582,7 +582,7 @@ namespace MarkdownEditor2022
         private string GetHtmlTemplate()
         {
             (bool useLightTheme, string themeBgColor, string themeFgColor) = GetThemeColors();
-            string scrollbarColor = GetScrollbarColor(useLightTheme, themeBgColor);
+            string scrollbarColor = GetScrollbarColor(useLightTheme);
             bool spellCheck = AdvancedOptions.Instance.EnableSpellCheck;
             string templateFileName = GetHtmlTemplateFileNameFromResource();
 
@@ -659,7 +659,7 @@ namespace MarkdownEditor2022
             }
         }
 
-        private static string GetScrollbarColor(bool useLightTheme, string themeBgColor)
+        private static string GetScrollbarColor(bool useLightTheme)
         {
             // Create a semi-transparent scrollbar thumb that contrasts with the background
             // For light themes, use a darker color; for dark themes, use a lighter color
@@ -682,7 +682,7 @@ namespace MarkdownEditor2022
                     IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
 
                     // Try multiple format map keys for background - "TextView Background" is the actual editor surface
-                    string[] bgKeys = { "TextView Background", "text", "Plain Text" };
+                    string[] bgKeys = ["TextView Background", "text", "Plain Text"];
                     foreach (string key in bgKeys)
                     {
                         if (foundBg) break;
@@ -742,8 +742,7 @@ namespace MarkdownEditor2022
             // Fallback to environment colors
             if (!foundBg)
             {
-                SolidColorBrush envBgBrush = Application.Current.Resources[EnvironmentColors.EnvironmentBackgroundBrushKey] as SolidColorBrush;
-                if (envBgBrush != null)
+                if (Application.Current.Resources[EnvironmentColors.EnvironmentBackgroundBrushKey] is SolidColorBrush envBgBrush)
                 {
                     bgColor = envBgBrush.Color;
                     foundBg = true;
@@ -752,8 +751,7 @@ namespace MarkdownEditor2022
 
             if (!foundFg)
             {
-                SolidColorBrush envFgBrush = Application.Current.Resources[EnvironmentColors.PanelTextBrushKey] as SolidColorBrush;
-                if (envFgBrush != null)
+                if (Application.Current.Resources[EnvironmentColors.PanelTextBrushKey] is SolidColorBrush envFgBrush)
                 {
                     fgColor = envFgBrush.Color;
                     foundFg = true;
@@ -788,7 +786,7 @@ namespace MarkdownEditor2022
                 try
                 {
                     IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
-                    string[] bgKeys = { "TextView Background", "text", "Plain Text" };
+                    string[] bgKeys = ["TextView Background", "text", "Plain Text"];
                     foreach (string key in bgKeys)
                     {
                         ResourceDictionary props = formatMap.GetProperties(key);
@@ -838,8 +836,7 @@ namespace MarkdownEditor2022
             // Fallback to WPF resource lookup
             if (Application.Current?.Resources != null)
             {
-                SolidColorBrush envBgBrush = Application.Current.Resources[EnvironmentColors.ToolWindowBackgroundBrushKey] as SolidColorBrush;
-                if (envBgBrush != null)
+                if (Application.Current.Resources[EnvironmentColors.ToolWindowBackgroundBrushKey] is SolidColorBrush envBgBrush)
                 {
                     return envBgBrush.Color;
                 }
