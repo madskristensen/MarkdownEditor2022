@@ -186,9 +186,6 @@
     <PackageReference Include="Microsoft.Web.WebView2">
       <Version>1.0.3650.58</Version>
     </PackageReference>
-    <PackageReference Include="Slugify.Core">
-      <Version>5.1.1</Version>
-    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />

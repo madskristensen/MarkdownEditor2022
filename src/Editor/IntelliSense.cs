@@ -333,8 +333,8 @@ namespace MarkdownEditor2022
             bool isImageLink = triggerLocation.GetContainingLine().GetText().Contains("![");
 
             // Check if we're at the beginning of the path (not inside a subfolder)
-            bool atPathStart = string.IsNullOrEmpty(fullTypedPath) 
-                || fullTypedPath == "." 
+            bool atPathStart = string.IsNullOrEmpty(fullTypedPath)
+                || fullTypedPath == "."
                 || fullTypedPath == ".."
                 || fullTypedPath.All(c => c == '.' || c == '/');
 
