@@ -33,10 +33,14 @@ namespace MarkdownEditor2022
                        _cachedHeight = 0,
                        _positionPercentage = 0;
 
+        // Per-instance cached theme colors (invalidated on theme change)
+        private (bool useLightTheme, string bgColor, string fgColor)? _cachedThemeColors;
+
         private const string _mappedMarkdownEditorVirtualHostName = "markdown-editor-host";
         private const string _mappedBrowsingFileVirtualHostName = "browsing-file-host";
 
         public readonly WebView2 _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
+
 
         /// <summary>
         /// Raised when the user clicks on an element in the preview and navigation to the source line is requested.
@@ -62,6 +66,22 @@ namespace MarkdownEditor2022
         private static readonly Regex _bgColorRegex = new(@"background(-color)?\s*:\s*#[0-9a-fA-F]{3,8}\b", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
 
+        // Cache WebView2 environment for faster initialization of subsequent instances
+        private static Task<CoreWebView2Environment> _cachedEnvironmentTask;
+        private static readonly object _environmentLock = new();
+
+        // Pre-warmed CSS content for faster first render
+        private static string _cachedHighlightCssLight;
+        private static string _cachedHighlightCssDark;
+        private static string _cachedPrismCssLight;
+        private static string _cachedPrismCssDark;
+        private static string _cachedDefaultTemplate;
+        private static bool _staticResourcesPrewarmed;
+        private static readonly object _prewarmLock = new();
+
+        // Pre-computed HTML template ready for content insertion (computed on first use per theme)
+        private Task<string> _precomputedTemplateTask;
+
         public Browser(string file, Document document, IWpfTextView textView, IEditorFormatMapService formatMapService)
         {
             _file = file;
@@ -70,14 +90,21 @@ namespace MarkdownEditor2022
             _formatMapService = formatMapService;
             _currentViewLine = -1;
 
+            // Start WebView2 environment creation immediately so it runs in parallel with WPF initialization
+            // This is a no-op if already cached from a previous instance
+            _ = GetOrCreateWebView2EnvironmentAsync();
+
+            // Pre-warm static resources (CSS files, default template) on first Browser instance
+            PrewarmStaticResources();
+
+            // Start template preparation in parallel with WebView2 init
+            _precomputedTemplateTask = Task.Run(() => GetHtmlTemplate());
+
             _browser.Initialized += BrowserInitialized;
             _browser.NavigationStarting += BrowserNavigationStarting;
 
             // Set the WPF Background to match VS theme (WebView2 DefaultBackgroundColor is set after init)
             _browser.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
-
-            // Listen for VS theme changes to update preview colors
-            VSColorTheme.ThemeChanged += OnThemeChanged;
         }
 
         public void Dispose()
@@ -98,6 +125,9 @@ namespace MarkdownEditor2022
         {
             // Clear template cache so new theme colors and CSS files are picked up
             _templateCache.Clear();
+
+            // Invalidate per-instance theme color cache
+            _cachedThemeColors = null;
 
             // Force full page reload to load new CSS (not just innerHTML update)
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -157,37 +187,43 @@ namespace MarkdownEditor2022
 
         private void BrowserInitialized(object sender, EventArgs e)
         {
-
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                await InitializeWebView2CoreAsync();
+                // Start WebView2 core initialization
+                Task webViewInitTask = InitializeWebView2CoreAsync();
+
+                // While WebView2 initializes, ensure template is ready (should already be computed from constructor)
+                Task<string> templateTask = _precomputedTemplateTask ?? Task.FromResult(GetHtmlTemplate());
+
+                // Wait for WebView2 to be ready
+                await webViewInitTask;
                 SetVirtualFolderMapping();
-                _browser.Visibility = Visibility.Visible;
 
-                string offsetHeightResult = await _browser.ExecuteScriptAsync("document.body.offsetHeight;");
-                double.TryParse(offsetHeightResult, out _cachedHeight);
-
-                await _browser.ExecuteScriptAsync($@"document.documentElement.scrollTop={_positionPercentage * _cachedHeight / 100}");
-
-                await AdjustAnchorsAsync();
-
-                await UpdateBrowserAsync();
-            }).FireAndForget();
-
-            async Task InitializeWebView2CoreAsync()
-            {
-                string tempDir = Path.Combine(Path.GetTempPath(), Assembly.GetExecutingAssembly().GetName().Name);
-                CoreWebView2Environment webView2Environment = await CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: null);
-
-                await _browser.EnsureCoreWebView2Async(webView2Environment);
+                // Get pre-computed template (should be instant if precomputed in constructor)
+                string precomputedTemplate = await templateTask;
 
                 // Set the default background color to match the editor/tool window background
                 // This prevents white flash before content loads
                 Color bgColor = GetPreviewBackgroundColor();
                 _browser.DefaultBackgroundColor = System.Drawing.Color.FromArgb(bgColor.A, bgColor.R, bgColor.G, bgColor.B);
 
+                _browser.Visibility = Visibility.Visible;
+
+                // Render initial content using pre-computed template
+                await RenderInitialContentAsync(precomputedTemplate);
+            }).FireAndForget();
+
+            async Task InitializeWebView2CoreAsync()
+            {
+                CoreWebView2Environment webView2Environment = await GetOrCreateWebView2EnvironmentAsync();
+
+                await _browser.EnsureCoreWebView2Async(webView2Environment);
+
                 // Subscribe to messages from JavaScript for click-to-sync feature
                 _browser.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+
+                // Listen for VS theme changes to update preview colors (deferred from constructor for faster startup)
+                VSColorTheme.ThemeChanged += OnThemeChanged;
             }
 
             void SetVirtualFolderMapping()
@@ -197,6 +233,73 @@ namespace MarkdownEditor2022
                 DirectoryInfo parentDir = new(Path.GetDirectoryName(_file));
                 string baseHref = (parentDir.Parent ?? parentDir).FullName.Replace("\\", "/");
                 _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, baseHref, CoreWebView2HostResourceAccessKind.Allow);
+            }
+
+            async Task RenderInitialContentAsync(string template)
+            {
+                try
+                {
+                    // Wait for initial parse with short timeout - don't block initial render too long
+                    using CancellationTokenSource timeoutCts = new(TimeSpan.FromMilliseconds(500));
+                    try
+                    {
+                        await _document.WaitForInitialParseAsync(timeoutCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Parse not ready yet - render with empty content, will update when parse completes
+                    }
+
+                    MarkdownDocument markdown = _document.Markdown;
+                    string html = markdown != null
+                        ? await RenderHtmlDocumentAsync(markdown)
+                        : string.Empty;
+
+                    // Feature detection
+                    bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                        html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
+                    string fullHtml = template.Replace("[content]", html).Replace("[scripts]", scripts);
+
+                    _browser.NavigateToString(fullHtml);
+
+                    // Get initial height for scroll calculations
+                    string offsetHeightResult = await _browser.ExecuteScriptAsync("document.body.offsetHeight;");
+                    double.TryParse(offsetHeightResult, out _cachedHeight);
+
+                    if (_positionPercentage > 0)
+                    {
+                        await _browser.ExecuteScriptAsync($@"document.documentElement.scrollTop={_positionPercentage * _cachedHeight / 100}");
+                    }
+
+                    await AdjustAnchorsAsync();
+
+                    // If parse wasn't ready, schedule a refresh once it completes
+                    if (markdown == null)
+                    {
+                        _ = RefreshWhenParseReadyAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await ex.LogAsync();
+                }
+            }
+
+            async Task RefreshWhenParseReadyAsync()
+            {
+                try
+                {
+                    using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+                    await _document.WaitForInitialParseAsync(timeoutCts.Token);
+                    await UpdateBrowserAsync();
+                }
+                catch
+                {
+                    // Ignore - document may have been disposed
+                }
             }
         }
 
@@ -587,6 +690,7 @@ namespace MarkdownEditor2022
             string templateFileName = GetHtmlTemplateFileNameFromResource();
 
             string customHighlightCandidate = FindFileRecursively(Path.GetDirectoryName(_file), "md-styles.css", null);
+            bool usingCustomHighlight = customHighlightCandidate != null;
             string highlightSourcePath = customHighlightCandidate ?? Path.Combine(GetFolder(), "margin", useLightTheme ? "highlight.css" : "highlight-dark.css");
             string prismSourcePath = Path.Combine(GetFolder(), "margin", useLightTheme ? "prism.css" : "prism-dark.css");
 
@@ -599,13 +703,10 @@ namespace MarkdownEditor2022
 
             if (!_templateCache.TryGetValue(cacheKey, out string cachedTemplate))
             {
-                string templateRaw = File.ReadAllText(templateFileName);
-                string cssHighlight = File.ReadAllText(highlightSourcePath);
-                string cssPrism = File.ReadAllText(prismSourcePath);
-
-                // Strip hardcoded background colors from CSS so theme colors take effect
-                cssHighlight = _bgColorRegex.Replace(cssHighlight, "background-color:inherit");
-                cssPrism = _bgColorRegex.Replace(cssPrism, "background-color:inherit");
+                // Use pre-warmed resources when available, fall back to file I/O
+                string templateRaw = GetTemplateContent(templateFileName);
+                string cssHighlight = GetHighlightCss(useLightTheme, usingCustomHighlight, highlightSourcePath);
+                string cssPrism = GetPrismCss(useLightTheme, prismSourcePath);
 
                 string css = cssHighlight + cssPrism;
                 string dirName = new FileInfo(_file).Directory.Name;
@@ -653,6 +754,36 @@ namespace MarkdownEditor2022
             string finalTemplate = spellCheck ? cachedTemplate.Replace("[CONTENTEDITABLE]", "contenteditable") : cachedTemplate.Replace("[CONTENTEDITABLE]", string.Empty);
             return finalTemplate;
 
+            // Local helper functions to use pre-warmed content or fall back to file I/O
+            static string GetTemplateContent(string templatePath)
+            {
+                string defaultPath = Path.Combine(GetFolder(), "Margin", "md-template.html");
+                if (templatePath == defaultPath && _cachedDefaultTemplate != null)
+                    return _cachedDefaultTemplate;
+                return File.ReadAllText(templatePath);
+            }
+
+            static string GetHighlightCss(bool useLightTheme, bool isCustom, string path)
+            {
+                if (!isCustom)
+                {
+                    string cached = useLightTheme ? _cachedHighlightCssLight : _cachedHighlightCssDark;
+                    if (cached != null)
+                        return cached;
+                }
+                string content = File.ReadAllText(path);
+                return _bgColorRegex.Replace(content, "background-color:inherit");
+            }
+
+            static string GetPrismCss(bool useLightTheme, string path)
+            {
+                string cached = useLightTheme ? _cachedPrismCssLight : _cachedPrismCssDark;
+                if (cached != null)
+                    return cached;
+                string content = File.ReadAllText(path);
+                return _bgColorRegex.Replace(content, "background-color:inherit");
+            }
+
             static DateTime SafeGetWriteTime(string path)
             {
                 try { return File.GetLastWriteTimeUtc(path); } catch { return DateTime.MinValue; }
@@ -668,6 +799,12 @@ namespace MarkdownEditor2022
 
         private (bool useLightTheme, string bgColor, string fgColor) GetThemeColors()
         {
+            // Return cached result if available (invalidated on theme change)
+            if (_cachedThemeColors.HasValue)
+            {
+                return _cachedThemeColors.Value;
+            }
+
             Color bgColor = default;
             Color fgColor = default;
             bool foundBg = false;
@@ -769,7 +906,9 @@ namespace MarkdownEditor2022
                 useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
             }
 
-            return (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
+            var result = (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
+            _cachedThemeColors = result;
+            return result;
 
             static string ColorToHex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
         }
@@ -871,6 +1010,80 @@ namespace MarkdownEditor2022
         {
             string assembly = Assembly.GetExecutingAssembly().Location;
             return Path.GetDirectoryName(assembly);
+        }
+
+        /// <summary>
+        /// Gets or creates a cached WebView2 environment for faster initialization of subsequent browser instances.
+        /// </summary>
+        private static Task<CoreWebView2Environment> GetOrCreateWebView2EnvironmentAsync()
+        {
+            if (_cachedEnvironmentTask != null)
+            {
+                return _cachedEnvironmentTask;
+            }
+
+            lock (_environmentLock)
+            {
+                if (_cachedEnvironmentTask != null)
+                {
+                    return _cachedEnvironmentTask;
+                }
+
+                string tempDir = Path.Combine(Path.GetTempPath(), Assembly.GetExecutingAssembly().GetName().Name);
+                _cachedEnvironmentTask = CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: null);
+                return _cachedEnvironmentTask;
+            }
+        }
+
+        /// <summary>
+        /// Pre-warms static CSS resources on first Browser instance to avoid file I/O during first render.
+        /// </summary>
+        private static void PrewarmStaticResources()
+        {
+            if (_staticResourcesPrewarmed)
+            {
+                return;
+            }
+
+            lock (_prewarmLock)
+            {
+                if (_staticResourcesPrewarmed)
+                {
+                    return;
+                }
+
+                try
+                {
+                    string folder = GetFolder();
+                    string marginPath = Path.Combine(folder, "margin");
+
+                    // Pre-load CSS files for both themes
+                    string highlightLightPath = Path.Combine(marginPath, "highlight.css");
+                    string highlightDarkPath = Path.Combine(marginPath, "highlight-dark.css");
+                    string prismLightPath = Path.Combine(marginPath, "prism.css");
+                    string prismDarkPath = Path.Combine(marginPath, "prism-dark.css");
+                    string defaultTemplatePath = Path.Combine(folder, "Margin", "md-template.html");
+
+                    if (File.Exists(highlightLightPath))
+                        _cachedHighlightCssLight = _bgColorRegex.Replace(File.ReadAllText(highlightLightPath), "background-color:inherit");
+                    if (File.Exists(highlightDarkPath))
+                        _cachedHighlightCssDark = _bgColorRegex.Replace(File.ReadAllText(highlightDarkPath), "background-color:inherit");
+                    if (File.Exists(prismLightPath))
+                        _cachedPrismCssLight = _bgColorRegex.Replace(File.ReadAllText(prismLightPath), "background-color:inherit");
+                    if (File.Exists(prismDarkPath))
+                        _cachedPrismCssDark = _bgColorRegex.Replace(File.ReadAllText(prismDarkPath), "background-color:inherit");
+                    if (File.Exists(defaultTemplatePath))
+                        _cachedDefaultTemplate = File.ReadAllText(defaultTemplatePath);
+                }
+                catch
+                {
+                    // Ignore errors - we'll fall back to loading on demand
+                }
+                finally
+                {
+                    _staticResourcesPrewarmed = true;
+                }
+            }
         }
 
         private string GetHtmlTemplateFileNameFromResource()

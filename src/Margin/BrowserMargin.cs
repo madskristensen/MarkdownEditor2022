@@ -38,16 +38,8 @@ namespace MarkdownEditor2022
 
             Browser = new Browser(textview.TextBuffer.GetFileName(), _document, textview as IWpfTextView, formatMapService);
             Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
-            Browser.LineNavigationRequested += OnLineNavigationRequested;
 
             CreateMarginControls(Browser._browser);
-
-            // Subscribe to auto-hide window monitor to hide preview when auto-hide tool windows slide in
-            // This mitigates the WebView2 airspace issue where HWND-based controls overlap WPF content
-            if (AdvancedOptions.Instance.AutoHideOnFocusLoss)
-            {
-                InitializeAutoHideMonitorAsync().FireAndForget();
-            }
         }
 
 
@@ -139,11 +131,19 @@ namespace MarkdownEditor2022
 
             view.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
+            // Subscribe to events now that browser is ready (deferred from constructor for faster startup)
+            Browser.LineNavigationRequested += OnLineNavigationRequested;
             _document.Parsed += UpdateBrowser;
             _textView.LayoutChanged += UpdatePosition;
             _textView.TextBuffer.Changed += OnTextBufferChange;
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             VSColorTheme.ThemeChanged += OnThemeChange;
+
+            // Initialize auto-hide monitor now that browser is ready (if enabled)
+            if (AdvancedOptions.Instance.AutoHideOnFocusLoss)
+            {
+                InitializeAutoHideMonitorAsync().FireAndForget();
+            }
 
             //UpdateBrowser(_document);
         }

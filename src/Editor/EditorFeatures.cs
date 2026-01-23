@@ -186,11 +186,20 @@ namespace MarkdownEditor2022
             }
 
             List<ErrorListItem> list = [];
+            ITextSnapshot snapshot = _docView.TextBuffer.CurrentSnapshot;
 
             foreach (HtmlBlock comment in analysis.CommentBlocks)
             {
-                SnapshotSpan span = new(_docView.TextBuffer.CurrentSnapshot, comment.ToSpan());
-                string text = span.GetText();
+                Span span = comment.ToSpan();
+
+                // Validate span is within current snapshot bounds (document may have changed since parsing)
+                if (span.End > snapshot.Length)
+                {
+                    continue;
+                }
+
+                SnapshotSpan snapshotSpan = new(snapshot, span);
+                string text = snapshotSpan.GetText();
 
                 foreach (Match match in _taskRegex.Matches(text))
                 {
