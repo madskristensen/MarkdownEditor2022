@@ -11,8 +11,10 @@ using Markdig.Syntax;
 using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Core.Imaging;
 using Microsoft.VisualStudio.Imaging;
+using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Language.Intellisense.AsyncCompletion;
 using Microsoft.VisualStudio.Language.Intellisense.AsyncCompletion.Data;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Editor;
@@ -196,9 +198,8 @@ namespace MarkdownEditor2022
     public class FilePathCompletionSource(ITextView textView) : IAsyncCompletionSource
     {
         private static readonly ImageElement _folderIcon = new(KnownMonikers.FolderOpened.ToImageId(), "Folder");
-        private static readonly ImageElement _fileIcon = new(KnownMonikers.TextFile.ToImageId(), "File");
-        private static readonly ImageElement _imageIcon = new(KnownMonikers.Image.ToImageId(), "Image");
         private static readonly ImageElement _anchorIcon = new(KnownMonikers.Link.ToImageId(), "Anchor");
+        private IVsImageService2 _imageService;
 
         public CompletionStartData InitializeCompletion(CompletionTrigger trigger, SnapshotPoint triggerLocation, CancellationToken token)
         {
@@ -301,6 +302,9 @@ namespace MarkdownEditor2022
             if (string.IsNullOrEmpty(docDir))
                 return CompletionContext.Empty;
 
+            // Get image service for file icons
+            _imageService ??= await VS.GetServiceAsync<SVsImageService, IVsImageService2>();
+
             // Resolve the directory to search based on typed path
             string searchDir = docDir;
             string pathPart = fullTypedPath;
@@ -370,7 +374,10 @@ namespace MarkdownEditor2022
 
                     string ext = Path.GetExtension(file).ToLowerInvariant();
                     bool isImage = ext is ".png" or ".jpg" or ".jpeg" or ".gif" or ".svg" or ".webp";
-                    ImageElement icon = isImage ? _imageIcon : _fileIcon;
+
+                    // Get file-specific icon from the image service
+                    ImageMoniker moniker = _imageService?.GetImageMonikerForFile(name) ?? KnownMonikers.Document;
+                    ImageElement icon = new(moniker.ToImageId(), name);
 
                     // Sort images first for image links, other files first for regular links
                     string sort = (isImageLink == isImage ? "1" : "2") + name;
