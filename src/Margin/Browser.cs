@@ -708,8 +708,11 @@ namespace MarkdownEditor2022
             long highlightTicks = SafeGetWriteTime(highlightSourcePath).Ticks;
             long prismTicks = SafeGetWriteTime(prismSourcePath).Ticks;
 
-            // Include theme colors in cache key so template updates when VS theme changes
-            string cacheKey = string.Join("|", useLightTheme ? "light" : "dark", spellCheck ? "spell" : "plain", templateFileName, templateTicks, highlightSourcePath, highlightTicks, prismSourcePath, prismTicks, themeBgColor, themeFgColor, scrollbarColor);
+            // Get the directory name for base href - must be included in cache key since it's file-specific
+            string dirName = new FileInfo(_file).Directory.Name;
+
+            // Include theme colors and dirName in cache key so template updates correctly per file location
+            string cacheKey = string.Join("|", useLightTheme ? "light" : "dark", spellCheck ? "spell" : "plain", templateFileName, templateTicks, highlightSourcePath, highlightTicks, prismSourcePath, prismTicks, themeBgColor, themeFgColor, scrollbarColor, dirName);
 
             if (!_templateCache.TryGetValue(cacheKey, out string cachedTemplate))
             {
@@ -719,7 +722,6 @@ namespace MarkdownEditor2022
                 string cssPrism = GetPrismCss(useLightTheme, prismSourcePath);
 
                 string css = cssHighlight + cssPrism;
-                string dirName = new FileInfo(_file).Directory.Name;
 
                 // Scrollbar styling for WebView2 (Chromium-based)
                 string scrollbarCss = $@"
