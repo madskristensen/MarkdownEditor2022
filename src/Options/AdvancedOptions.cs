@@ -99,6 +99,12 @@ namespace MarkdownEditor2022
         [DefaultValue(true)]
         public bool ValidateUrls { get; set; } = true;
 
+        [Category("Image Optimizer")]
+        [DisplayName("Optimize images on paste")]
+        [Description("When enabled, images pasted into the document will be automatically optimized using the Image Optimizer extension (if installed).")]
+        [DefaultValue(true)]
+        public bool OptimizeImagesOnPaste { get; set; } = true;
+
         [Browsable(false)]
         public int RatingRequests { get; set; }
     }

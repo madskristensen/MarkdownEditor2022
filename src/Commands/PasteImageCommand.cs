@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
+using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
@@ -100,6 +101,13 @@ namespace MarkdownEditor2022
 
                 SaveClipboardImageToFile(data, existingFile);
                 UpdateTextBuffer(existingFile, _fileName);
+
+                // Optimize the pasted image using Image Optimizer if enabled
+                if (AdvancedOptions.Instance.OptimizeImagesOnPaste)
+                {
+                    string fileToOptimize = existingFile;
+                    ImageOptimizerService.OptimizeLosslessAsync(fileToOptimize).FireAndForget();
+                }
             }
             catch (Exception ex)
             {

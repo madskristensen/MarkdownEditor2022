@@ -77,6 +77,7 @@
     <Compile Include="Editor\ClassificationTypes.cs" />
     <Compile Include="Editor\DropdownBars.cs" />
     <Compile Include="Editor\TokenTagger.cs" />
+    <Compile Include="ImageOptimizerService.cs" />
     <Compile Include="Margin\AutoHideWindowMonitor.cs" />
     <Compile Include="Margin\Browser.cs" />
     <Compile Include="Margin\BrowserMargin.cs" />
@@ -99,6 +100,8 @@
     <Compile Include="SuggestedActions\Actions\ConvertToQuoteAction.cs" />
     <Compile Include="SuggestedActions\Actions\ConvertToTaskList.cs" />
     <Compile Include="SuggestedActions\Actions\ConvertToUnorderedList.cs" />
+    <Compile Include="SuggestedActions\Actions\OptimizeImageLosslessAction.cs" />
+    <Compile Include="SuggestedActions\Actions\OptimizeImageLossyAction.cs" />
     <Compile Include="SuggestedActions\SuggestedActionsSource.cs" />
     <Compile Include="SuggestedActions\SuggestedActionsSourceProvider.cs" />
     <Compile Include="Validation\UrlValidator.cs" />

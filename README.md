@@ -239,6 +239,21 @@ This is really helpful for copying images from a browser or for inserting screen
 
 It will even parse the file name and make a friendly name to use for the alt text.
 
+### Image Optimizer integration
+
+This extension integrates with the [Image Optimizer](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ImageOptimizer64bit) extension to optimize images.
+
+**Automatic optimization on paste:** When you paste an image into a markdown document, it can be automatically optimized using lossless compression. This feature is enabled by default and can be toggled in **Tools -> Options -> Text Editor -> Markdown -> Advanced -> Optimize images on paste**.
+
+**Suggested actions:** When your cursor is on an image reference in markdown (e.g., `![alt](image.png)`), lightbulb suggestions appear offering:
+
+- **Optimize Image (Lossless)** - Best quality, smaller file size
+- **Optimize Image (Lossy)** - Best compression, minimal quality loss
+
+<!--![Image Optimizer suggested actions](art/image-optimizer-actions.png)-->
+
+> **Note:** These features require the [Image Optimizer](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ImageOptimizer64bit) extension to be installed. If it's not installed, you'll be prompted to download it.
+
 ### Outlining
 
 Any fenced code and HTML blocks can be collapsed, so that this:
@@ -323,6 +338,7 @@ Control the settings for this extension under
 | Preview window width/height | Set the size of the preview pane |
 | Auto-hide for tool windows | Temporarily hides the preview when auto-hide tool windows expand, preventing overlap issues |
 | Enable table sorting | Allows clicking table headers to sort columns (underlines headers when enabled) |
+| Optimize images on paste | Automatically optimizes pasted images using Image Optimizer (requires Image Optimizer extension) |
 
 ### How can I help?
 
