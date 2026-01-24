@@ -90,6 +90,55 @@ All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Color
 Advanced markdown extensions are supported to give more features to the syntax. This includes pipe tables, emoji, mathematics and a lot
 more.
 
+### Mermaid diagram support
+
+The editor supports all Mermaid diagram types for visualizing complex information. Mermaid diagrams are rendered in the live preview window using the native Mermaid.js library.
+
+**Supported diagram types include:**
+
+- **Flowcharts** (`flowchart` or `graph TB/LR`) - For architectural diagrams, system designs, and process flows
+- **Sequence Diagrams** (`sequenceDiagram`) - For operational flows like authentication, authorization, and API interactions
+- **Class Diagrams** - For object-oriented designs
+- **State Diagrams** - For state machine representations
+- **Entity Relationship Diagrams** - For database schemas
+- **Gantt Charts** - For project timelines
+- **Pie Charts** - For data visualization
+- And many more supported by Mermaid.js
+
+**Example - Flowchart:**
+
+````markdown
+```mermaid
+graph TB
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E
+```
+````
+
+**Example - Sequence Diagram:**
+
+````markdown
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Database
+    
+    User->>Frontend: Login Request
+    Frontend->>Backend: Authenticate
+    Backend->>Database: Query User
+    Database-->>Backend: User Data
+    Backend-->>Frontend: Auth Token
+    Frontend-->>User: Login Success
+```
+````
+
+Mermaid diagrams automatically adapt to the current Visual Studio theme (light or dark mode).
+
 ### Table formatting
 
 Use Visual Studio's standard format commands to align and beautify pipe tables:
