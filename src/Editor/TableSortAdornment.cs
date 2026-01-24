@@ -32,6 +32,8 @@ namespace MarkdownEditor2022
     internal sealed class TableSortHandler
     {
         private readonly IWpfTextView _view;
+        private Cursor _originalCursor;
+        private bool _isOverHeader;
 
         // Sort state per table (keyed by header row line number for stability)
         private readonly Dictionary<int, (int columnIndex, bool ascending)> _sortStates = [];
@@ -40,13 +42,60 @@ namespace MarkdownEditor2022
         {
             _view = view;
             _view.VisualElement.MouseLeftButtonUp += OnMouseLeftButtonUp;
+            _view.VisualElement.MouseMove += OnMouseMove;
+            _view.VisualElement.MouseLeave += OnMouseLeave;
             _view.Closed += OnViewClosed;
         }
 
         private void OnViewClosed(object sender, EventArgs e)
         {
             _view.VisualElement.MouseLeftButtonUp -= OnMouseLeftButtonUp;
+            _view.VisualElement.MouseMove -= OnMouseMove;
+            _view.VisualElement.MouseLeave -= OnMouseLeave;
             _view.Closed -= OnViewClosed;
+        }
+
+        private void OnMouseMove(object sender, MouseEventArgs e)
+        {
+            if (!AdvancedOptions.Instance.EnableTableSorting)
+            {
+                ResetCursor();
+                return;
+            }
+
+            System.Windows.Point position = e.GetPosition(_view.VisualElement);
+            SnapshotPoint? bufferPosition = GetBufferPositionFromMousePosition(position);
+
+            bool isOverTableHeader = false;
+            if (bufferPosition.HasValue)
+            {
+                isOverTableHeader = GetTableHeaderAtPosition(bufferPosition.Value) != null;
+            }
+
+            if (isOverTableHeader && !_isOverHeader)
+            {
+                _originalCursor = _view.VisualElement.Cursor;
+                _view.VisualElement.Cursor = Cursors.Arrow;
+                _isOverHeader = true;
+            }
+            else if (!isOverTableHeader && _isOverHeader)
+            {
+                ResetCursor();
+            }
+        }
+
+        private void OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            ResetCursor();
+        }
+
+        private void ResetCursor()
+        {
+            if (_isOverHeader)
+            {
+                _view.VisualElement.Cursor = _originalCursor;
+                _isOverHeader = false;
+            }
         }
 
         private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -207,17 +256,17 @@ namespace MarkdownEditor2022
             for (int i = 0; i < columnCount; i++)
             {
                 columnWidths[i] = Math.Max(3, headerCells[i].Length);
-                foreach (var row in sorted)
+                foreach ((string sortKey, string[] cells) in sorted)
                 {
-                    if (i < row.cells.Length)
+                    if (i < cells.Length)
                     {
-                        columnWidths[i] = Math.Max(columnWidths[i], row.cells[i].Length);
+                        columnWidths[i] = Math.Max(columnWidths[i], cells[i].Length);
                     }
                 }
             }
 
             // Get column alignments
-            TableColumnDefinition[] columnDefinitions = table.ColumnDefinitions?.ToArray() ?? new TableColumnDefinition[0];
+            TableColumnDefinition[] columnDefinitions = table.ColumnDefinitions?.ToArray() ?? [];
 
             // Build formatted table
             StringBuilder sb = new();
@@ -244,14 +293,14 @@ namespace MarkdownEditor2022
             }
 
             // Data rows
-            foreach (var row in sorted)
+            foreach ((string sortKey, string[] cells) in sorted)
             {
                 sb.AppendLine();
                 sb.Append('|');
                 for (int i = 0; i < columnCount; i++)
                 {
                     TableColumnAlign? alignment = i < columnDefinitions.Length ? columnDefinitions[i].Alignment : null;
-                    string cell = i < row.cells.Length ? row.cells[i] : "";
+                    string cell = i < cells.Length ? cells[i] : "";
                     sb.Append(' ');
                     sb.Append(PadCell(cell, columnWidths[i], alignment));
                     sb.Append(" |");
@@ -294,30 +343,23 @@ namespace MarkdownEditor2022
 
             int padding = width - content.Length;
 
-            switch (alignment)
+            return alignment switch
             {
-                case TableColumnAlign.Center:
-                    return new string(' ', padding / 2) + content + new string(' ', padding - padding / 2);
-                case TableColumnAlign.Right:
-                    return new string(' ', padding) + content;
-                default:
-                    return content + new string(' ', padding);
-            }
+                TableColumnAlign.Center => new string(' ', padding / 2) + content + new string(' ', padding - padding / 2),
+                TableColumnAlign.Right => new string(' ', padding) + content,
+                _ => content + new string(' ', padding),
+            };
         }
 
         private static string CreateSeparator(int width, TableColumnAlign? alignment)
         {
-            switch (alignment)
+            return alignment switch
             {
-                case TableColumnAlign.Center:
-                    return ":" + new string('-', width - 2) + ":";
-                case TableColumnAlign.Right:
-                    return new string('-', width - 1) + ":";
-                case TableColumnAlign.Left:
-                    return ":" + new string('-', width - 1);
-                default:
-                    return new string('-', width);
-            }
+                TableColumnAlign.Center => ":" + new string('-', width - 2) + ":",
+                TableColumnAlign.Right => new string('-', width - 1) + ":",
+                TableColumnAlign.Left => ":" + new string('-', width - 1),
+                _ => new string('-', width),
+            };
         }
 
         private static string GetCellText(TableCell cell, ITextSnapshot snapshot)
@@ -350,8 +392,7 @@ namespace MarkdownEditor2022
             if (x == null) return -1;
             if (y == null) return 1;
 
-            double numX, numY;
-            if (double.TryParse(x, out numX) && double.TryParse(y, out numY))
+            if (double.TryParse(x, out double numX) && double.TryParse(y, out double numY))
             {
                 return numX.CompareTo(numY);
             }
