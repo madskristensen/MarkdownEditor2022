@@ -466,7 +466,7 @@ namespace MarkdownEditor2022
             // Check if the file has a markdown extension or no extension (so we can add .md)
             string extension = Path.GetExtension(file);
             
-            bool isMarkdownFile = !string.IsNullOrEmpty(extension) && _markdownExtensions.Contains(extension.ToLowerInvariant());
+            bool isMarkdownFile = !string.IsNullOrEmpty(extension) && Array.IndexOf(_markdownExtensions, extension.ToLowerInvariant()) >= 0;
             bool noExtension = string.IsNullOrEmpty(extension);
             
             if (!isMarkdownFile && !noExtension)
@@ -509,8 +509,8 @@ namespace MarkdownEditor2022
                         Directory.CreateDirectory(targetDirectory);
                     }
 
-                    // Create the file with empty content
-                    await File.WriteAllTextAsync(targetPath, string.Empty);
+                    // Create the file with empty content (synchronous - .NET Framework 4.8 doesn't have WriteAllTextAsync)
+                    File.WriteAllText(targetPath, string.Empty);
 
                     // Open the newly created file
                     await VS.Documents.OpenAsync(targetPath);
