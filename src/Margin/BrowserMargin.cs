@@ -377,8 +377,12 @@ namespace MarkdownEditor2022
                 Visibility = Visibility.Visible;
                 await Browser.RefreshAsync();
 
-                int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
-                await Browser.UpdatePositionAsync(line, false);
+                // Only sync position on refresh if scroll sync is enabled
+                if (options.EnableScrollSync)
+                {
+                    int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
+                    await Browser.UpdatePositionAsync(line, false);
+                }
             }
             else
             {
