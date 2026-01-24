@@ -573,7 +573,12 @@ namespace MarkdownEditor2022
 
                 string html = await RenderHtmlDocumentAsync(markdown);
                 await UpdateContentAsync(html);
-                await SyncNavigationAsync(isTyping: false);
+                
+                // Only sync navigation if scroll sync is enabled
+                if (AdvancedOptions.Instance.EnableScrollSync)
+                {
+                    await SyncNavigationAsync(isTyping: false);
+                }
             }
             catch (OperationCanceledException)
             {
