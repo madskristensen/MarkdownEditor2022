@@ -38,6 +38,7 @@ namespace MarkdownEditor2022
 
         private const string _mappedMarkdownEditorVirtualHostName = "markdown-editor-host";
         private const string _mappedBrowsingFileVirtualHostName = "browsing-file-host";
+        private static readonly string[] _markdownExtensions = [".md", ".markdown", ".mdown", ".mkd"];
 
         public readonly WebView2 _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
 
@@ -400,8 +401,7 @@ namespace MarkdownEditor2022
                         // If still not found, try adding common markdown extensions
                         if (targetPath == null && string.IsNullOrEmpty(Path.GetExtension(file)))
                         {
-                            string[] mdExtensions = [".md", ".markdown", ".mdown", ".mkd"];
-                            foreach (string ext in mdExtensions)
+                            foreach (string ext in _markdownExtensions)
                             {
                                 string withExt = Path.Combine(currentDir, file + ext);
                                 if (File.Exists(withExt))
@@ -465,9 +465,8 @@ namespace MarkdownEditor2022
         {
             // Check if the file has a markdown extension or no extension (so we can add .md)
             string extension = Path.GetExtension(file);
-            string[] mdExtensions = [".md", ".markdown", ".mdown", ".mkd"];
             
-            bool isMarkdownFile = !string.IsNullOrEmpty(extension) && mdExtensions.Contains(extension.ToLowerInvariant());
+            bool isMarkdownFile = !string.IsNullOrEmpty(extension) && _markdownExtensions.Contains(extension.ToLowerInvariant());
             bool noExtension = string.IsNullOrEmpty(extension);
             
             if (!isMarkdownFile && !noExtension)
@@ -511,7 +510,7 @@ namespace MarkdownEditor2022
                     }
 
                     // Create the file with empty content
-                    File.WriteAllText(targetPath, string.Empty);
+                    await File.WriteAllTextAsync(targetPath, string.Empty);
 
                     // Open the newly created file
                     await VS.Documents.OpenAsync(targetPath);
@@ -528,14 +527,26 @@ namespace MarkdownEditor2022
         {
             try
             {
+                // Ensure currentDir ends with directory separator for proper URI construction
+                string normalizedCurrentDir = currentDir;
+                if (!normalizedCurrentDir.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                {
+                    normalizedCurrentDir += Path.DirectorySeparatorChar;
+                }
+                
                 Uri targetUri = new Uri(targetPath);
-                Uri currentUri = new Uri(currentDir + Path.DirectorySeparatorChar);
+                Uri currentUri = new Uri(normalizedCurrentDir);
                 Uri relativeUri = currentUri.MakeRelativeUri(targetUri);
                 return Uri.UnescapeDataString(relativeUri.ToString().Replace('/', Path.DirectorySeparatorChar));
             }
-            catch
+            catch (UriFormatException)
             {
-                // If we can't compute relative path, just return the file name
+                // If we can't compute relative path due to URI issues, just return the file name
+                return Path.GetFileName(targetPath);
+            }
+            catch (InvalidOperationException)
+            {
+                // If MakeRelativeUri fails, return file name
                 return Path.GetFileName(targetPath);
             }
         }
