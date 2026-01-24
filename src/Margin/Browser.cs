@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -61,10 +62,275 @@ namespace MarkdownEditor2022
         // Cache StringBuilder and Regex for better performance
         private static StringWriter _htmlWriterStatic;
         private static readonly ConcurrentQueue<StringBuilder> _stringBuilderPool = new();
-        private static readonly Regex _languageRegex = new("\"language-(c#|C#|cs|dotnet)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex _languageRegex = new("\"language-([^\"]+)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _escapeRegex = new(@"[\\\r\n""]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _bgColorRegex = new(@"background(-color)?\s*:\s*#[0-9a-fA-F]{3,8}\b", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
+
+        // PrismJS language alias mappings (based on components.json from PrismJS)
+        // Maps common aliases to their canonical PrismJS language identifiers
+        private static readonly Dictionary<string, string> _languageAliasMap = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // C# aliases
+            ["c#"] = "csharp",
+            ["cs"] = "csharp",
+            ["dotnet"] = "csharp",
+            
+            // CoffeeScript aliases
+            ["coffee"] = "coffeescript",
+            
+            // JavaScript aliases
+            ["js"] = "javascript",
+            
+            // TypeScript aliases
+            ["ts"] = "typescript",
+            
+            // Python aliases
+            ["py"] = "python",
+            
+            // Ruby aliases
+            ["rb"] = "ruby",
+            
+            // Bash/Shell aliases
+            ["sh"] = "bash",
+            ["shell"] = "bash",
+            
+            // Markup/HTML aliases
+            ["html"] = "markup",
+            ["xml"] = "markup",
+            ["svg"] = "markup",
+            ["mathml"] = "markup",
+            ["ssml"] = "markup",
+            ["atom"] = "markup",
+            ["rss"] = "markup",
+            
+            // Markdown aliases
+            ["md"] = "markdown",
+            
+            // YAML aliases
+            ["yml"] = "yaml",
+            
+            // Docker aliases
+            ["dockerfile"] = "docker",
+            
+            // Objective-C aliases
+            ["objc"] = "objectivec",
+            
+            // Haskell aliases
+            ["hs"] = "haskell",
+            
+            // Arduino aliases
+            ["ino"] = "arduino",
+            
+            // Kotlin aliases
+            ["kt"] = "kotlin",
+            ["kts"] = "kotlin",
+            
+            // LaTeX aliases
+            ["tex"] = "latex",
+            ["context"] = "latex",
+            
+            // PowerQuery aliases
+            ["pq"] = "powerquery",
+            ["mscript"] = "powerquery",
+            
+            // Q# aliases
+            ["qs"] = "qsharp",
+            
+            // Visual Basic aliases
+            ["vb"] = "visual-basic",
+            ["vba"] = "visual-basic",
+            
+            // Handlebars/Mustache aliases
+            ["hbs"] = "handlebars",
+            ["mustache"] = "handlebars",
+            
+            // Gettext aliases
+            ["po"] = "gettext",
+            
+            // ANTLR4 aliases
+            ["g4"] = "antlr4",
+            
+            // ARM Assembly aliases
+            ["arm-asm"] = "armasm",
+            
+            // AsciiDoc aliases
+            ["adoc"] = "asciidoc",
+            
+            // Avisynth aliases
+            ["avs"] = "avisynth",
+            
+            // Avro IDL aliases
+            ["avdl"] = "avro-idl",
+            
+            // AWK aliases
+            ["gawk"] = "awk",
+            
+            // BBcode aliases
+            ["shortcode"] = "bbcode",
+            
+            // BNF aliases
+            ["rbnf"] = "bnf",
+            
+            // BSL aliases
+            ["oscript"] = "bsl",
+            
+            // CFScript aliases
+            ["cfc"] = "cfscript",
+            
+            // Cilk aliases
+            ["cilk-c"] = "cilkc",
+            ["cilk-cpp"] = "cilkcpp",
+            ["cilk"] = "cilkcpp",
+            
+            // Concurnas aliases
+            ["conc"] = "concurnas",
+            
+            // Django/Jinja2 aliases
+            ["jinja2"] = "django",
+            
+            // DNS zone file aliases
+            ["dns-zone"] = "dns-zone-file",
+            
+            // DOT (Graphviz) aliases
+            ["gv"] = "dot",
+            
+            // EJS/Eta aliases
+            ["eta"] = "ejs",
+            
+            // Excel Formula aliases
+            ["xlsx"] = "excel-formula",
+            ["xls"] = "excel-formula",
+            
+            // GameMaker Language aliases
+            ["gamemakerlanguage"] = "gml",
+            
+            // GN aliases
+            ["gni"] = "gn",
+            
+            // GNU Linker Script aliases
+            ["ld"] = "linker-script",
+            
+            // Go module aliases
+            ["go-mod"] = "go-module",
+            
+            // Idris aliases
+            ["idr"] = "idris",
+            
+            // .ignore aliases
+            ["gitignore"] = "ignore",
+            ["hgignore"] = "ignore",
+            ["npmignore"] = "ignore",
+            
+            // JSON aliases
+            ["webmanifest"] = "json",
+            
+            // LilyPond aliases
+            ["ly"] = "lilypond",
+            
+            // Lisp aliases
+            ["emacs"] = "lisp",
+            ["elisp"] = "lisp",
+            ["emacs-lisp"] = "lisp",
+            
+            // MoonScript aliases
+            ["moon"] = "moonscript",
+            
+            // N4JS aliases
+            ["n4jsd"] = "n4js",
+            
+            // Naninovel Script aliases
+            ["nani"] = "naniscript",
+            
+            // OpenQasm aliases
+            ["qasm"] = "openqasm",
+            
+            // Pascal aliases
+            ["objectpascal"] = "pascal",
+            
+            // PC-Axis aliases
+            ["px"] = "pcaxis",
+            
+            // PeopleCode aliases
+            ["pcode"] = "peoplecode",
+            
+            // PlantUML aliases
+            ["plantuml"] = "plant-uml",
+            
+            // PureBasic aliases
+            ["pbfasm"] = "purebasic",
+            
+            // PureScript aliases
+            ["purs"] = "purescript",
+            
+            // Racket aliases
+            ["rkt"] = "racket",
+            
+            // Razor C# aliases
+            ["razor"] = "cshtml",
+            
+            // Ren'py aliases
+            ["rpy"] = "renpy",
+            
+            // ReScript aliases
+            ["res"] = "rescript",
+            
+            // Robot Framework aliases
+            ["robot"] = "robotframework",
+            
+            // Shell session aliases
+            ["sh-session"] = "shell-session",
+            ["shellsession"] = "shell-session",
+            
+            // SML aliases
+            ["smlnj"] = "sml",
+            
+            // Solidity aliases
+            ["sol"] = "solidity",
+            
+            // Solution file aliases
+            ["sln"] = "solution-file",
+            
+            // SPARQL aliases
+            ["rq"] = "sparql",
+            
+            // SuperCollider aliases
+            ["sclang"] = "supercollider",
+            
+            // T4 Text Templates aliases
+            ["t4"] = "t4-cs",
+            
+            // Tremor aliases
+            ["trickle"] = "tremor",
+            ["troy"] = "tremor",
+            
+            // Turtle/TriG aliases
+            ["trig"] = "turtle",
+            
+            // TypoScript aliases
+            ["tsconfig"] = "typoscript",
+            
+            // UnrealScript aliases
+            ["uscript"] = "unrealscript",
+            ["uc"] = "unrealscript",
+            
+            // URI aliases
+            ["url"] = "uri",
+            
+            // Web IDL aliases
+            ["webidl"] = "web-idl",
+            
+            // Wolfram language aliases
+            ["mathematica"] = "wolfram",
+            ["nb"] = "wolfram",
+            ["wl"] = "wolfram",
+            
+            // Xeora aliases
+            ["xeoracube"] = "xeora",
+            
+            // Arturo aliases
+            ["art"] = "arturo",
+        };
 
         // Cache WebView2 environment for faster initialization of subsequent instances
         private static Task<CoreWebView2Environment> _cachedEnvironmentTask;
@@ -600,7 +866,22 @@ namespace MarkdownEditor2022
 
                 await htmlWriter.FlushAsync();
                 string html = htmlWriter.ToString();
-                html = _languageRegex.Replace(html, "\"language-csharp\"");
+                
+                // Replace language aliases with canonical PrismJS language names
+                html = _languageRegex.Replace(html, match =>
+                {
+                    string lang = match.Groups[1].Value;
+                    
+                    // Check if this is an alias that needs to be mapped
+                    if (_languageAliasMap.TryGetValue(lang, out string canonicalLang))
+                    {
+                        return $"\"language-{canonicalLang}\"";
+                    }
+                    
+                    // Return original if no mapping exists
+                    return match.Value;
+                });
+                
                 return html;
             }
             catch (Exception ex)
