@@ -39,6 +39,7 @@ namespace MarkdownEditor2022
 
         private const string _mappedMarkdownEditorVirtualHostName = "markdown-editor-host";
         private const string _mappedBrowsingFileVirtualHostName = "browsing-file-host";
+        private static readonly string[] _markdownExtensions = [".md", ".markdown", ".mdown", ".mkd"];
 
         public readonly WebView2 _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
 
@@ -666,8 +667,7 @@ namespace MarkdownEditor2022
                         // If still not found, try adding common markdown extensions
                         if (targetPath == null && string.IsNullOrEmpty(Path.GetExtension(file)))
                         {
-                            string[] mdExtensions = [".md", ".markdown", ".mdown", ".mkd"];
-                            foreach (string ext in mdExtensions)
+                            foreach (string ext in _markdownExtensions)
                             {
                                 string withExt = Path.Combine(currentDir, file + ext);
                                 if (File.Exists(withExt))
@@ -681,6 +681,11 @@ namespace MarkdownEditor2022
                         if (targetPath != null)
                         {
                             VS.Documents.OpenInPreviewTabAsync(targetPath).FireAndForget();
+                        }
+                        else
+                        {
+                            // If file doesn't exist, check if it's a markdown file and ask to create it
+                            await HandleNonExistentMarkdownLinkAsync(file, currentDir);
                         }
                     }
                 }
@@ -720,6 +725,95 @@ namespace MarkdownEditor2022
                 }})();";
 
             await _browser.ExecuteScriptAsync(script);
+        }
+
+        private async Task HandleNonExistentMarkdownLinkAsync(string file, string currentDir)
+        {
+            // Check if the file has a markdown extension or no extension (so we can add .md)
+            string extension = Path.GetExtension(file);
+            
+            bool isMarkdownFile = !string.IsNullOrEmpty(extension) && Array.IndexOf(_markdownExtensions, extension.ToLowerInvariant()) >= 0;
+            bool noExtension = string.IsNullOrEmpty(extension);
+            
+            if (!isMarkdownFile && !noExtension)
+            {
+                // Not a markdown file, don't offer to create it
+                return;
+            }
+
+            // If no extension, add .md
+            string targetFile = noExtension ? file + ".md" : file;
+            
+            // Determine the full path where the file should be created
+            // Path.Combine and Path.GetFullPath will correctly resolve ../ references
+            string targetPath = Path.GetFullPath(Path.Combine(currentDir, targetFile));
+
+            // Get the directory that needs to be created
+            string targetDirectory = Path.GetDirectoryName(targetPath);
+
+            // Create a user-friendly message
+            string fileName = Path.GetFileName(targetPath);
+            string relativePath = GetRelativePathForDisplay(targetPath, currentDir);
+            string message = $"The file '{relativePath}' does not exist.\n\nDo you want to create it?";
+            
+            if (!Directory.Exists(targetDirectory))
+            {
+                message = $"The file '{relativePath}' does not exist, and its directory doesn't exist either.\n\nDo you want to create the directory and file?";
+            }
+
+            // Show message box asking if user wants to create the file
+            bool result = await VS.MessageBox.ShowConfirmAsync("Create Markdown File", message);
+            
+            if (result)
+            {
+                try
+                {
+                    // Create directory if it doesn't exist
+                    if (!Directory.Exists(targetDirectory))
+                    {
+                        Directory.CreateDirectory(targetDirectory);
+                    }
+
+                    // Create the file with empty content (synchronous - .NET Framework 4.8 doesn't have WriteAllTextAsync)
+                    File.WriteAllText(targetPath, string.Empty);
+
+                    // Open the newly created file
+                    await VS.Documents.OpenAsync(targetPath);
+                    await VS.StatusBar.ShowMessageAsync($"Created and opened: {fileName}");
+                }
+                catch (Exception ex)
+                {
+                    await VS.StatusBar.ShowMessageAsync($"Failed to create file: {ex.Message}");
+                }
+            }
+        }
+
+        private string GetRelativePathForDisplay(string targetPath, string currentDir)
+        {
+            try
+            {
+                // Ensure currentDir ends with directory separator for proper URI construction
+                string normalizedCurrentDir = currentDir;
+                if (!normalizedCurrentDir.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                {
+                    normalizedCurrentDir += Path.DirectorySeparatorChar;
+                }
+                
+                Uri targetUri = new Uri(targetPath);
+                Uri currentUri = new Uri(normalizedCurrentDir);
+                Uri relativeUri = currentUri.MakeRelativeUri(targetUri);
+                return Uri.UnescapeDataString(relativeUri.ToString().Replace('/', Path.DirectorySeparatorChar));
+            }
+            catch (UriFormatException)
+            {
+                // If we can't compute relative path due to URI issues, just return the file name
+                return Path.GetFileName(targetPath);
+            }
+            catch (InvalidOperationException)
+            {
+                // If MakeRelativeUri fails, return file name
+                return Path.GetFileName(targetPath);
+            }
         }
 
         /// <summary>
