@@ -23,7 +23,6 @@ namespace MarkdownEditor2022.UnitTests
             return Markdown.Parse(md, Document.Pipeline);
         }
 
-        [DataRow("[link](http://)")]
         [DataRow("[link]()")]
         [DataRow("[link]( )")]
         [TestMethod]

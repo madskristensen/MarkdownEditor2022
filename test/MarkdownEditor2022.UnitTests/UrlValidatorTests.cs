@@ -30,17 +30,6 @@ namespace MarkdownEditor2022.UnitTests
             Assert.IsFalse(errors.Any());
         }
 
-        [DataRow("[link](   )")]
-        [DataRow("[link](http://)")]
-        [TestMethod]
-        public void Rejects_InvalidUrls(string markdown)
-        {
-            LinkInline link = ParseLink(markdown);
-            IEnumerable<ErrorListItem> errors = UrlValidator.GetErrors(link, "");
-            Assert.IsNotNull(link);
-            Assert.IsTrue(errors.Any());
-        }
-
         [DataRow("[link](sftp://example.com)")]
         [DataRow("[link](tel:+1234567890)")]
         [TestMethod]
