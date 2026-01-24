@@ -118,6 +118,34 @@ After:
 | Gizmo  | A larger device  | $24.95 |
 ```
 
+### Table sorting
+
+Click any table header to sort the table by that column. Click again to toggle between ascending and descending order. Table headers are underlined to indicate they are clickable.
+
+Before (unsorted):
+
+```markdown
+| Name   | Price  |
+|--------|-------:|
+| Banana |  $1.25 |
+| Apple  |  $0.99 |
+| Cherry |  $2.50 |
+```
+
+After clicking "Name" header (sorted ascending):
+
+```markdown
+| Name   | Price  |
+|--------|-------:|
+| Apple  |  $0.99 |
+| Banana |  $1.25 |
+| Cherry |  $2.50 |
+```
+
+The sorter handles numeric values intelligently, so columns with numbers sort numerically rather than alphabetically. Column alignment is preserved after sorting.
+
+Enable or disable this feature in **Tools -> Options -> Text Editor -> Markdown -> Advanced -> Enable table sorting**.
+
 ### IntelliSense
 
 #### Emoji IntelliSense
@@ -245,6 +273,7 @@ Control the settings for this extension under
 | Preview window position | Choose between right-side or bottom placement |
 | Preview window width/height | Set the size of the preview pane |
 | Auto-hide for tool windows | Temporarily hides the preview when auto-hide tool windows expand, preventing overlap issues |
+| Enable table sorting | Allows clicking table headers to sort columns (underlines headers when enabled) |
 
 ### How can I help?
 

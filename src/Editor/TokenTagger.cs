@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading.Tasks;
+using Markdig.Extensions.Tables;
 using Markdig.Extensions.Yaml;
 using Markdig.Helpers;
 using Markdig.Syntax;
@@ -75,8 +76,52 @@ namespace MarkdownEditor2022
                 }
             }
 
+            // Add table header cell classifications (cells aren't included in Descendants())
+            if (AdvancedOptions.Instance.EnableTableSorting)
+            {
+                foreach (Table table in _document.Markdown.Descendants<Table>())
+                {
+                    if (_document.IsParsing)
+                    {
+                        return Task.CompletedTask;
+                    }
+                    AddTableHeaderTags(list, table);
+                }
+            }
+
             OnTagsUpdated(list);
             return Task.CompletedTask;
+        }
+
+        private void AddTableHeaderTags(List<ITagSpan<TokenTag>> list, Table table)
+        {
+            foreach (TableRow row in table.OfType<TableRow>())
+            {
+                if (!row.IsHeader)
+                {
+                    continue;
+                }
+
+                foreach (TableCell cell in row.OfType<TableCell>())
+                {
+                    if (cell.Span.Length == 0 || cell.Span.Start >= Buffer.CurrentSnapshot.Length)
+                    {
+                        continue;
+                    }
+
+                    int start = cell.Span.Start;
+                    int length = Math.Min(cell.Span.Length, Buffer.CurrentSnapshot.Length - start);
+
+                    if (length <= 0)
+                    {
+                        continue;
+                    }
+
+                    SnapshotSpan span = new(Buffer.CurrentSnapshot, start, length);
+                    TokenTag tag = CreateToken(ClassificationTypes.MarkdownTableHeader, false, false, null);
+                    list.Add(new TagSpan<TokenTag>(span, tag));
+                }
+            }
         }
 
         private void AddTagToList(List<ITagSpan<TokenTag>> list, MarkdownObject item)
@@ -85,7 +130,7 @@ namespace MarkdownEditor2022
             IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
 
             SnapshotSpan span = new(Buffer.CurrentSnapshot, GetApplicableSpan(item));
-            
+
             // Special handling for HeadingBlock to differentiate levels
             string tokenType = GetItemType(item);
             if (item is HeadingBlock headingBlock)

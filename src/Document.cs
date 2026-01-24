@@ -32,8 +32,8 @@ namespace MarkdownEditor2022
         // Converts Azure DevOps triple-colon syntax to standard fenced code blocks
         // Handles both ":::mermaid" and "::: mermaid" (with space) formats
         // Uses a MatchEvaluator to exclude markdown alerts like "::: note"
-        private static readonly Regex _colonFixRegex = new Regex(@"^(:::) ?(\w*)", RegexOptions.Multiline | RegexOptions.Compiled);
-        private static readonly HashSet<string> _alertKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Regex _colonFixRegex = new(@"^(:::) ?(\w*)", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly HashSet<string> _alertKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
             "note", "tip", "important", "caution", "warning"
         };
