@@ -479,9 +479,8 @@ namespace MarkdownEditor2022
             string targetFile = noExtension ? file + ".md" : file;
             
             // Determine the full path where the file should be created
-            // Default to relative to current document's directory
-            string targetPath = Path.Combine(currentDir, targetFile);
-            targetPath = Path.GetFullPath(targetPath);
+            // Path.Combine and Path.GetFullPath will correctly resolve ../ references
+            string targetPath = Path.GetFullPath(Path.Combine(currentDir, targetFile));
 
             // Get the directory that needs to be created
             string targetDirectory = Path.GetDirectoryName(targetPath);
