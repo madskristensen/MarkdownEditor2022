@@ -732,10 +732,10 @@ namespace MarkdownEditor2022
         {
             // Check if the file has a markdown extension or no extension (so we can add .md)
             string extension = Path.GetExtension(file);
-            
+
             bool isMarkdownFile = !string.IsNullOrEmpty(extension) && Array.IndexOf(_markdownExtensions, extension.ToLowerInvariant()) >= 0;
             bool noExtension = string.IsNullOrEmpty(extension);
-            
+
             if (!isMarkdownFile && !noExtension)
             {
                 // Not a markdown file, don't offer to create it
@@ -744,10 +744,14 @@ namespace MarkdownEditor2022
 
             // If no extension, add .md
             string targetFile = noExtension ? file + ".md" : file;
-            
+
             // Determine the full path where the file should be created
-            // Path.Combine and Path.GetFullPath will correctly resolve ../ references
-            string targetPath = Path.GetFullPath(Path.Combine(currentDir, targetFile));
+            // The browsing-file-host virtual host is mapped to the parent directory of currentDir,
+            // so paths received from the browser are relative to that parent directory.
+            // We need to resolve relative to the parent directory, not currentDir.
+            DirectoryInfo parentDir = new DirectoryInfo(currentDir).Parent;
+            string baseDir = parentDir?.FullName ?? currentDir;
+            string targetPath = Path.GetFullPath(Path.Combine(baseDir, targetFile));
 
             // Get the directory that needs to be created
             string targetDirectory = Path.GetDirectoryName(targetPath);
