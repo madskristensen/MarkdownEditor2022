@@ -1,5 +1,6 @@
 using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 
@@ -10,7 +11,7 @@ namespace MarkdownEditor2022
     [Order(After = PredefinedMarginNames.RightControl)]
     [MarginContainer(PredefinedMarginNames.Right)]
     [ContentType(Constants.LanguageName)]
-    [TextViewRole(PredefinedTextViewRoles.Debuggable)] // This is to prevent the margin from loading in the diff view
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class PreviewMarginVerticalProvider : IWpfTextViewMarginProvider
     {
         [Import]
@@ -20,7 +21,7 @@ namespace MarkdownEditor2022
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
         {
-            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Horizontal)
+            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Horizontal || wpfTextViewHost.TextView.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole))
             {
                 return null;
             }
@@ -50,7 +51,7 @@ namespace MarkdownEditor2022
     [Order(After = PredefinedMarginNames.BottomControl)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
     [ContentType(Constants.LanguageName)]
-    [TextViewRole(PredefinedTextViewRoles.Debuggable)] // This is to prevent the margin from loading in the diff view
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class PreviewMarginHorizontalProvider : IWpfTextViewMarginProvider
     {
         [Import]
@@ -60,7 +61,7 @@ namespace MarkdownEditor2022
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
         {
-            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical)
+            if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical || wpfTextViewHost.TextView.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole))
             {
                 return null;
             }
