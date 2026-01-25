@@ -149,6 +149,35 @@ In addition to Mermaid code blocks in Markdown, the extension also supports stan
 
 This is useful when you want to maintain complex diagrams as separate files or share them across multiple documents.
 
+### Root path configuration for Jekyll/GitHub Pages
+
+When working with static site generators like Jekyll or GitHub Pages, you may want to use root-relative paths (paths starting with `/`) in your markdown files. The extension supports configuring a root path via YAML front matter to properly resolve these paths in the preview.
+
+**Example usage:**
+
+```yaml
+---
+root_path: C:\Projects\myblog
+title: My Blog Post
+---
+
+![Header Image](/images/header.jpg)
+[About Page](/about.md)
+```
+
+In this example:
+- The image path `/images/header.jpg` resolves to `C:\Projects\myblog\images\header.jpg`
+- The link `/about.md` resolves to `C:\Projects\myblog\about.md`
+
+**Key features:**
+- Works with both images (`src`) and links (`href`)
+- Supports Windows paths (`C:\Projects\blog`) and Unix paths (`/home/user/website`)
+- Case-insensitive (`root_path` or `ROOT_PATH`)
+- Can be quoted if the path contains spaces
+- Regular relative paths (not starting with `/`) continue to work as before
+
+This feature is particularly useful when editing Jekyll blog posts where the actual URL structure differs from the file system layout.
+
 ### Table formatting
 
 Use Visual Studio's standard format commands to align and beautify pipe tables:
