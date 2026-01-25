@@ -10,13 +10,11 @@
 Download this extension from the [Visual Studio Marketplace][marketplace]
 or get the [CI build][vsixgallery].
 
---------------------------------------
+----------
 
-This extension delivers a full featured Markdown editor with live preview, syntax-aware editing, and turnkey workflows for GitHub flavored Markdown.
+This extension delivers a full featured Markdown editor with live preview, syntax-aware editing, and turnkey workflows for GitHu`b flavored Markdown.
 
-> This is a complete rewrite of the original [Markdown Editor](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownEditor64) with tons of fixes, tweaks, and performance improvements. A few little-used features are not being ported to this new extension, so if you rely on them you should keep using the original.
-
-For linting and validation rules, this extension integrates with the [Markdown Lint](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownLint) extension.
+> **💡 Tip:** For the best experience, pair this extension with [Markdown Lint](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownLint) for linting/validation and [Image Optimizer](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ImageOptimizer64bit) for automatic image compression.
 
 ## Getting Started
 
