@@ -69,6 +69,7 @@
     <Compile Include="DragDrop\MarkdownDropHandler.cs" />
     <Compile Include="DragDrop\MarkdownDropHandlerProvider.cs" />
     <Compile Include="Editor\IntelliSense.cs" />
+    <Compile Include="Editor\MermaidClassifier.cs" />
     <Compile Include="Editor\TableHeaderQuickInfo.cs" />
     <Compile Include="Editor\TableSortAdornment.cs" />
     <Compile Include="ExtensionMethods.cs" />

@@ -21,13 +21,20 @@ namespace MarkdownEditor2022
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, ["mark", "md", "mdown"])]
     [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMd)]
     [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionRmd)]
+    [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMermaid)]
+    [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMmd)]
 
     [ProvideEditorFactory(typeof(MarkdownEditorV2), 0, false, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorLogicalView(typeof(MarkdownEditorV2), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMd, 1000)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionRmd, 1000)]
+    [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMermaid, 1000)]
+    [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMmd, 1000)]
 
     [ProvideFileIcon(Constants.FileExtensionMd, "KnownMonikers.MarkdownFile")]
+    [ProvideFileIcon(Constants.FileExtensionRmd, "KnownMonikers.MarkdownFile")]
+    [ProvideFileIcon(Constants.FileExtensionMermaid, "KnownMonikers.SkinFile")]
+    [ProvideFileIcon(Constants.FileExtensionMmd, "KnownMonikers.SkinFile")]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
     {
         private static DTE _dte;
@@ -63,7 +70,8 @@ namespace MarkdownEditor2022
         {
             string ext = Path.GetExtension(_dte?.ActiveDocument?.FullName ?? "").ToLowerInvariant();
 
-            return ext is Constants.FileExtensionMd or Constants.FileExtensionRmd;
+            return ext is Constants.FileExtensionMd or Constants.FileExtensionRmd
+                       or Constants.FileExtensionMermaid or Constants.FileExtensionMmd;
         }
     }
 }

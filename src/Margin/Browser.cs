@@ -40,6 +40,7 @@ namespace MarkdownEditor2022
         private const string _mappedMarkdownEditorVirtualHostName = "markdown-editor-host";
         private const string _mappedBrowsingFileVirtualHostName = "browsing-file-host";
         private static readonly string[] _markdownExtensions = [".md", ".markdown", ".mdown", ".mkd"];
+        private static readonly string[] _mermaidExtensions = [".mermaid", ".mmd"];
 
         public readonly WebView2 _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
 
@@ -375,6 +376,18 @@ namespace MarkdownEditor2022
             _browser.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
         }
 
+        /// <summary>
+        /// Returns true if the current file is a standalone mermaid file (.mermaid or .mmd).
+        /// </summary>
+        private bool IsMermaidFile
+        {
+            get
+            {
+                string ext = Path.GetExtension(_file);
+                return Array.Exists(_mermaidExtensions, e => e.Equals(ext, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
         public void Dispose()
         {
             VSColorTheme.ThemeChanged -= OnThemeChanged;
@@ -422,16 +435,27 @@ namespace MarkdownEditor2022
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
-                await _document.WaitForInitialParseAsync(timeoutCts.Token);
+                string html;
 
-                MarkdownDocument markdown = _document.Markdown;
-                if (markdown == null)
+                if (IsMermaidFile)
                 {
-                    return;
+                    // For standalone mermaid files, wrap the entire content in a mermaid div
+                    string content = _textView.TextBuffer.CurrentSnapshot.GetText();
+                    html = $"<pre class=\"mermaid\">{WebUtility.HtmlEncode(content)}</pre>";
                 }
+                else
+                {
+                    using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+                    await _document.WaitForInitialParseAsync(timeoutCts.Token);
 
-                string html = await RenderHtmlDocumentAsync(markdown);
+                    MarkdownDocument markdown = _document.Markdown;
+                    if (markdown == null)
+                    {
+                        return;
+                    }
+
+                    html = await RenderHtmlDocumentAsync(markdown);
+                }
 
                 // Feature detection
                 bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -925,22 +949,34 @@ namespace MarkdownEditor2022
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                // Wait for initial parsing to complete before rendering (fixes #127, #142)
-                // Use a timeout to prevent indefinite waiting
-                using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
-                await _document.WaitForInitialParseAsync(timeoutCts.Token);
+                string html;
 
-                MarkdownDocument markdown = _document.Markdown;
-                if (markdown == null)
+                if (IsMermaidFile)
                 {
-                    return; // Document not yet parsed or parsing failed
+                    // For standalone mermaid files, wrap the entire content in a mermaid div
+                    string content = _textView.TextBuffer.CurrentSnapshot.GetText();
+                    html = $"<pre class=\"mermaid\">{WebUtility.HtmlEncode(content)}</pre>";
+                }
+                else
+                {
+                    // Wait for initial parsing to complete before rendering (fixes #127, #142)
+                    // Use a timeout to prevent indefinite waiting
+                    using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+                    await _document.WaitForInitialParseAsync(timeoutCts.Token);
+
+                    MarkdownDocument markdown = _document.Markdown;
+                    if (markdown == null)
+                    {
+                        return; // Document not yet parsed or parsing failed
+                    }
+
+                    html = await RenderHtmlDocumentAsync(markdown);
                 }
 
-                string html = await RenderHtmlDocumentAsync(markdown);
                 await UpdateContentAsync(html);
-                
-                // Only sync navigation if scroll sync is enabled
-                if (AdvancedOptions.Instance.EnableScrollSync)
+
+                // Only sync navigation if scroll sync is enabled (not applicable for mermaid files)
+                if (!IsMermaidFile && AdvancedOptions.Instance.EnableScrollSync)
                 {
                     await SyncNavigationAsync(isTyping: false);
                 }

@@ -149,7 +149,9 @@ namespace MarkdownEditor2022
                 InitializeAutoHideMonitorAsync().FireAndForget();
             }
 
-            //UpdateBrowser(_document);
+            // Trigger initial render now that browser is ready
+            // For mermaid files, this is essential since they don't depend on markdown parsing
+            _ = Browser.UpdateBrowserAsync();
         }
 
         /// <summary>
