@@ -309,6 +309,12 @@ namespace MarkdownEditor2022
             string searchDir = docDir;
             string pathPart = fullTypedPath;
 
+            // Strip quotes and other illegal path characters that might be typed in markdown links
+            // e.g., ![]("path") - the quotes are illegal in Windows paths
+            pathPart = pathPart.Trim('"', '\'', '<', '>', '|');
+            if (string.IsNullOrWhiteSpace(pathPart))
+                return CompletionContext.Empty;
+
             // Handle relative path prefixes
             if (pathPart.StartsWith("./")) pathPart = pathPart.Substring(2);
             while (pathPart.StartsWith("../"))

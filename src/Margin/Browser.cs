@@ -70,6 +70,12 @@ namespace MarkdownEditor2022
         private static readonly Regex _bgColorRegex = new(@"background(-color)?\s*:\s*#[0-9a-fA-F]{3,8}\b", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
 
+        // Regex for resolving relative paths in HTML attributes to absolute file:// URLs
+        // Matches src="..." and href="..." attributes with relative paths (not starting with http, https, data, #, or /)
+        private static readonly Regex _relativePathRegex = new(
+            @"(?<attr>src|href)\s*=\s*""(?<path>(?!https?://|data:|#|/)[^""]+)""",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
         // PrismJS language alias mappings (based on components.json from PrismJS)
         // Maps common aliases to their canonical PrismJS language identifiers
         private static readonly Dictionary<string, string> _languageAliasMap = new(StringComparer.OrdinalIgnoreCase)
@@ -78,26 +84,26 @@ namespace MarkdownEditor2022
             ["c#"] = "csharp",
             ["cs"] = "csharp",
             ["dotnet"] = "csharp",
-            
+
             // CoffeeScript aliases
             ["coffee"] = "coffeescript",
-            
+
             // JavaScript aliases
             ["js"] = "javascript",
-            
+
             // TypeScript aliases
             ["ts"] = "typescript",
-            
+
             // Python aliases
             ["py"] = "python",
-            
+
             // Ruby aliases
             ["rb"] = "ruby",
-            
+
             // Bash/Shell aliases
             ["sh"] = "bash",
             ["shell"] = "bash",
-            
+
             // Markup/HTML aliases
             ["html"] = "markup",
             ["xml"] = "markup",
@@ -106,231 +112,231 @@ namespace MarkdownEditor2022
             ["ssml"] = "markup",
             ["atom"] = "markup",
             ["rss"] = "markup",
-            
+
             // Markdown aliases
             ["md"] = "markdown",
-            
+
             // YAML aliases
             ["yml"] = "yaml",
-            
+
             // Docker aliases
             ["dockerfile"] = "docker",
-            
+
             // Objective-C aliases
             ["objc"] = "objectivec",
-            
+
             // Haskell aliases
             ["hs"] = "haskell",
-            
+
             // Arduino aliases
             ["ino"] = "arduino",
-            
+
             // Kotlin aliases
             ["kt"] = "kotlin",
             ["kts"] = "kotlin",
-            
+
             // LaTeX aliases
             ["tex"] = "latex",
             ["context"] = "latex",
-            
+
             // PowerQuery aliases
             ["pq"] = "powerquery",
             ["mscript"] = "powerquery",
-            
+
             // Q# aliases
             ["qs"] = "qsharp",
-            
+
             // Visual Basic aliases
             ["vb"] = "visual-basic",
             ["vba"] = "visual-basic",
-            
+
             // Handlebars/Mustache aliases
             ["hbs"] = "handlebars",
             ["mustache"] = "handlebars",
-            
+
             // Gettext aliases
             ["po"] = "gettext",
-            
+
             // ANTLR4 aliases
             ["g4"] = "antlr4",
-            
+
             // ARM Assembly aliases
             ["arm-asm"] = "armasm",
-            
+
             // AsciiDoc aliases
             ["adoc"] = "asciidoc",
-            
+
             // Avisynth aliases
             ["avs"] = "avisynth",
-            
+
             // Avro IDL aliases
             ["avdl"] = "avro-idl",
-            
+
             // AWK aliases
             ["gawk"] = "awk",
-            
+
             // BBcode aliases
             ["shortcode"] = "bbcode",
-            
+
             // BNF aliases
             ["rbnf"] = "bnf",
-            
+
             // BSL aliases
             ["oscript"] = "bsl",
-            
+
             // CFScript aliases
             ["cfc"] = "cfscript",
-            
+
             // Cilk aliases
             ["cilk-c"] = "cilkc",
             ["cilk-cpp"] = "cilkcpp",
             ["cilk"] = "cilkcpp",
-            
+
             // Concurnas aliases
             ["conc"] = "concurnas",
-            
+
             // Django/Jinja2 aliases
             ["jinja2"] = "django",
-            
+
             // DNS zone file aliases
             ["dns-zone"] = "dns-zone-file",
-            
+
             // DOT (Graphviz) aliases
             ["gv"] = "dot",
-            
+
             // EJS/Eta aliases
             ["eta"] = "ejs",
-            
+
             // Excel Formula aliases
             ["xlsx"] = "excel-formula",
             ["xls"] = "excel-formula",
-            
+
             // GameMaker Language aliases
             ["gamemakerlanguage"] = "gml",
-            
+
             // GN aliases
             ["gni"] = "gn",
-            
+
             // GNU Linker Script aliases
             ["ld"] = "linker-script",
-            
+
             // Go module aliases
             ["go-mod"] = "go-module",
-            
+
             // Idris aliases
             ["idr"] = "idris",
-            
+
             // .ignore aliases
             ["gitignore"] = "ignore",
             ["hgignore"] = "ignore",
             ["npmignore"] = "ignore",
-            
+
             // JSON aliases
             ["webmanifest"] = "json",
-            
+
             // LilyPond aliases
             ["ly"] = "lilypond",
-            
+
             // Lisp aliases
             ["emacs"] = "lisp",
             ["elisp"] = "lisp",
             ["emacs-lisp"] = "lisp",
-            
+
             // MoonScript aliases
             ["moon"] = "moonscript",
-            
+
             // N4JS aliases
             ["n4jsd"] = "n4js",
-            
+
             // Naninovel Script aliases
             ["nani"] = "naniscript",
-            
+
             // OpenQasm aliases
             ["qasm"] = "openqasm",
-            
+
             // Pascal aliases
             ["objectpascal"] = "pascal",
-            
+
             // PC-Axis aliases
             ["px"] = "pcaxis",
-            
+
             // PeopleCode aliases
             ["pcode"] = "peoplecode",
-            
+
             // PlantUML aliases
             ["plantuml"] = "plant-uml",
-            
+
             // PureBasic aliases
             ["pbfasm"] = "purebasic",
-            
+
             // PureScript aliases
             ["purs"] = "purescript",
-            
+
             // Racket aliases
             ["rkt"] = "racket",
-            
+
             // Razor C# aliases
             ["razor"] = "cshtml",
-            
+
             // Ren'py aliases
             ["rpy"] = "renpy",
-            
+
             // ReScript aliases
             ["res"] = "rescript",
-            
+
             // Robot Framework aliases
             ["robot"] = "robotframework",
-            
+
             // Shell session aliases
             ["sh-session"] = "shell-session",
             ["shellsession"] = "shell-session",
-            
+
             // SML aliases
             ["smlnj"] = "sml",
-            
+
             // Solidity aliases
             ["sol"] = "solidity",
-            
+
             // Solution file aliases
             ["sln"] = "solution-file",
-            
+
             // SPARQL aliases
             ["rq"] = "sparql",
-            
+
             // SuperCollider aliases
             ["sclang"] = "supercollider",
-            
+
             // T4 Text Templates aliases
             ["t4"] = "t4-cs",
-            
+
             // Tremor aliases
             ["trickle"] = "tremor",
             ["troy"] = "tremor",
-            
+
             // Turtle/TriG aliases
             ["trig"] = "turtle",
-            
+
             // TypoScript aliases
             ["tsconfig"] = "typoscript",
-            
+
             // UnrealScript aliases
             ["uscript"] = "unrealscript",
             ["uc"] = "unrealscript",
-            
+
             // URI aliases
             ["url"] = "uri",
-            
+
             // Web IDL aliases
             ["webidl"] = "web-idl",
-            
+
             // Wolfram language aliases
             ["mathematica"] = "wolfram",
             ["nb"] = "wolfram",
             ["wl"] = "wolfram",
-            
+
             // Xeora aliases
             ["xeoracube"] = "xeora",
-            
+
             // Arturo aliases
             ["art"] = "arturo",
         };
@@ -457,6 +463,10 @@ namespace MarkdownEditor2022
                     html = await RenderHtmlDocumentAsync(markdown);
                 }
 
+                // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
+                string baseDirectory = Path.GetDirectoryName(_file);
+                html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory);
+
                 // Feature detection
                 bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
                 bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 || html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -520,11 +530,13 @@ namespace MarkdownEditor2022
 
             void SetVirtualFolderMapping()
             {
+                // Map markdown-editor-host for extension resources (CSS, JS for syntax highlighting, etc.)
                 _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedMarkdownEditorVirtualHostName, GetFolder(), CoreWebView2HostResourceAccessKind.Allow);
 
-                DirectoryInfo parentDir = new(Path.GetDirectoryName(_file));
-                string baseHref = (parentDir.Parent ?? parentDir).FullName.Replace("\\", "/");
-                _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, baseHref, CoreWebView2HostResourceAccessKind.Allow);
+                // Map browsing-file-host to the drive root so relative paths with any number of ../ can be resolved
+                // This fixes issue #60 where paths like ../../images/foo.png were being normalized away
+                string driveRoot = Path.GetPathRoot(_file);
+                _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, driveRoot, CoreWebView2HostResourceAccessKind.Allow);
             }
 
             async Task RenderInitialContentAsync(string template)
@@ -546,6 +558,10 @@ namespace MarkdownEditor2022
                     string html = markdown != null
                         ? await RenderHtmlDocumentAsync(markdown)
                         : string.Empty;
+
+                    // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
+                    string baseDirectory = Path.GetDirectoryName(_file);
+                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory);
 
                     // Feature detection
                     bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -639,65 +655,42 @@ namespace MarkdownEditor2022
                     return;
                 }
 
-                // Handle browsing-file-host links (relative links and internal anchors)
+                // Handle browsing-file-host links (resolved absolute paths via virtual host)
+                // Since the virtual host is mapped to the drive root, the localPath contains the full path from the drive root
                 if (uri.Authority == _mappedBrowsingFileVirtualHostName)
                 {
                     string localPath = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/'));
                     string fragment = uri.Fragment?.TrimStart('#');
                     bool hasFragment = !string.IsNullOrEmpty(fragment);
 
-                    // Check if this is an internal anchor link (fragment-only, no file path change)
-                    // Internal links will have the same directory as the base href
-                    string currentDir = Path.GetDirectoryName(_file);
-                    string currentDirName = new DirectoryInfo(currentDir).Name;
+                    // Convert to absolute file system path by prepending the drive root
+                    string driveRoot = Path.GetPathRoot(_file);
+                    string absolutePath = Path.Combine(driveRoot, localPath.Replace('/', Path.DirectorySeparatorChar));
 
-                    // If the local path is just the current directory name (or empty), it's an internal anchor
-                    bool isInternalAnchor = string.IsNullOrEmpty(localPath) ||
-                                            localPath.Equals(currentDirName, StringComparison.OrdinalIgnoreCase) ||
-                                            localPath.Equals(currentDirName + "/", StringComparison.OrdinalIgnoreCase);
-
-                    if (isInternalAnchor && hasFragment)
+                    // Check if this is an internal anchor (same file with fragment)
+                    if (hasFragment && absolutePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
                     {
-                        // Navigate to the fragment within the current document
                         await NavigateToFragmentAsync(fragment);
                         return;
                     }
 
                     // This is a link to another file
-                    if (!string.IsNullOrEmpty(localPath) && !isInternalAnchor)
+                    if (File.Exists(absolutePath))
                     {
-                        string file = localPath.Replace('/', Path.DirectorySeparatorChar);
+                        VS.Documents.OpenInPreviewTabAsync(absolutePath).FireAndForget();
+                    }
+                    else
+                    {
+                        // Try adding common markdown extensions if no extension was specified
                         string targetPath = null;
-
-                        // Try to resolve the file path relative to the current document's directory
-                        string relativePath = Path.Combine(currentDir, file);
-                        if (File.Exists(relativePath))
-                        {
-                            targetPath = Path.GetFullPath(relativePath);
-                        }
-                        else
-                        {
-                            // Try relative to the parent directory (where browsing-file-host is mapped)
-                            DirectoryInfo parentDir = new DirectoryInfo(currentDir).Parent;
-                            if (parentDir != null)
-                            {
-                                string parentRelativePath = Path.Combine(parentDir.FullName, file);
-                                if (File.Exists(parentRelativePath))
-                                {
-                                    targetPath = Path.GetFullPath(parentRelativePath);
-                                }
-                            }
-                        }
-
-                        // If still not found, try adding common markdown extensions
-                        if (targetPath == null && string.IsNullOrEmpty(Path.GetExtension(file)))
+                        if (string.IsNullOrEmpty(Path.GetExtension(absolutePath)))
                         {
                             foreach (string ext in _markdownExtensions)
                             {
-                                string withExt = Path.Combine(currentDir, file + ext);
+                                string withExt = absolutePath + ext;
                                 if (File.Exists(withExt))
                                 {
-                                    targetPath = Path.GetFullPath(withExt);
+                                    targetPath = withExt;
                                     break;
                                 }
                             }
@@ -710,8 +703,36 @@ namespace MarkdownEditor2022
                         else
                         {
                             // If file doesn't exist, check if it's a markdown file and ask to create it
-                            await HandleNonExistentMarkdownLinkAsync(file, currentDir);
+                            string currentDir = Path.GetDirectoryName(_file);
+                            await HandleNonExistentMarkdownLinkAsync(absolutePath, currentDir);
                         }
+                    }
+                    return;
+                }
+                // Handle file:// URLs (absolute paths from resolved relative links)
+                else if (uri.IsAbsoluteUri && uri.Scheme == "file")
+                {
+                    string filePath = uri.LocalPath;
+                    string fragment = uri.Fragment?.TrimStart('#');
+                    bool hasFragment = !string.IsNullOrEmpty(fragment);
+
+                    // Check if this is an internal anchor (same file with fragment)
+                    if (hasFragment && filePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
+                    {
+                        await NavigateToFragmentAsync(fragment);
+                        return;
+                    }
+
+                    // This is a link to another file
+                    if (File.Exists(filePath))
+                    {
+                        VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
+                    }
+                    else
+                    {
+                        // If file doesn't exist, check if it's a markdown file and ask to create it
+                        string currentDir = Path.GetDirectoryName(_file);
+                        await HandleNonExistentMarkdownLinkAsync(filePath, currentDir);
                     }
                 }
                 else if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
@@ -784,7 +805,7 @@ namespace MarkdownEditor2022
             string fileName = Path.GetFileName(targetPath);
             string relativePath = GetRelativePathForDisplay(targetPath, currentDir);
             string message = $"The file '{relativePath}' does not exist.\n\nDo you want to create it?";
-            
+
             if (!Directory.Exists(targetDirectory))
             {
                 message = $"The file '{relativePath}' does not exist, and its directory doesn't exist either.\n\nDo you want to create the directory and file?";
@@ -792,7 +813,7 @@ namespace MarkdownEditor2022
 
             // Show message box asking if user wants to create the file
             bool result = await VS.MessageBox.ShowConfirmAsync("Create Markdown File", message);
-            
+
             if (result)
             {
                 try
@@ -827,9 +848,9 @@ namespace MarkdownEditor2022
                 {
                     normalizedCurrentDir += Path.DirectorySeparatorChar;
                 }
-                
-                Uri targetUri = new Uri(targetPath);
-                Uri currentUri = new Uri(normalizedCurrentDir);
+
+                Uri targetUri = new(targetPath);
+                Uri currentUri = new(normalizedCurrentDir);
                 Uri relativeUri = currentUri.MakeRelativeUri(targetUri);
                 return Uri.UnescapeDataString(relativeUri.ToString().Replace('/', Path.DirectorySeparatorChar));
             }
@@ -973,6 +994,10 @@ namespace MarkdownEditor2022
                     html = await RenderHtmlDocumentAsync(markdown);
                 }
 
+                // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
+                string baseDirectory = Path.GetDirectoryName(_file);
+                html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory);
+
                 await UpdateContentAsync(html);
 
                 // Only sync navigation if scroll sync is enabled (not applicable for mermaid files)
@@ -1006,26 +1031,26 @@ namespace MarkdownEditor2022
 
                 await htmlWriter.FlushAsync();
                 string html = htmlWriter.ToString();
-                
+
                 // Replace language aliases with canonical PrismJS language names
                 html = _languageRegex.Replace(html, match =>
                 {
                     string lang = match.Groups[1].Value;
-                    
+
                     // Check if this is an alias that needs to be mapped
                     if (_languageAliasMap.TryGetValue(lang, out string canonicalLang))
                     {
                         return $"\"language-{canonicalLang}\"";
                     }
-                    
+
                     // Return original if no mapping exists
                     return match.Value;
                 });
-                
+
                 // Convert language-mermaid to mermaid class for Mermaid.js rendering
                 // Mermaid.js requires class="mermaid" instead of class="language-mermaid"
                 html = _mermaidRegex.Replace(html, "class=\"mermaid\"");
-                
+
                 return html;
             }
             catch (Exception ex)
@@ -1040,6 +1065,64 @@ namespace MarkdownEditor2022
                     _stringBuilderPool.Enqueue(sb);
                 }
             }
+        }
+
+        /// <summary>
+        /// Resolves relative paths in HTML src and href attributes to absolute virtual host URLs.
+        /// This fixes issue #60 where paths with parent directory navigation (../) were being
+        /// normalized away by the browser before we could handle them.
+        /// </summary>
+        /// <param name="html">The HTML content with potentially relative paths.</param>
+        /// <param name="baseDirectory">The directory to resolve relative paths against.</param>
+        /// <returns>HTML with relative paths converted to absolute virtual host URLs.</returns>
+        private static string ResolveRelativePathsToAbsoluteUrls(string html, string baseDirectory)
+        {
+            if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(baseDirectory))
+            {
+                return html;
+            }
+
+            string driveRoot = Path.GetPathRoot(baseDirectory);
+
+            return _relativePathRegex.Replace(html, match =>
+            {
+                string attr = match.Groups["attr"].Value;
+                string relativePath = match.Groups["path"].Value;
+
+                // Skip if it's an anchor-only link or already absolute
+                if (string.IsNullOrEmpty(relativePath) || relativePath.StartsWith("#"))
+                {
+                    return match.Value;
+                }
+
+                try
+                {
+                    // Decode HTML entities in the path (e.g., %20 for spaces)
+                    string decodedPath = WebUtility.UrlDecode(relativePath);
+
+                    // Normalize path separators
+                    decodedPath = decodedPath.Replace('/', Path.DirectorySeparatorChar);
+
+                    // Resolve the full path using Path.GetFullPath which handles ../ correctly
+                    string fullPath = Path.GetFullPath(Path.Combine(baseDirectory, decodedPath));
+
+                    // Convert to virtual host URL relative to drive root
+                    // e.g., C:\Projects\images\foo.png -> http://browsing-file-host/Projects/images/foo.png
+                    string relativeToDrive = fullPath;
+                    if (fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        relativeToDrive = fullPath.Substring(driveRoot.Length);
+                    }
+                    string virtualUrl = "http://" + _mappedBrowsingFileVirtualHostName + "/" + relativeToDrive.Replace(Path.DirectorySeparatorChar, '/');
+
+                    return $"{attr}=\"{virtualUrl}\"";
+                }
+                catch
+                {
+                    // If path resolution fails, keep the original path
+                    return match.Value;
+                }
+            });
         }
 
         private async Task UpdateContentAsync(string html)
@@ -1133,11 +1216,8 @@ namespace MarkdownEditor2022
             long highlightTicks = SafeGetWriteTime(highlightSourcePath).Ticks;
             long prismTicks = SafeGetWriteTime(prismSourcePath).Ticks;
 
-            // Get the directory name for base href - must be included in cache key since it's file-specific
-            string dirName = new FileInfo(_file).Directory.Name;
-
-            // Include theme colors and dirName in cache key so template updates correctly per file location
-            string cacheKey = string.Join("|", useLightTheme ? "light" : "dark", spellCheck ? "spell" : "plain", templateFileName, templateTicks, highlightSourcePath, highlightTicks, prismSourcePath, prismTicks, themeBgColor, themeFgColor, scrollbarColor, dirName);
+            // Include theme colors in cache key so template updates correctly
+            string cacheKey = string.Join("|", useLightTheme ? "light" : "dark", spellCheck ? "spell" : "plain", templateFileName, templateTicks, highlightSourcePath, highlightTicks, prismSourcePath, prismTicks, themeBgColor, themeFgColor, scrollbarColor);
 
             if (!_templateCache.TryGetValue(cacheKey, out string cachedTemplate))
             {
@@ -1160,7 +1240,6 @@ namespace MarkdownEditor2022
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
-    <base href=""http://{_mappedBrowsingFileVirtualHostName}/{dirName}/"" />
     <style>
         html, body {{margin: 0; padding:0; min-height: 100%; display: block; background-color: {themeBgColor}; color: {themeFgColor};}}
         .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}
