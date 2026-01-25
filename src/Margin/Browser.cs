@@ -468,14 +468,7 @@ namespace MarkdownEditor2022
                         return;
                     }
 
-                    html = await RenderHtmlDocumentAsync(markdown);
-                    
-                    // Extract root_path from front matter if present
-                    string rootPath = GetRootPathFromFrontMatter(markdown);
-                    
-                    // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
-                    string baseDirectory = Path.GetDirectoryName(_file);
-                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
+                    html = await RenderMarkdownToHtmlAsync(markdown);
                 }
 
                 // Feature detection
@@ -566,16 +559,7 @@ namespace MarkdownEditor2022
                     }
 
                     MarkdownDocument markdown = _document.Markdown;
-                    string html = markdown != null
-                        ? await RenderHtmlDocumentAsync(markdown)
-                        : string.Empty;
-
-                    // Extract root_path from front matter if present
-                    string rootPath = markdown != null ? GetRootPathFromFrontMatter(markdown) : null;
-                    
-                    // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
-                    string baseDirectory = Path.GetDirectoryName(_file);
-                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
+                    string html = await RenderMarkdownToHtmlAsync(markdown);
 
                     // Feature detection
                     bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -670,90 +654,68 @@ namespace MarkdownEditor2022
                 }
 
                 // Handle browsing-file-host links (resolved absolute paths via virtual host)
-                // Since the virtual host is mapped to the drive root, the localPath contains the full path from the drive root
                 if (uri.Authority == _mappedBrowsingFileVirtualHostName)
                 {
                     string localPath = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/'));
-                    string fragment = uri.Fragment?.TrimStart('#');
-                    bool hasFragment = !string.IsNullOrEmpty(fragment);
-
-                    // Convert to absolute file system path by prepending the drive root
                     string driveRoot = Path.GetPathRoot(_file);
                     string absolutePath = Path.Combine(driveRoot, localPath.Replace('/', Path.DirectorySeparatorChar));
-
-                    // Check if this is an internal anchor (same file with fragment)
-                    if (hasFragment && absolutePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
-                    {
-                        await NavigateToFragmentAsync(fragment);
-                        return;
-                    }
-
-                    // This is a link to another file
-                    if (File.Exists(absolutePath))
-                    {
-                        VS.Documents.OpenInPreviewTabAsync(absolutePath).FireAndForget();
-                    }
-                    else
-                    {
-                        // Try adding common markdown extensions if no extension was specified
-                        string targetPath = null;
-                        if (string.IsNullOrEmpty(Path.GetExtension(absolutePath)))
-                        {
-                            foreach (string ext in _markdownExtensions)
-                            {
-                                string withExt = absolutePath + ext;
-                                if (File.Exists(withExt))
-                                {
-                                    targetPath = withExt;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (targetPath != null)
-                        {
-                            VS.Documents.OpenInPreviewTabAsync(targetPath).FireAndForget();
-                        }
-                        else
-                        {
-                            // If file doesn't exist, check if it's a markdown file and ask to create it
-                            string currentDir = Path.GetDirectoryName(_file);
-                            await HandleNonExistentMarkdownLinkAsync(absolutePath, currentDir);
-                        }
-                    }
+                    await HandleFileNavigationAsync(absolutePath, uri.Fragment);
                     return;
                 }
+
                 // Handle file:// URLs (absolute paths from resolved relative links)
-                else if (uri.IsAbsoluteUri && uri.Scheme == "file")
+                if (uri.IsAbsoluteUri && uri.Scheme == "file")
                 {
-                    string filePath = uri.LocalPath;
-                    string fragment = uri.Fragment?.TrimStart('#');
-                    bool hasFragment = !string.IsNullOrEmpty(fragment);
-
-                    // Check if this is an internal anchor (same file with fragment)
-                    if (hasFragment && filePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
-                    {
-                        await NavigateToFragmentAsync(fragment);
-                        return;
-                    }
-
-                    // This is a link to another file
-                    if (File.Exists(filePath))
-                    {
-                        VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
-                    }
-                    else
-                    {
-                        // If file doesn't exist, check if it's a markdown file and ask to create it
-                        string currentDir = Path.GetDirectoryName(_file);
-                        await HandleNonExistentMarkdownLinkAsync(filePath, currentDir);
-                    }
+                    await HandleFileNavigationAsync(uri.LocalPath, uri.Fragment);
+                    return;
                 }
-                else if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
+
+                if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
                 {
                     Process.Start(uri.ToString());
                 }
             }).FireAndForget();
+        }
+
+        /// <summary>
+        /// Handles navigation to a local file path, including internal anchors and non-existent files.
+        /// </summary>
+        private async Task HandleFileNavigationAsync(string filePath, string fragment)
+        {
+            fragment = fragment?.TrimStart('#');
+            bool hasFragment = !string.IsNullOrEmpty(fragment);
+
+            // Check if this is an internal anchor (same file with fragment)
+            if (hasFragment && filePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
+            {
+                await NavigateToFragmentAsync(fragment);
+                return;
+            }
+
+            // File exists - open it
+            if (File.Exists(filePath))
+            {
+                VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
+                return;
+            }
+
+            // Try adding common markdown extensions if no extension was specified
+            if (string.IsNullOrEmpty(Path.GetExtension(filePath)))
+            {
+                foreach (string ext in _markdownExtensions)
+                {
+                    string withExt = filePath + ext;
+                    if (File.Exists(withExt))
+                    {
+                        VS.Documents.OpenInPreviewTabAsync(withExt).FireAndForget();
+                        return;
+                    }
+                }
+            }
+
+            // File doesn't exist - offer to create it if it's a markdown file
+            string currentDir = Path.GetDirectoryName(_file);
+            await HandleNonExistentMarkdownLinkAsync(filePath, currentDir);
         }
 
         private async Task NavigateToFragmentAsync(string fragmentId)
@@ -1005,14 +967,7 @@ namespace MarkdownEditor2022
                         return; // Document not yet parsed or parsing failed
                     }
 
-                    html = await RenderHtmlDocumentAsync(markdown);
-                    
-                    // Extract root_path from front matter if present
-                    string rootPath = GetRootPathFromFrontMatter(markdown);
-                    
-                    // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
-                    string baseDirectory = Path.GetDirectoryName(_file);
-                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
+                    html = await RenderMarkdownToHtmlAsync(markdown);
                 }
 
                 await UpdateContentAsync(html);
@@ -1085,6 +1040,24 @@ namespace MarkdownEditor2022
         }
 
         /// <summary>
+        /// Renders markdown to HTML and resolves relative paths to absolute virtual host URLs.
+        /// Common pipeline used by all rendering code paths.
+        /// </summary>
+        private async Task<string> RenderMarkdownToHtmlAsync(MarkdownDocument markdown)
+        {
+            if (markdown == null)
+            {
+                return string.Empty;
+            }
+
+            string html = await RenderHtmlDocumentAsync(markdown);
+            string rootPath = GetRootPathFromFrontMatter(markdown);
+            string baseDirectory = Path.GetDirectoryName(_file);
+
+            return ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
+        }
+
+        /// <summary>
         /// Extracts the root_path value from YAML front matter in a MarkdownDocument.
         /// </summary>
         /// <param name="md">The parsed markdown document.</param>
@@ -1104,10 +1077,10 @@ namespace MarkdownEditor2022
             }
 
             // Parse the YAML lines to find root_path
-            foreach (var line in frontMatter.Lines.Lines)
+            foreach (Markdig.Helpers.StringLine line in frontMatter.Lines.Lines)
             {
                 string lineText = line.ToString().Trim();
-                
+
                 // Look for root_path: value
                 if (lineText.StartsWith("root_path:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -1446,20 +1419,53 @@ namespace MarkdownEditor2022
                 return _cachedThemeColors.Value;
             }
 
+            (Color bgColor, Color fgColor) = TryGetColorsFromFormatMap();
+
+            bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
+            if (AdvancedOptions.Instance.Theme == Theme.Automatic)
+            {
+                ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(bgColor);
+                useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
+            }
+
+            (bool useLightTheme, string, string) result = (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
+            _cachedThemeColors = result;
+            return result;
+
+            static string ColorToHex(Color c)
+            {
+                return $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+            }
+        }
+
+        /// <summary>
+        /// Gets the Visual Studio background color that should be used for the preview.
+        /// Uses the editor background if available, falls back to environment colors.
+        /// </summary>
+        private Color GetPreviewBackgroundColor()
+        {
+            (Color bgColor, _) = TryGetColorsFromFormatMap();
+            return bgColor;
+        }
+
+        /// <summary>
+        /// Tries to extract background and foreground colors from the editor format map and fallback sources.
+        /// </summary>
+        private (Color background, Color foreground) TryGetColorsFromFormatMap()
+        {
             Color bgColor = default;
             Color fgColor = default;
             bool foundBg = false;
             bool foundFg = false;
 
             // Use IEditorFormatMap to get the actual editor background color
-            // The background is typically in "TextView Background", not "Plain Text"
             if (_formatMapService != null && _textView != null)
             {
                 try
                 {
                     IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
 
-                    // Try multiple format map keys for background - "TextView Background" is the actual editor surface
+                    // Try multiple format map keys for background
                     string[] bgKeys = ["TextView Background", "text", "Plain Text"];
                     foreach (string key in bgKeys)
                     {
@@ -1473,7 +1479,7 @@ namespace MarkdownEditor2022
                         {
                             if (props.Contains(EditorFormatDefinition.BackgroundBrushId) &&
                                 props[EditorFormatDefinition.BackgroundBrushId] is SolidColorBrush bgBrush &&
-                                bgBrush.Color.A > 0) // Ensure not transparent
+                                bgBrush.Color.A > 0)
                             {
                                 bgColor = bgBrush.Color;
                                 foundBg = true;
@@ -1514,7 +1520,7 @@ namespace MarkdownEditor2022
                 }
             }
 
-            // Try IWpfTextView.Background as second option (may have actual rendered background)
+            // Try IWpfTextView.Background as second option
             if (!foundBg && _textView?.Background is SolidColorBrush viewBgBrush && viewBgBrush.Color.A > 0)
             {
                 bgColor = viewBgBrush.Color;
@@ -1522,16 +1528,16 @@ namespace MarkdownEditor2022
             }
 
             // Fallback to environment colors
-            if (!foundBg)
+            if (!foundBg && Application.Current?.Resources != null)
             {
-                if (Application.Current.Resources[EnvironmentColors.EnvironmentBackgroundBrushKey] is SolidColorBrush envBgBrush)
+                if (Application.Current.Resources[EnvironmentColors.ToolWindowBackgroundBrushKey] is SolidColorBrush envBgBrush)
                 {
                     bgColor = envBgBrush.Color;
                     foundBg = true;
                 }
             }
 
-            if (!foundFg)
+            if (!foundFg && Application.Current?.Resources != null)
             {
                 if (Application.Current.Resources[EnvironmentColors.PanelTextBrushKey] is SolidColorBrush envFgBrush)
                 {
@@ -1541,102 +1547,7 @@ namespace MarkdownEditor2022
             }
 
             // Ultimate fallback
-            if (!foundBg)
-            {
-                bgColor = Colors.White;
-            }
-
-            if (!foundFg)
-            {
-                fgColor = Colors.Black;
-            }
-
-            bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
-            if (AdvancedOptions.Instance.Theme == Theme.Automatic)
-            {
-                ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(bgColor);
-                useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
-            }
-
-            (bool useLightTheme, string, string) result = (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
-            _cachedThemeColors = result;
-            return result;
-
-            static string ColorToHex(Color c)
-            {
-                return $"#{c.R:X2}{c.G:X2}{c.B:X2}";
-            }
-        }
-
-        /// <summary>
-        /// Gets the Visual Studio background color that should be used for the preview.
-        /// Uses the editor background if available, falls back to environment colors.
-        /// </summary>
-        private Color GetPreviewBackgroundColor()
-        {
-            // Try to get the editor background color from the format map
-            if (_formatMapService != null && _textView != null)
-            {
-                try
-                {
-                    IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
-                    string[] bgKeys = ["TextView Background", "text", "Plain Text"];
-                    foreach (string key in bgKeys)
-                    {
-                        ResourceDictionary props = formatMap.GetProperties(key);
-                        if (props != null)
-                        {
-                            if (props.Contains(EditorFormatDefinition.BackgroundBrushId) &&
-                                props[EditorFormatDefinition.BackgroundBrushId] is SolidColorBrush bgBrush &&
-                                bgBrush.Color.A > 0)
-                            {
-                                return bgBrush.Color;
-                            }
-                            else if (props.Contains(EditorFormatDefinition.BackgroundColorId) &&
-                                     props[EditorFormatDefinition.BackgroundColorId] is Color bgColorVal &&
-                                     bgColorVal.A > 0)
-                            {
-                                return bgColorVal;
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // Fall through to other methods
-                }
-            }
-
-            // Try IWpfTextView.Background
-            if (_textView?.Background is SolidColorBrush viewBgBrush && viewBgBrush.Color.A > 0)
-            {
-                return viewBgBrush.Color;
-            }
-
-            // Try VS theme service
-            try
-            {
-                System.Drawing.Color themeColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
-                if (themeColor != System.Drawing.Color.Empty && themeColor.A > 0)
-                {
-                    return Color.FromArgb(themeColor.A, themeColor.R, themeColor.G, themeColor.B);
-                }
-            }
-            catch
-            {
-                // Fall through
-            }
-
-            // Fallback to WPF resource lookup
-            if (Application.Current?.Resources != null)
-            {
-                if (Application.Current.Resources[EnvironmentColors.ToolWindowBackgroundBrushKey] is SolidColorBrush envBgBrush)
-                {
-                    return envBgBrush.Color;
-                }
-            }
-
-            return Colors.White;
+            return (foundBg ? bgColor : Colors.White, foundFg ? fgColor : Colors.Black);
         }
 
         private static StringBuilder GetOrCreateStringBuilder()

@@ -166,15 +166,31 @@ title: My Blog Post
 ```
 
 In this example:
+
 - The image path `/images/header.jpg` resolves to `C:\Projects\myblog\images\header.jpg`
 - The link `/about.md` resolves to `C:\Projects\myblog\about.md`
 
 **Key features:**
+
 - Works with both images (`src`) and links (`href`)
 - Supports Windows paths (`C:\Projects\blog`) and Unix paths (`/home/user/website`)
 - Case-insensitive (`root_path` or `ROOT_PATH`)
-- Can be quoted if the path contains spaces
+- Can be quoted if the path contains spaces: `root_path: "C:\My Projects\Site"`
 - Regular relative paths (not starting with `/`) continue to work as before
+- Paths starting with `<http://`,> `<https://`,> `data:`, or `#` are left unchanged
+
+**Typical Jekyll structure:**
+
+```text
+myblog/
+├── _posts/
+│   └── 2024-01-15-my-post.md   ← Edit this file
+├── images/
+│   └── header.jpg               ← Referenced as /images/header.jpg
+└── _config.yml
+```
+
+By adding `root_path: C:\Users\Me\myblog` to your post's front matter, root-relative paths in your Jekyll posts will render correctly in the Visual Studio preview.
 
 This feature is particularly useful when editing Jekyll blog posts where the actual URL structure differs from the file system layout.
 
