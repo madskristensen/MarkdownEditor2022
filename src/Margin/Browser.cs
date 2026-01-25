@@ -1116,13 +1116,20 @@ namespace MarkdownEditor2022
                     if (colonIndex >= 0 && colonIndex < lineText.Length - 1)
                     {
                         string value = lineText.Substring(colonIndex + 1).Trim();
-                        
-                        // Remove quotes if present
-                        if (value.Length >= 2 && (value[0] == '"' || value[0] == '\''))
+
+                        // Remove matching quotes if present (both single or double)
+                        if (value.Length >= 2)
                         {
-                            value = value.Trim('"', '\'');
+                            char firstChar = value[0];
+                            char lastChar = value[value.Length - 1];
+                            
+                            if ((firstChar == '"' && lastChar == '"') || 
+                                (firstChar == '\'' && lastChar == '\''))
+                            {
+                                value = value.Substring(1, value.Length - 2);
+                            }
                         }
-                        
+
                         return string.IsNullOrWhiteSpace(value) ? null : value;
                     }
                 }
