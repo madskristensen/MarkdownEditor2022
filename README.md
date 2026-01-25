@@ -139,6 +139,16 @@ sequenceDiagram
 
 Mermaid diagrams automatically adapt to the current Visual Studio theme (light or dark mode).
 
+#### Standalone Mermaid files
+
+In addition to Mermaid code blocks in Markdown, the extension also supports standalone Mermaid files with `.mermaid` or `.mmd` extensions. These files get:
+
+- Custom file icons in Solution Explorer
+- Syntax highlighting including Mermaid comments (`%%`)
+- Live preview rendering the diagram
+
+This is useful when you want to maintain complex diagrams as separate files or share them across multiple documents.
+
 ### Table formatting
 
 Use Visual Studio's standard format commands to align and beautify pipe tables:
@@ -330,15 +340,16 @@ Control the settings for this extension under
 
 ![Options](art/options.png)
 
-| Setting | Description |
-|---------|-------------|
-| Enable preview window | Shows the live preview pane when opening markdown files |
-| Enable scroll sync | Synchronizes scrolling between the editor and preview |
-| Preview window position | Choose between right-side or bottom placement |
-| Preview window width/height | Set the size of the preview pane |
-| Auto-hide for tool windows | Temporarily hides the preview when auto-hide tool windows expand, preventing overlap issues |
-| Enable table sorting | Allows clicking table headers to sort columns (underlines headers when enabled) |
-| Optimize images on paste | Automatically optimizes pasted images using Image Optimizer (requires Image Optimizer extension) |
+| Setting                     | Description                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------ |
+| Enable preview window       | Shows the live preview pane when opening markdown files                                          |
+| Enable scroll sync          | Synchronizes scrolling between the editor and preview                                            |
+| Preview window position     | Choose between right-side or bottom placement                                                    |
+| Preview window width/height | Set the size of the preview pane                                                                 |
+| Auto-hide for tool windows  | Temporarily hides the preview when auto-hide tool windows expand, preventing overlap issues      |
+| Enable table sorting        | Allows clicking table headers to sort columns (underlines headers when enabled)                  |
+| Optimize images on paste    | Automatically optimizes pasted images using Image Optimizer (requires Image Optimizer extension) |
+| Show trailing whitespace    | Displays dots for trailing double-spaces (soft line breaks) in the editor                        |
 
 ### How can I help?
 
