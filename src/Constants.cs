@@ -9,5 +9,9 @@ namespace MarkdownEditor2022
         public const string FileExtensionMmd = ".mmd";
         public static bool IsTest = false;
         public const string MarketplaceId = "MadsKristensen.MarkdownEditor2";
+
+        // Whitespace visualization
+        public const char SpaceDot = '·';           // Middle dot for space (U+00B7)
+        public const byte WhitespaceGrayLevel = 128;
     }
 }
