@@ -106,16 +106,6 @@ namespace MarkdownEditor2022
         public override IEnumerable<char> CommitChars => [' ', '\'', '"', ',', '.', ';', ':', '\\'];
     }
 
-    [Export(typeof(IViewTaggerProvider))]
-    [TagType(typeof(TextMarkerTag))]
-    [ContentType(Constants.LanguageName)]
-    internal sealed class BraceMatchingTaggerProvider : BraceMatchingBase { }
-
-    [Export(typeof(IViewTaggerProvider))]
-    [ContentType(Constants.LanguageName)]
-    [TagType(typeof(TextMarkerTag))]
-    public class SameWordHighlighter : SameWordHighlighterBase { }
-
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType(Constants.LanguageName)]
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
@@ -140,7 +130,7 @@ namespace MarkdownEditor2022
 
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
-            _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
+            //_docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
 
             _document.Parsed += OnParsed;
             _docView.Document.FileActionOccurred += Document_FileActionOccurred;
