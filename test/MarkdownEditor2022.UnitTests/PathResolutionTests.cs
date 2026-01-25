@@ -244,5 +244,92 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         #endregion
+
+        #region Root-Relative Path Resolution Tests
+
+        /// <summary>
+        /// Mirrors the ResolveRelativePathsToAbsoluteUrls method from Browser.cs for testing root-relative paths.
+        /// This simplified version only tests the root-relative path resolution logic.
+        /// </summary>
+        private static string ResolveRootRelativePath(string rootRelativePath, string rootPath, string driveRoot)
+        {
+            try
+            {
+                // Remove leading slash
+                string pathWithoutLeadingSlash = rootRelativePath.TrimStart('/');
+
+                // Normalize path separators
+                pathWithoutLeadingSlash = pathWithoutLeadingSlash.Replace('/', Path.DirectorySeparatorChar);
+
+                // Resolve against the root path
+                string fullPath = Path.GetFullPath(Path.Combine(rootPath, pathWithoutLeadingSlash));
+
+                // Convert to virtual host URL relative to drive root
+                string relativeToDrive = fullPath;
+                if (fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    relativeToDrive = fullPath.Substring(driveRoot.Length);
+                }
+                string virtualUrl = "http://browsing-file-host/" + relativeToDrive.Replace(Path.DirectorySeparatorChar, '/');
+
+                return virtualUrl;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        [TestMethod]
+        public void ResolveRootRelativePath_ImagePath_ReturnsCorrectVirtualUrl()
+        {
+            // Simulating Jekyll/GitHub Pages scenario where /images/test.png should resolve to
+            // C:\Projects\blog\images\test.png when root_path is C:\Projects\blog
+            string rootRelativePath = "/images/test.png";
+            string rootPath = @"C:\Projects\blog";
+            string driveRoot = @"C:\";
+
+            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+
+            Assert.AreEqual("http://browsing-file-host/Projects/blog/images/test.png", result);
+        }
+
+        [TestMethod]
+        public void ResolveRootRelativePath_NestedPath_ReturnsCorrectVirtualUrl()
+        {
+            string rootRelativePath = "/assets/img/photo.jpg";
+            string rootPath = @"C:\Users\Dev\website";
+            string driveRoot = @"C:\";
+
+            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+
+            Assert.AreEqual("http://browsing-file-host/Users/Dev/website/assets/img/photo.jpg", result);
+        }
+
+        [TestMethod]
+        public void ResolveRootRelativePath_SingleFile_ReturnsCorrectVirtualUrl()
+        {
+            string rootRelativePath = "/readme.md";
+            string rootPath = @"C:\Projects";
+            string driveRoot = @"C:\";
+
+            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+
+            Assert.AreEqual("http://browsing-file-host/Projects/readme.md", result);
+        }
+
+        [TestMethod]
+        public void ResolveRootRelativePath_PathWithSpaces_ReturnsCorrectVirtualUrl()
+        {
+            string rootRelativePath = "/my docs/test file.md";
+            string rootPath = @"C:\Projects\Site";
+            string driveRoot = @"C:\";
+
+            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+
+            Assert.AreEqual("http://browsing-file-host/Projects/Site/my docs/test file.md", result);
+        }
+
+        #endregion
     }
 }

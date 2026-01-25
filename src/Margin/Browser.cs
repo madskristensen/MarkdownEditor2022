@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -12,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.PlatformUI;
@@ -74,6 +76,12 @@ namespace MarkdownEditor2022
         // Matches src="..." and href="..." attributes with relative paths (not starting with http, https, data, #, or /)
         private static readonly Regex _relativePathRegex = new(
             @"(?<attr>src|href)\s*=\s*""(?<path>(?!https?://|data:|#|/)[^""]+)""",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        // Regex for resolving root-relative paths (paths starting with /) in HTML attributes
+        // Matches src="..." and href="..." attributes with paths starting with / (but not //)
+        private static readonly Regex _rootRelativePathRegex = new(
+            @"(?<attr>src|href)\s*=\s*""(?<path>/(?!/)[^""]+)""",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         // PrismJS language alias mappings (based on components.json from PrismJS)
@@ -461,11 +469,14 @@ namespace MarkdownEditor2022
                     }
 
                     html = await RenderHtmlDocumentAsync(markdown);
+                    
+                    // Extract root_path from front matter if present
+                    string rootPath = GetRootPathFromFrontMatter(markdown);
+                    
+                    // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
+                    string baseDirectory = Path.GetDirectoryName(_file);
+                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
                 }
-
-                // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
-                string baseDirectory = Path.GetDirectoryName(_file);
-                html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory);
 
                 // Feature detection
                 bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -559,9 +570,12 @@ namespace MarkdownEditor2022
                         ? await RenderHtmlDocumentAsync(markdown)
                         : string.Empty;
 
+                    // Extract root_path from front matter if present
+                    string rootPath = markdown != null ? GetRootPathFromFrontMatter(markdown) : null;
+                    
                     // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
                     string baseDirectory = Path.GetDirectoryName(_file);
-                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory);
+                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
 
                     // Feature detection
                     bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -992,11 +1006,14 @@ namespace MarkdownEditor2022
                     }
 
                     html = await RenderHtmlDocumentAsync(markdown);
+                    
+                    // Extract root_path from front matter if present
+                    string rootPath = GetRootPathFromFrontMatter(markdown);
+                    
+                    // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
+                    string baseDirectory = Path.GetDirectoryName(_file);
+                    html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
                 }
-
-                // Resolve relative paths to absolute virtual host URLs (fixes issue #60)
-                string baseDirectory = Path.GetDirectoryName(_file);
-                html = ResolveRelativePathsToAbsoluteUrls(html, baseDirectory);
 
                 await UpdateContentAsync(html);
 
@@ -1068,14 +1085,63 @@ namespace MarkdownEditor2022
         }
 
         /// <summary>
+        /// Extracts the root_path value from YAML front matter in a MarkdownDocument.
+        /// </summary>
+        /// <param name="md">The parsed markdown document.</param>
+        /// <returns>The root_path value if found, otherwise null.</returns>
+        private static string GetRootPathFromFrontMatter(MarkdownDocument md)
+        {
+            if (md == null)
+            {
+                return null;
+            }
+
+            // Find the YamlFrontMatterBlock in the document
+            YamlFrontMatterBlock frontMatter = md.Descendants<YamlFrontMatterBlock>().FirstOrDefault();
+            if (frontMatter == null)
+            {
+                return null;
+            }
+
+            // Parse the YAML lines to find root_path
+            foreach (var line in frontMatter.Lines.Lines)
+            {
+                string lineText = line.ToString().Trim();
+                
+                // Look for root_path: value
+                if (lineText.StartsWith("root_path:", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Extract the value after the colon
+                    int colonIndex = lineText.IndexOf(':');
+                    if (colonIndex >= 0 && colonIndex < lineText.Length - 1)
+                    {
+                        string value = lineText.Substring(colonIndex + 1).Trim();
+                        
+                        // Remove quotes if present
+                        if (value.Length >= 2 && (value[0] == '"' || value[0] == '\''))
+                        {
+                            value = value.Trim('"', '\'');
+                        }
+                        
+                        return string.IsNullOrWhiteSpace(value) ? null : value;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Resolves relative paths in HTML src and href attributes to absolute virtual host URLs.
         /// This fixes issue #60 where paths with parent directory navigation (../) were being
         /// normalized away by the browser before we could handle them.
+        /// Also supports root-relative paths (starting with /) when a root_path is specified in front matter.
         /// </summary>
         /// <param name="html">The HTML content with potentially relative paths.</param>
         /// <param name="baseDirectory">The directory to resolve relative paths against.</param>
+        /// <param name="rootPath">Optional root path from front matter for resolving root-relative paths (paths starting with /).</param>
         /// <returns>HTML with relative paths converted to absolute virtual host URLs.</returns>
-        private static string ResolveRelativePathsToAbsoluteUrls(string html, string baseDirectory)
+        private static string ResolveRelativePathsToAbsoluteUrls(string html, string baseDirectory, string rootPath = null)
         {
             if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(baseDirectory))
             {
@@ -1084,7 +1150,54 @@ namespace MarkdownEditor2022
 
             string driveRoot = Path.GetPathRoot(baseDirectory);
 
-            return _relativePathRegex.Replace(html, match =>
+            // First, handle root-relative paths (starting with /) if rootPath is specified
+            if (!string.IsNullOrEmpty(rootPath))
+            {
+                html = _rootRelativePathRegex.Replace(html, match =>
+                {
+                    string attr = match.Groups["attr"].Value;
+                    string relativePath = match.Groups["path"].Value;
+
+                    // Skip if it's an anchor-only link
+                    if (string.IsNullOrEmpty(relativePath) || relativePath == "/")
+                    {
+                        return match.Value;
+                    }
+
+                    try
+                    {
+                        // Decode HTML entities in the path (e.g., %20 for spaces)
+                        string decodedPath = WebUtility.UrlDecode(relativePath);
+
+                        // Remove leading slash
+                        string pathWithoutLeadingSlash = decodedPath.TrimStart('/');
+
+                        // Normalize path separators
+                        pathWithoutLeadingSlash = pathWithoutLeadingSlash.Replace('/', Path.DirectorySeparatorChar);
+
+                        // Resolve against the root path
+                        string fullPath = Path.GetFullPath(Path.Combine(rootPath, pathWithoutLeadingSlash));
+
+                        // Convert to virtual host URL relative to drive root
+                        string relativeToDrive = fullPath;
+                        if (fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase))
+                        {
+                            relativeToDrive = fullPath.Substring(driveRoot.Length);
+                        }
+                        string virtualUrl = "http://" + _mappedBrowsingFileVirtualHostName + "/" + relativeToDrive.Replace(Path.DirectorySeparatorChar, '/');
+
+                        return $"{attr}=\"{virtualUrl}\"";
+                    }
+                    catch
+                    {
+                        // If path resolution fails, keep the original path
+                        return match.Value;
+                    }
+                });
+            }
+
+            // Then handle regular relative paths (not starting with /)
+            html = _relativePathRegex.Replace(html, match =>
             {
                 string attr = match.Groups["attr"].Value;
                 string relativePath = match.Groups["path"].Value;
@@ -1123,6 +1236,8 @@ namespace MarkdownEditor2022
                     return match.Value;
                 }
             });
+
+            return html;
         }
 
         private async Task UpdateContentAsync(string html)
