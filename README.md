@@ -12,7 +12,7 @@ or get the [CI build][vsixgallery].
 
 ----------
 
-This extension delivers a full featured Markdown editor with live preview, syntax-aware editing, and turnkey workflows for GitHu`b flavored Markdown.
+This extension delivers a full featured Markdown editor with live preview, syntax-aware editing, and turnkey workflows for GitHub flavored Markdown.
 
 > **💡 Tip:** For the best experience, pair this extension with [Markdown Lint](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownLint) for linting/validation and [Image Optimizer](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ImageOptimizer64bit) for automatic image compression.
 
