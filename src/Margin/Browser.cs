@@ -15,6 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
+using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text.Classification;
@@ -1090,7 +1091,14 @@ namespace MarkdownEditor2022
                 }
 
                 // Set the ID attribute on the heading
-                heading.GetAttributes().Id = slug;
+                // Use TryGetAttributes to get existing attributes or create new ones
+                HtmlAttributes attributes = heading.TryGetAttributes();
+                if (attributes == null)
+                {
+                    attributes = new HtmlAttributes();
+                    heading.SetAttributes(attributes);
+                }
+                attributes.Id = slug;
             }
         }
 
