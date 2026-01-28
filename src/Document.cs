@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Markdig;
+using Markdig.Extensions.AutoIdentifiers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Threading;
@@ -21,6 +22,7 @@ namespace MarkdownEditor2022
         private int _lastParsedVersion;
 
         public static MarkdownPipeline Pipeline { get; } = new MarkdownPipelineBuilder()
+            .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)  // Must be BEFORE UseAdvancedExtensions to override default
             .UseAdvancedExtensions()
             .UsePragmaLines()
             .UsePreciseSourceLocation()

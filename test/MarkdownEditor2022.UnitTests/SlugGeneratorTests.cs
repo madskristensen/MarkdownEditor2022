@@ -1,182 +1,146 @@
+using Markdig;
+using Markdig.Extensions.AutoIdentifiers;
+using Markdig.Renderers.Html;
+using Markdig.Syntax;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Linq;
 
 namespace MarkdownEditor2022.UnitTests
 {
+    /// <summary>
+    /// Tests for Markdig's AutoIdentifier extension with GitHub option which is used for 
+    /// heading ID generation. These tests verify the behavior matches GitHub's anchor link format.
+    /// </summary>
     [TestClass]
     public class SlugGeneratorTests
     {
-        [TestMethod]
-        public void GenerateSlug_SimpleText_ReturnsLowercase()
+        private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+            .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)
+            .Build();
+
+        /// <summary>
+        /// Parses markdown and returns the generated heading ID.
+        /// This matches how the application generates heading IDs.
+        /// </summary>
+        private static string GetHeadingId(string headingMarkdown)
         {
-            string result = SlugGenerator.GenerateSlug("Hello World");
+            MarkdownDocument doc = Markdown.Parse(headingMarkdown, _pipeline);
+            HeadingBlock heading = doc.Descendants<HeadingBlock>().FirstOrDefault();
+            return heading?.GetAttributes().Id ?? string.Empty;
+        }
+
+        [TestMethod]
+        public void GetHeadingId_SimpleText_ReturnsLowercase()
+        {
+            string result = GetHeadingId("## Hello World");
 
             Assert.AreEqual("hello-world", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_WithAmpersand_CollapsesToSingleHyphen()
+        public void GetHeadingId_WithAmpersand_PreservesDoubleHyphen()
         {
-            // GitHub collapses consecutive hyphens: "A & B" becomes "a-b" not "a--b"
-            string result = SlugGenerator.GenerateSlug("Supported Diagrams & Examples");
+            // GitHub preserves consecutive hyphens: "Foo & bar" becomes "foo--bar"
+            // The & becomes a space-like separator, creating two consecutive hyphens
+            string result = GetHeadingId("## Foo & bar");
 
-            Assert.AreEqual("supported-diagrams-examples", result);
+            Assert.AreEqual("foo--bar", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_WithMultipleAmpersands_CollapsesAll()
+        public void GetHeadingId_WithAmpersandAndSpaces_PreservesDoubleHyphen()
         {
-            string result = SlugGenerator.GenerateSlug("A & B & C");
+            // GitHub preserves consecutive hyphens from issue #182
+            string result = GetHeadingId("## Supported Diagrams & Examples");
 
-            Assert.AreEqual("a-b-c", result);
+            Assert.AreEqual("supported-diagrams--examples", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_WithSpecialCharacters_RemovesThem()
+        public void GetHeadingId_HeaderIdentifiersInHtml()
         {
-            string result = SlugGenerator.GenerateSlug("Hello! @World# $Test%");
+            string result = GetHeadingId("## Header identifiers in HTML");
 
-            Assert.AreEqual("hello-world-test", result);
+            Assert.AreEqual("header-identifiers-in-html", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_WithHyphens_PreservesThem()
+        public void GetHeadingId_NumberedHeading()
         {
-            string result = SlugGenerator.GenerateSlug("Pre-existing-hyphens");
+            string result = GetHeadingId("## 3. Applications");
+
+            Assert.AreEqual("3-applications", result);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_OnlyNumbers()
+        {
+            string result = GetHeadingId("## 33");
+
+            Assert.AreEqual("33", result);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_WithHyphens_PreservesThem()
+        {
+            string result = GetHeadingId("## Pre-existing-hyphens");
 
             Assert.AreEqual("pre-existing-hyphens", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_WithUnderscores_PreservesThem()
+        public void GetHeadingId_WithUnderscores_PreservesThem()
         {
-            string result = SlugGenerator.GenerateSlug("With_Underscores");
+            string result = GetHeadingId("## With_Underscores");
 
             Assert.AreEqual("with_underscores", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_WithMultipleSpaces_CollapsesToSingleHyphen()
+        public void GetHeadingId_WithNumbers_PreservesThem()
         {
-            string result = SlugGenerator.GenerateSlug("Multiple   Spaces    Here");
-
-            Assert.AreEqual("multiple-spaces-here", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_WithLeadingTrailingSpaces_TrimsThem()
-        {
-            string result = SlugGenerator.GenerateSlug("  Trim Me  ");
-
-            Assert.AreEqual("trim-me", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_WithUnicodeLetters_PreservesThem()
-        {
-            // Test Unicode letter support (e.g., German umlauts, accented characters)
-            string result = SlugGenerator.GenerateSlug("Über café");
-
-            Assert.AreEqual("über-café", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_WithNumbers_PreservesThem()
-        {
-            string result = SlugGenerator.GenerateSlug("Chapter 123");
+            string result = GetHeadingId("## Chapter 123");
 
             Assert.AreEqual("chapter-123", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_EmptyString_ReturnsEmpty()
+        public void GetHeadingId_WithMixedCase_ConvertsToLowercase()
         {
-            string result = SlugGenerator.GenerateSlug("");
-
-            Assert.AreEqual("", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_NullString_ReturnsEmpty()
-        {
-            string result = SlugGenerator.GenerateSlug(null);
-
-            Assert.AreEqual("", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_OnlySpecialChars_ReturnsEmpty()
-        {
-            string result = SlugGenerator.GenerateSlug("!@#$%^&*()");
-
-            Assert.AreEqual("", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_OnlyHyphens_ReturnsEmpty()
-        {
-            // After removing leading/trailing hyphens, should be empty
-            string result = SlugGenerator.GenerateSlug("---");
-
-            Assert.AreEqual("", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_WithParentheses_RemovesThem()
-        {
-            string result = SlugGenerator.GenerateSlug("Function(arg)");
-
-            Assert.AreEqual("functionarg", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_WithDots_RemovesThem()
-        {
-            string result = SlugGenerator.GenerateSlug("File.Extension");
-
-            Assert.AreEqual("fileextension", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_WithMixedCase_ConvertsToLowercase()
-        {
-            string result = SlugGenerator.GenerateSlug("MiXeD CaSe");
+            string result = GetHeadingId("## MiXeD CaSe");
 
             Assert.AreEqual("mixed-case", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_ConsecutiveHyphens_CollapsesToSingle()
+        public void GetHeadingId_BuildingAndPublishing_PreservesDoubleHyphen()
         {
-            // GitHub collapses consecutive hyphens
-            string result = SlugGenerator.GenerateSlug("Before & After");
+            // GitHub preserves double hyphens for & character
+            string result = GetHeadingId("## Building & Publishing");
 
-            Assert.AreEqual("before-after", result);
+            Assert.AreEqual("building--publishing", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_ComplexExample_MatchesGitHub()
+        public void GetHeadingId_WithSpecialCharacters_StripsAndTrims()
         {
-            // Real-world example from the issue (GitHub collapses to single hyphen)
-            string result = SlugGenerator.GenerateSlug("Building & Publishing");
+            // Special characters are stripped and result is trimmed
+            string result = GetHeadingId("## [HTML], [S5], or [RTF]?");
 
-            Assert.AreEqual("building-publishing", result);
+            Assert.AreEqual("html-s5-or-rtf", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_LeadingTrailingHyphens_RemovesThem()
+        public void GetHeadingId_DuplicateHeadings_GetsUniqueIds()
         {
-            string result = SlugGenerator.GenerateSlug("- Heading -");
+            // Markdig adds -1, -2 suffixes for duplicate headings
+            string markdown = "## Test\n\n## Test\n\n## Test";
+            MarkdownDocument doc = Markdown.Parse(markdown, _pipeline);
+            System.Collections.Generic.List<HeadingBlock> headings = doc.Descendants<HeadingBlock>().ToList();
 
-            Assert.AreEqual("heading", result);
-        }
-
-        [TestMethod]
-        public void GenerateSlug_ExplicitDoubleHyphen_CollapsesToSingle()
-        {
-            // Even explicit double hyphens get collapsed
-            string result = SlugGenerator.GenerateSlug("Item -- Description");
-
-            Assert.AreEqual("item-description", result);
+            Assert.AreEqual("test", headings[0].GetAttributes().Id);
+            Assert.AreEqual("test-1", headings[1].GetAttributes().Id);
+            Assert.AreEqual("test-2", headings[2].GetAttributes().Id);
         }
     }
 }
