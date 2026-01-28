@@ -42,7 +42,8 @@ This extension delivers a full featured Markdown editor with live preview, synta
 
 ### Navigation and structure
 
-- Jump between headings from the NavigationBar or generated table of contents.
+- Jump between headings from the NavigationBar, Document Outline, or generated table of contents.
+- Document Outline tool window shows a persistent hierarchical view of all headings.
 - Collapse or expand fenced code and HTML blocks to stay focused.
 
 ### Media workflows
@@ -281,6 +282,22 @@ Headings are shown with their level indicator (##, ###, etc.) and automatically 
 The NavigationBar shows all of the document headings, like a table of contents. Select a heading to jump to that section of the document.
 
 ![Navigator Bar](art/navigator-bar.png)
+
+### Document Outline
+
+The Document Outline tool window (**View -> Document Outline**) provides a persistent, hierarchical view of all markdown headings in your document. This is especially useful for navigating large documents.
+
+**Features:**
+
+- **Hierarchical display** - Headings are organized in a tree structure based on their level (H1-H6)
+- **Live synchronization** - The outline updates automatically as you edit the document
+- **Click to navigate** - Double-click any heading to jump to that location in the editor
+- **Caret tracking** - The current heading is highlighted as you move through the document
+- **Theme support** - Colors adapt to your Visual Studio theme (Light, Dark, Blue)
+
+The Document Outline complements the NavigationBar dropdown by providing an always-visible overview of your document structure.
+
+![Document outline window](art/document-outline.png)
 
 ### Drag 'n drop images
 

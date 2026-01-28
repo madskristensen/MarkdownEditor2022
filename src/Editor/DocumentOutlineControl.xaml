@@ -1,0 +1,64 @@
+<UserControl x:Class="MarkdownEditor2022.DocumentOutlineControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:MarkdownEditor2022"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             xmlns:platform="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="250"
+             Background="{DynamicResource {x:Static platform:TreeViewColors.BackgroundBrushKey}}">
+    <UserControl.Resources>
+        <Style x:Key="TreeViewItemStyle" TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="True"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static platform:TreeViewColors.BackgroundTextBrushKey}}"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemActiveBrushKey}}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemActiveTextBrushKey}}"/>
+                </Trigger>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsSelected" Value="True"/>
+                        <Condition Property="IsSelectionActive" Value="False"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemInactiveBrushKey}}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemInactiveTextBrushKey}}"/>
+                </MultiTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    
+    <Grid>
+        <TreeView x:Name="OutlineTreeView" 
+                  BorderThickness="0"
+                  Background="Transparent"
+                  ItemContainerStyle="{StaticResource TreeViewItemStyle}"
+                  MouseDoubleClick="OutlineTreeView_MouseDoubleClick"
+                  KeyDown="OutlineTreeView_KeyDown"
+                  SelectedItemChanged="OutlineTreeView_SelectedItemChanged">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal" Margin="2,1">
+                        <imaging:CrispImage Width="16" Height="16" 
+                                           Moniker="{x:Static catalog:KnownMonikers.Commit}"
+                                           Margin="0,0,4,0"/>
+                        <TextBlock Text="{Binding Text}" 
+                                   FontWeight="{Binding FontWeight}"/>
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+        
+        <TextBlock x:Name="EmptyMessage" 
+                   Text="No headings found in document."
+                   HorizontalAlignment="Center" 
+                   VerticalAlignment="Center"
+                   Foreground="{DynamicResource {x:Static platform:TreeViewColors.BackgroundTextBrushKey}}"
+                   Visibility="Collapsed"/>
+    </Grid>
+</UserControl>

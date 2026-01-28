@@ -43,6 +43,10 @@
       "targetPath": "art/navigator-bar.png"
     },
     {
+      "pathOnDisk": "art/document-outline.png",
+      "targetPath": "art/document-outline.png"
+    },
+    {
       "pathOnDisk": "art/emoji.gif",
       "targetPath": "art/emoji.gif"
     }
