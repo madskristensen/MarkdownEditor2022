@@ -315,11 +315,13 @@ namespace MarkdownEditor2022
 
         public void OnFrameIsVisibleChanged(IVsWindowFrame frame, bool newIsVisible)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             HandleFrameVisibilityChange(frame, newIsVisible);
         }
 
         public void OnFrameIsOnScreenChanged(IVsWindowFrame frame, bool newIsOnScreen)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             // Also handle on-screen changes - this is more reliable for auto-hide windows
             // that physically slide in/out of view
             HandleFrameVisibilityChange(frame, newIsOnScreen);

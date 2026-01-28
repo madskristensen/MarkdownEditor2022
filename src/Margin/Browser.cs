@@ -15,7 +15,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
-using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text.Classification;
@@ -23,6 +22,8 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
+
+#pragma warning disable VSSDK007 // Use JoinableTaskFactory - fire-and-forget is intentional for async event handlers
 
 namespace MarkdownEditor2022
 {
@@ -1096,8 +1097,8 @@ namespace MarkdownEditor2022
                         {
                             char firstChar = value[0];
                             char lastChar = value[value.Length - 1];
-                            
-                            if ((firstChar == '"' && lastChar == '"') || 
+
+                            if ((firstChar == '"' && lastChar == '"') ||
                                 (firstChar == '\'' && lastChar == '\''))
                             {
                                 value = value.Substring(1, value.Length - 2);

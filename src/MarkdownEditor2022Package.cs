@@ -57,6 +57,8 @@ namespace MarkdownEditor2022
 
         protected override void Dispose(bool disposing)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             if (disposing)
             {
                 // Dispose the auto-hide window monitor to stop event processing during shutdown

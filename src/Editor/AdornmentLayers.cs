@@ -11,7 +11,7 @@ namespace MarkdownEditor2022
     {
         public const string TrailingWhitespace = "MarkdownTrailingWhitespaceAdornment";
 
-#pragma warning disable 649 // Field is never assigned to
+#pragma warning disable 649, CS0169 // Field is never assigned to, never used
 
         /// <summary>
         /// Defines the adornment layer for trailing whitespace visualization.

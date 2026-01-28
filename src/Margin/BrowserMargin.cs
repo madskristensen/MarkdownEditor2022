@@ -7,6 +7,9 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
+#pragma warning disable VSTHRD001 // Avoid legacy thread switching APIs - Dispatcher.InvokeAsync is correct for WPF
+#pragma warning disable VSSDK007 // Use JoinableTaskFactory - fire-and-forget is intentional here
+
 namespace MarkdownEditor2022
 {
     public class BrowserMargin : DockPanel, IWpfTextViewMargin, AutoHideWindowMonitor.IAutoHideWindowListener
