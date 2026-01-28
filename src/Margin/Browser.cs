@@ -1059,8 +1059,8 @@ namespace MarkdownEditor2022
 
             foreach (HeadingBlock heading in md.Descendants<HeadingBlock>())
             {
-                // Get the heading text (this is the rendered inline content)
-                string text = heading.Inline?.FirstChild != null 
+                // Get the heading text from inline content
+                string text = heading.Inline != null 
                     ? ExtractTextFromInline(heading.Inline) 
                     : string.Empty;
 

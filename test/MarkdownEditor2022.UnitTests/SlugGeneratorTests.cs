@@ -14,20 +14,20 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public void GenerateSlug_WithAmpersand_ReplacesWithDoubleHyphen()
+        public void GenerateSlug_WithAmpersand_CollapsesToSingleHyphen()
         {
-            // This is the key test for the GitHub issue
+            // GitHub collapses consecutive hyphens: "A & B" becomes "a-b" not "a--b"
             string result = SlugGenerator.GenerateSlug("Supported Diagrams & Examples");
 
-            Assert.AreEqual("supported-diagrams--examples", result);
+            Assert.AreEqual("supported-diagrams-examples", result);
         }
 
         [TestMethod]
-        public void GenerateSlug_WithMultipleAmpersands_ReplacesAll()
+        public void GenerateSlug_WithMultipleAmpersands_CollapsesAll()
         {
             string result = SlugGenerator.GenerateSlug("A & B & C");
 
-            Assert.AreEqual("a--b--c", result);
+            Assert.AreEqual("a-b-c", result);
         }
 
         [TestMethod]
@@ -136,21 +136,38 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public void GenerateSlug_ConsecutiveHyphensFromSpaceAndAmpersand_PreservesBoth()
+        public void GenerateSlug_ConsecutiveHyphens_CollapsesToSingle()
         {
-            // " & " should become "--" (space becomes -, & removed, space becomes -)
+            // GitHub collapses consecutive hyphens
             string result = SlugGenerator.GenerateSlug("Before & After");
 
-            Assert.AreEqual("before--after", result);
+            Assert.AreEqual("before-after", result);
         }
 
         [TestMethod]
         public void GenerateSlug_ComplexExample_MatchesGitHub()
         {
-            // Real-world example from the issue
+            // Real-world example from the issue (GitHub collapses to single hyphen)
             string result = SlugGenerator.GenerateSlug("Building & Publishing");
 
-            Assert.AreEqual("building--publishing", result);
+            Assert.AreEqual("building-publishing", result);
+        }
+
+        [TestMethod]
+        public void GenerateSlug_LeadingTrailingHyphens_RemovesThem()
+        {
+            string result = SlugGenerator.GenerateSlug("- Heading -");
+
+            Assert.AreEqual("heading", result);
+        }
+
+        [TestMethod]
+        public void GenerateSlug_ExplicitDoubleHyphen_CollapsesToSingle()
+        {
+            // Even explicit double hyphens get collapsed
+            string result = SlugGenerator.GenerateSlug("Item -- Description");
+
+            Assert.AreEqual("item-description", result);
         }
     }
 }
