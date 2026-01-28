@@ -17,7 +17,7 @@ namespace MarkdownEditor2022
         {
             Command.Supported = false;
             return base.InitializeCompletedAsync();
-        }        
+        }
 
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
@@ -39,8 +39,7 @@ namespace MarkdownEditor2022
         public static string Generate(DocumentView docView, Document doc, int position)
         {
             StringBuilder sb = new();
-            sb.AppendLine("<!--TOC-->");
-            sb.AppendLine();
+            sb.AppendLine("<!-- TOC-->");
 
             IEnumerable<HeadingBlock> headers = doc.Markdown.Descendants<HeadingBlock>().Where(h => h.Span.Start > position);
             Dictionary<string, int> headerCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -66,8 +65,7 @@ namespace MarkdownEditor2022
                 sb.AppendLine($"{indent}- [{title}](#{url})");
             }
 
-            sb.AppendLine();
-            sb.AppendLine("<!--/TOC-->");
+            sb.AppendLine("<!-- TOC -->");
             return sb.ToString().Trim();
         }
 

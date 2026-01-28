@@ -112,7 +112,7 @@ namespace MarkdownEditor2022
     public class HideMargins : WpfTextViewCreationListener
     {
         private static readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex _tocRegex = new(@"<!--TOC-->.+<!--/TOC-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        private static readonly Regex _tocRegex = new(@"<!--\s*TOC\s*-->.+?<!--\s*/?TOC\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
         private TableDataSource _dataSource;
         private DocumentView _docView;
         private Document _document;
@@ -140,13 +140,19 @@ namespace MarkdownEditor2022
         {
             if (e.FileActionType == FileActionTypes.ContentSavedToDisk)
             {
-                Match match = _tocRegex.Match(_docView.TextBuffer.CurrentSnapshot.GetText());
+                MatchCollection matches = _tocRegex.Matches(_docView.TextBuffer.CurrentSnapshot.GetText());
 
-                if (match.Success)
+                if (matches.Count > 0)
                 {
-                    string toc = GenerateTocCommand.Generate(_docView, _document, match.Index + match.Length);
-                    Span span = new(match.Index, match.Length);
-                    _docView.TextBuffer.Replace(span, toc);
+                    // Process matches in reverse order to avoid offset issues when replacing
+                    for (int i = matches.Count - 1; i >= 0; i--)
+                    {
+                        Match match = matches[i];
+                        string toc = GenerateTocCommand.Generate(_docView, _document, match.Index + match.Length);
+                        Span span = new(match.Index, match.Length);
+                        _docView.TextBuffer.Replace(span, toc);
+                    }
+
                     _docView.Document.SaveCopy(e.FilePath, true);
 
                     ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
