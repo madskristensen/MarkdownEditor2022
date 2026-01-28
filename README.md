@@ -89,6 +89,25 @@ All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Color
 Advanced markdown extensions are supported to give more features to the syntax. This includes pipe tables, emoji, mathematics and a lot
 more.
 
+### Azure DevOps wiki syntax
+
+The editor supports Azure DevOps wiki-specific syntax for generating a table of contents.
+
+**Table of Contents (`[[_TOC_]]`):**
+
+Add `[[_TOC_]]` anywhere in your document to automatically generate a table of contents based on all headings. The TOC renders as a nested list with links to each section.
+
+```markdown
+[[_TOC_]]
+
+# Introduction
+## Getting Started
+## Installation
+# Advanced Topics
+```
+
+This syntax is case-sensitive and must appear on its own line, matching Azure DevOps wiki behavior.
+
 ### Mermaid diagram support
 
 The editor supports all Mermaid diagram types for visualizing complex information. Mermaid diagrams are rendered in the live preview window using the native Mermaid.js library.

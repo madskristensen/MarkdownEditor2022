@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Markdig;
 using Markdig.Extensions.AutoIdentifiers;
 using Markdig.Syntax;
+using MarkdownEditor2022.Extensions;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Threading;
 
@@ -24,6 +25,7 @@ namespace MarkdownEditor2022
         public static MarkdownPipeline Pipeline { get; } = new MarkdownPipelineBuilder()
             .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)  // Must be BEFORE UseAdvancedExtensions to override default
             .UseAdvancedExtensions()
+            .UseTocToken()  // Support for [[_TOC_]] Azure DevOps wiki syntax
             .UsePragmaLines()
             .UsePreciseSourceLocation()
             .UseYamlFrontMatter()
