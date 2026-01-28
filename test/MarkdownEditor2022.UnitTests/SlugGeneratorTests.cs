@@ -112,6 +112,15 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
+        public void GenerateSlug_OnlyHyphens_ReturnsEmpty()
+        {
+            // After removing leading/trailing hyphens, should be empty
+            string result = SlugGenerator.GenerateSlug("---");
+
+            Assert.AreEqual("", result);
+        }
+
+        [TestMethod]
         public void GenerateSlug_WithParentheses_RemovesThem()
         {
             string result = SlugGenerator.GenerateSlug("Function(arg)");

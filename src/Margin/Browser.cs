@@ -1072,6 +1072,12 @@ namespace MarkdownEditor2022
                 // Generate GitHub-compatible slug
                 string slug = SlugGenerator.GenerateSlug(text);
 
+                // Skip headings that result in empty slugs (e.g., only special characters)
+                if (string.IsNullOrEmpty(slug))
+                {
+                    continue;
+                }
+
                 // Handle duplicate headings by appending a suffix
                 if (slugCounts.TryGetValue(slug, out int count))
                 {
@@ -1125,6 +1131,18 @@ namespace MarkdownEditor2022
             {
                 ExtractTextRecursive(link.FirstChild, sb);
             }
+            // For autolinks, use the URL as text
+            else if (inline is Markdig.Syntax.Inlines.AutolinkInline autolink)
+            {
+                sb.Append(autolink.Url);
+            }
+            // Line breaks contribute space
+            else if (inline is Markdig.Syntax.Inlines.LineBreakInline)
+            {
+                sb.Append(' ');
+            }
+            // HTML inlines are typically not part of visible heading text
+            // Other inline types (HtmlEntityInline, etc.) are uncommon in headings
 
             // Process next sibling
             if (inline.NextSibling != null)

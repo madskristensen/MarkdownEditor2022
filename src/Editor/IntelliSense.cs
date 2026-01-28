@@ -270,6 +270,12 @@ namespace MarkdownEditor2022
                 string text = snapshot.GetText(heading.ToSpan()).TrimStart('#').Trim();
                 string slug = SlugGenerator.GenerateSlug(text);
 
+                // Skip headings that result in empty slugs (e.g., only special characters)
+                if (string.IsNullOrEmpty(slug))
+                {
+                    continue;
+                }
+
                 // Handle duplicate headings
                 if (slugCounts.TryGetValue(slug, out int count))
                 {
