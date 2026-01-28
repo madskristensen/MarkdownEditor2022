@@ -12,10 +12,6 @@ namespace MarkdownEditor2022
     {
         private static readonly Regex _regex = new(@"#* (<a(.*)\sname=(?:""(?<url>[^""]+)""|'([^']+)').*?>(?<title>.*?)</a>|(?<title>[^\{]+)(\{#(?<url>[^\s]+)\}))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        // Regex to match characters that GitHub removes from anchors (keeps letters, numbers, spaces, hyphens, and underscores)
-        private static readonly Regex _githubSlugCleanup = new(@"[^\p{L}\p{N}\s_-]", RegexOptions.Compiled);
-        private static readonly Regex _multipleSpaces = new(@"\s+", RegexOptions.Compiled);
-
         protected override Task InitializeCompletedAsync()
         {
             Command.Supported = false;
@@ -92,37 +88,7 @@ namespace MarkdownEditor2022
             }
 
             title = title.Trim();
-            url = GenerateGitHubSlug(url);
-        }
-
-        /// <summary>
-        /// Generates a GitHub-compatible anchor slug from header text.
-        /// GitHub's algorithm:
-        /// 1. Convert to lowercase
-        /// 2. Remove anything that isn't a letter, number, space, or hyphen
-        /// 3. Replace spaces with hyphens
-        /// 4. Do NOT collapse consecutive hyphens (e.g., " - " becomes "---")
-        /// </summary>
-        private static string GenerateGitHubSlug(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return string.Empty;
-            }
-
-            // Trim and convert to lowercase
-            string slug = text.Trim().ToLowerInvariant();
-
-            // Remove characters that GitHub strips (keeps letters, numbers, spaces, and hyphens)
-            slug = _githubSlugCleanup.Replace(slug, string.Empty);
-
-            // Collapse multiple spaces into one
-            slug = _multipleSpaces.Replace(slug, " ");
-
-            // Replace spaces with hyphens (but don't collapse consecutive hyphens)
-            slug = slug.Replace(" ", "-");
-
-            return slug;
+            url = SlugGenerator.GenerateSlug(url);
         }
     }
 }
