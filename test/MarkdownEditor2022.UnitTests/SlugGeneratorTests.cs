@@ -14,8 +14,11 @@ namespace MarkdownEditor2022.UnitTests
     [TestClass]
     public class SlugGeneratorTests
     {
+        // Pipeline matching the app configuration in Document.cs
+        // UseAutoIdentifiers(GitHub) must come BEFORE UseAdvancedExtensions
         private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
             .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)
+            .UseAdvancedExtensions()
             .Build();
 
         /// <summary>
@@ -141,6 +144,33 @@ namespace MarkdownEditor2022.UnitTests
             Assert.AreEqual("test", headings[0].GetAttributes().Id);
             Assert.AreEqual("test-1", headings[1].GetAttributes().Id);
             Assert.AreEqual("test-2", headings[2].GetAttributes().Id);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_WithCustomId_UsesCustomId()
+        {
+            // Custom {#id} syntax should override auto-generated ID
+            string result = GetHeadingId("## foo & bar {#baz-jazz}");
+
+            Assert.AreEqual("baz-jazz", result);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_WithCustomIdContainingSpecialChars_PreservesId()
+        {
+            // Custom IDs are used as-is
+            string result = GetHeadingId("## My Heading {#my-custom-anchor}");
+
+            Assert.AreEqual("my-custom-anchor", result);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_WithCustomIdNoSpaces_UsesCustomId()
+        {
+            // Custom ID syntax with no space before brace
+            string result = GetHeadingId("## Heading{#custom}");
+
+            Assert.AreEqual("custom", result);
         }
     }
 }
