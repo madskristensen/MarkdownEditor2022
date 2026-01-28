@@ -15,6 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
+using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text.Classification;
@@ -996,6 +997,9 @@ namespace MarkdownEditor2022
                 htmlWriter = (_htmlWriterStatic ??= new StringWriter(GetOrCreateStringBuilder()));
                 htmlWriter.GetStringBuilder().Clear();
 
+                // Apply GitHub-compatible IDs to heading blocks before rendering
+                ApplyGitHubHeadingIds(md);
+
                 HtmlRenderer htmlRenderer = new(htmlWriter);
                 Document.Pipeline.Setup(htmlRenderer);
                 htmlRenderer.UseNonAsciiNoEscape = true;
@@ -1036,6 +1040,122 @@ namespace MarkdownEditor2022
                     sb.Clear();
                     _stringBuilderPool.Enqueue(sb);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Applies GitHub-compatible IDs to all heading blocks in the markdown document.
+        /// This ensures that heading anchors in the preview match GitHub's behavior.
+        /// Handles duplicate headings by appending a suffix (-1, -2, etc.).
+        /// </summary>
+        /// <param name="md">The parsed markdown document.</param>
+        private static void ApplyGitHubHeadingIds(MarkdownDocument md)
+        {
+            if (md == null)
+            {
+                return;
+            }
+
+            Dictionary<string, int> slugCounts = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (HeadingBlock heading in md.Descendants<HeadingBlock>())
+            {
+                // Get the heading text from inline content
+                string text = heading.Inline != null 
+                    ? ExtractTextFromInline(heading.Inline) 
+                    : string.Empty;
+
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    continue;
+                }
+
+                // Generate GitHub-compatible slug
+                string slug = SlugGenerator.GenerateSlug(text);
+
+                // Skip headings that result in empty slugs (e.g., only special characters)
+                if (string.IsNullOrEmpty(slug))
+                {
+                    continue;
+                }
+
+                // Handle duplicate headings by appending a suffix
+                if (slugCounts.TryGetValue(slug, out int count))
+                {
+                    slugCounts[slug] = count + 1;
+                    slug = $"{slug}-{count}";
+                }
+                else
+                {
+                    slugCounts[slug] = 1;
+                }
+
+                // Set the ID attribute on the heading
+                // Use TryGetAttributes to get existing attributes or create new ones
+                HtmlAttributes attributes = heading.TryGetAttributes();
+                if (attributes == null)
+                {
+                    attributes = new HtmlAttributes();
+                    heading.SetAttributes(attributes);
+                }
+                attributes.Id = slug;
+            }
+        }
+
+        /// <summary>
+        /// Extracts plain text from inline content (recursively handles nested inlines).
+        /// </summary>
+        private static string ExtractTextFromInline(Markdig.Syntax.Inlines.Inline inline)
+        {
+            StringBuilder sb = new();
+            ExtractTextRecursive(inline, sb);
+            return sb.ToString();
+        }
+
+        private static void ExtractTextRecursive(Markdig.Syntax.Inlines.Inline inline, StringBuilder sb)
+        {
+            if (inline == null)
+            {
+                return;
+            }
+
+            // For literal inlines (text), append the content
+            if (inline is Markdig.Syntax.Inlines.LiteralInline literal)
+            {
+                sb.Append(literal.Content.ToString());
+            }
+            // For code inlines, append the content
+            else if (inline is Markdig.Syntax.Inlines.CodeInline code)
+            {
+                sb.Append(code.Content);
+            }
+            // For emphasis/strong, process children
+            else if (inline is Markdig.Syntax.Inlines.EmphasisInline emphasis)
+            {
+                ExtractTextRecursive(emphasis.FirstChild, sb);
+            }
+            // For links, process the label (child inlines)
+            else if (inline is Markdig.Syntax.Inlines.LinkInline link)
+            {
+                ExtractTextRecursive(link.FirstChild, sb);
+            }
+            // For autolinks, use the URL as text
+            else if (inline is Markdig.Syntax.Inlines.AutolinkInline autolink)
+            {
+                sb.Append(autolink.Url);
+            }
+            // Line breaks contribute space
+            else if (inline is Markdig.Syntax.Inlines.LineBreakInline)
+            {
+                sb.Append(' ');
+            }
+            // HTML inlines are typically not part of visible heading text
+            // Other inline types (HtmlEntityInline, etc.) are uncommon in headings
+
+            // Process next sibling
+            if (inline.NextSibling != null)
+            {
+                ExtractTextRecursive(inline.NextSibling, sb);
             }
         }
 

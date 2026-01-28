@@ -268,8 +268,13 @@ namespace MarkdownEditor2022
             foreach (HeadingBlock heading in doc.Markdown.Descendants<HeadingBlock>())
             {
                 string text = snapshot.GetText(heading.ToSpan()).TrimStart('#').Trim();
-                string slug = Regex.Replace(text.ToLowerInvariant(), @"[^\w\s-]", "");
-                slug = Regex.Replace(slug, @"\s+", "-");
+                string slug = SlugGenerator.GenerateSlug(text);
+
+                // Skip headings that result in empty slugs (e.g., only special characters)
+                if (string.IsNullOrEmpty(slug))
+                {
+                    continue;
+                }
 
                 // Handle duplicate headings
                 if (slugCounts.TryGetValue(slug, out int count))
