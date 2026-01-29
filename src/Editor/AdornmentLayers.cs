@@ -10,6 +10,7 @@ namespace MarkdownEditor2022
     internal static class AdornmentLayers
     {
         public const string TrailingWhitespace = "MarkdownTrailingWhitespaceAdornment";
+        public const string FloatingToolbar = "MarkdownFloatingToolbarAdornment";
 
 #pragma warning disable 649, CS0169 // Field is never assigned to, never used
 
@@ -21,6 +22,19 @@ namespace MarkdownEditor2022
         [Name(TrailingWhitespace)]
         [Order(After = PredefinedAdornmentLayers.Text)]
         private static AdornmentLayerDefinition _trailingWhitespaceLayer;
+
+        /// <summary>
+        /// Defines the adornment layer for the floating formatting toolbar.
+        /// Ordered after caret to appear above all text and selection elements.
+        /// </summary>
+        [Export(typeof(AdornmentLayerDefinition))]
+        [Name(FloatingToolbar)]
+        [Order(After = PredefinedAdornmentLayers.Caret)]
+        [Order(After = PredefinedAdornmentLayers.Text)]
+        [Order(After = PredefinedAdornmentLayers.Selection)]
+        [Order(After = PredefinedAdornmentLayers.TextMarker)]
+        [Order(After = PredefinedAdornmentLayers.Squiggle)]
+        private static AdornmentLayerDefinition _floatingToolbarLayer;
 
 #pragma warning restore 649
     }

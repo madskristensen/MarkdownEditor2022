@@ -72,6 +72,11 @@
     <Compile Include="Editor\DocumentOutlineControl.xaml.cs">
       <DependentUpon>DocumentOutlineControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Editor\FloatingToolbar.xaml.cs">
+      <DependentUpon>FloatingToolbar.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Editor\FloatingToolbarAdornment.cs" />
+    <Compile Include="Editor\FloatingToolbarAdornmentProvider.cs" />
     <Compile Include="Editor\IntelliSense.cs" />
     <Compile Include="Editor\MarkdownCodeWindowManager.cs" />
     <Compile Include="Editor\MermaidClassifier.cs" />
@@ -201,6 +206,9 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Editor\DocumentOutlineControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Editor\FloatingToolbar.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

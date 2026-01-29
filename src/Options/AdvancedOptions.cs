@@ -36,6 +36,12 @@ namespace MarkdownEditor2022
         public bool ShowTrailingWhitespace { get; set; } = true;
 
         [Category("Editor")]
+        [DisplayName("Enable floating toolbar")]
+        [Description("Shows a floating formatting toolbar when text is selected, providing quick access to bold, italic, strikethrough, code, links, and list formatting.")]
+        [DefaultValue(true)]
+        public bool EnableFloatingToolbar { get; set; } = true;
+
+        [Category("Editor")]
         [DisplayName("Format pasted URLs as links")]
         [Description("When enabled, pasting a URL from a browser will automatically format it as a markdown link [title](url). When disabled, only the raw URL is pasted.")]
         [DefaultValue(true)]

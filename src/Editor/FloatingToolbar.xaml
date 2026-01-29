@@ -1,0 +1,205 @@
+<UserControl x:Class="MarkdownEditor2022.FloatingToolbar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vs="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             x:Name="ToolbarRoot"
+             Focusable="False"
+             IsHitTestVisible="True"
+             Background="Transparent"
+             PreviewMouseMove="OnPreviewMouseMove">
+    <UserControl.Resources>
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMouseOverBackgroundGradientKey}}"/>
+                                <Setter TargetName="border" Property="BorderBrush" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarHoverOverSelectedIconBorderKey}}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMouseDownBackgroundGradientKey}}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SeparatorStyle" TargetType="Border">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Margin" Value="4,4,4,4"/>
+            <Setter Property="Background" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMenuSeparatorKey}}"/>
+        </Style>
+
+        <Style x:Key="DropdownButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinWidth" Value="70"/>
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarTextActiveKey}}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Horizontal">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                                <Path x:Name="arrow" 
+                                      Data="M 0 0 L 4 4 L 8 0 Z" 
+                                      Fill="{DynamicResource {x:Static vs:VsBrushes.CommandBarTextActiveKey}}"
+                                      Margin="6,0,0,0" 
+                                      VerticalAlignment="Center"
+                                      Width="8" Height="4"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMouseOverBackgroundGradientKey}}"/>
+                                <Setter TargetName="border" Property="BorderBrush" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarHoverOverSelectedIconBorderKey}}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMouseDownBackgroundGradientKey}}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource {x:Static vs:VsBrushes.CommandBarGradientKey}}"
+            BorderBrush="{DynamicResource {x:Static vs:VsBrushes.CommandBarMenuBorderKey}}"
+            BorderThickness="1"
+            CornerRadius="3"
+            Padding="2">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.3" Direction="270"/>
+        </Border.Effect>
+        <StackPanel Orientation="Horizontal">
+            <!-- Header Level Dropdown -->
+            <Button x:Name="HeaderButton" 
+                    Style="{StaticResource DropdownButtonStyle}"
+                    ToolTip="Header Level"
+                    Click="HeaderButton_Click">
+                <Button.ContextMenu>
+                    <ContextMenu x:Name="HeaderMenu" Placement="Bottom">
+                        <MenuItem Header="Paragraph" Tag="0" Click="HeaderMenuItem_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Heading 1" Tag="1" Click="HeaderMenuItem_Click"/>
+                        <MenuItem Header="Heading 2" Tag="2" Click="HeaderMenuItem_Click"/>
+                        <MenuItem Header="Heading 3" Tag="3" Click="HeaderMenuItem_Click"/>
+                        <MenuItem Header="Heading 4" Tag="4" Click="HeaderMenuItem_Click"/>
+                        <MenuItem Header="Heading 5" Tag="5" Click="HeaderMenuItem_Click"/>
+                        <MenuItem Header="Heading 6" Tag="6" Click="HeaderMenuItem_Click"/>
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <TextBlock x:Name="HeaderText" Text="Paragraph" FontSize="11"/>
+            </Button>
+
+            <Border Style="{StaticResource SeparatorStyle}"/>
+
+            <!-- Bold -->
+            <Button x:Name="BoldButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Bold (Ctrl+B)"
+                    Click="BoldButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Bold}"/>
+            </Button>
+
+            <!-- Italic -->
+            <Button x:Name="ItalicButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Italic (Ctrl+I)"
+                    Click="ItalicButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Italic}"/>
+            </Button>
+
+            <!-- Strikethrough -->
+            <Button x:Name="StrikethroughButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Strikethrough)"
+                    Click="StrikethroughButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.StrikeThrough}"/>
+            </Button>
+
+            <Border Style="{StaticResource SeparatorStyle}"/>
+
+            <!-- Inline Code -->
+            <Button x:Name="CodeButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Inline Code"
+                    Click="CodeButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Code}"/>
+            </Button>
+
+            <!-- Link -->
+            <Button x:Name="LinkButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Insert Link"
+                    Click="LinkButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Link}"/>
+            </Button>
+
+            <Border Style="{StaticResource SeparatorStyle}"/>
+
+            <!-- Bullet List -->
+            <Button x:Name="BulletListButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Bullet List"
+                    Click="BulletListButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.BulletList}"/>
+            </Button>
+
+            <!-- Numbered List -->
+            <Button x:Name="NumberedListButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Numbered List"
+                    Click="NumberedListButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.OrderedList}"/>
+            </Button>
+
+            <!-- Task List -->
+            <Button x:Name="TaskListButton" 
+                    Style="{StaticResource ToolbarButtonStyle}" 
+                    ToolTip="Task List"
+                    Click="TaskListButton_Click">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.CheckBoxList}"/>
+            </Button>
+        </StackPanel>
+    </Border>
+</UserControl>
