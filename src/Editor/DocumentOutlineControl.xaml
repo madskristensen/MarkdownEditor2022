@@ -7,29 +7,97 @@
              xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
              xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
              xmlns:platform="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:shell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="250"
-             Background="{DynamicResource {x:Static platform:TreeViewColors.BackgroundBrushKey}}">
+             Background="{DynamicResource {x:Static platform:TreeViewColors.BackgroundBrushKey}}"
+             FontFamily="{DynamicResource {x:Static shell:VsFonts.EnvironmentFontFamilyKey}}"
+             FontSize="{DynamicResource {x:Static shell:VsFonts.EnvironmentFontSizeKey}}">
     <UserControl.Resources>
+        <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="#20808080"/>
+        <SolidColorBrush x:Key="SelectionInactiveBackgroundBrush" Color="#10808080"/>
+        <Style x:Key="ExpandCollapseToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Width="16" Height="16">
+                            <Path x:Name="ExpandPath" 
+                                  HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center" 
+                                  Fill="{DynamicResource {x:Static platform:TreeViewColors.GlyphBrushKey}}"
+                                  Data="M 4 0 L 8 4 L 4 8 Z"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ExpandPath" Property="Data" Value="M 0 4 L 8 4 L 4 8 Z"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="TreeViewItemStyle" TargetType="TreeViewItem">
             <Setter Property="IsExpanded" Value="True"/>
-            <Setter Property="Padding" Value="2"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource {x:Static platform:TreeViewColors.BackgroundTextBrushKey}}"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemActiveBrushKey}}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemActiveTextBrushKey}}"/>
-                </Trigger>
-                <MultiTrigger>
-                    <MultiTrigger.Conditions>
-                        <Condition Property="IsSelected" Value="True"/>
-                        <Condition Property="IsSelectionActive" Value="False"/>
-                    </MultiTrigger.Conditions>
-                    <Setter Property="Background" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemInactiveBrushKey}}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource {x:Static platform:TreeViewColors.SelectedItemInactiveTextBrushKey}}"/>
-                </MultiTrigger>
-            </Style.Triggers>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <!-- Full-width selection background -->
+                            <Border x:Name="SelectionBorder" 
+                                    Background="Transparent"
+                                    Margin="-1000,0,0,0"
+                                    Padding="1000,0,0,0"/>
+                            <!-- Header row with expander and content -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" MinWidth="19"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ToggleButton x:Name="Expander" 
+                                              ClickMode="Press" 
+                                              IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                                              Style="{StaticResource ExpandCollapseToggleStyle}"/>
+                                <ContentPresenter x:Name="PART_Header" 
+                                                  Grid.Column="1" 
+                                                  ContentSource="Header" 
+                                                  HorizontalAlignment="Left"
+                                                  Margin="0,2"/>
+                            </Grid>
+                            <ItemsPresenter x:Name="ItemsHost" 
+                                            Grid.Row="1" 
+                                            Margin="19,0,0,0"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="False">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="SelectionBorder" Property="Background" Value="{StaticResource SelectionBackgroundBrush}"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True"/>
+                                    <Condition Property="IsSelectionActive" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="SelectionBorder" Property="Background" Value="{StaticResource SelectionInactiveBackgroundBrush}"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
     
@@ -43,12 +111,12 @@
                   SelectedItemChanged="OutlineTreeView_SelectedItemChanged">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Margin="2,1">
+                    <StackPanel Orientation="Horizontal">
                         <imaging:CrispImage Width="16" Height="16" 
                                            Moniker="{x:Static catalog:KnownMonikers.Commit}"
                                            Margin="0,0,4,0"/>
                         <TextBlock Text="{Binding Text}" 
-                                   FontWeight="{Binding FontWeight}"/>
+                                   Foreground="{DynamicResource {x:Static platform:TreeViewColors.BackgroundTextBrushKey}}"/>
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>

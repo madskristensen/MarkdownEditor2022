@@ -192,8 +192,7 @@ namespace MarkdownEditor2022
                     Text = text,
                     Level = block.Level,
                     LineNumber = lineNumber,
-                    Span = block.Span,
-                    FontWeight = block.Level == 1 ? FontWeights.Bold : FontWeights.Normal
+                    Span = block.Span
                 };
 
                 // Find the appropriate parent
@@ -376,7 +375,6 @@ namespace MarkdownEditor2022
         public int Level { get; set; }
         public int LineNumber { get; set; }
         public SourceSpan Span { get; set; }
-        public FontWeight FontWeight { get; set; }
         public ObservableCollection<HeadingItem> Children { get; } = [];
     }
 }
