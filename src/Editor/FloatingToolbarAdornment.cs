@@ -222,10 +222,13 @@ namespace MarkdownEditor2022
                 // Calculate Y position - above the line with gap
                 double y = caretLine.TextTop - toolbarHeight - _verticalGap;
 
-                // If toolbar would go above viewport, position below the line instead
-                if (y < 0)
+                // Get the line number of the caret position
+                int lineNumber = _view.TextSnapshot.GetLineNumberFromPosition(_view.Caret.Position.BufferPosition);
+
+                // If on first 3 lines or toolbar would go above viewport, position below the line instead
+                if (caretLine.TextTop - visibleArea.Y < 80)
                 {
-                    y = visibleArea.Y + visibleArea.Height + _verticalGap;
+                    y = visibleArea.Y + caretLine.Bottom + 10;
                 }
 
                 // Ensure toolbar stays within viewport vertically
