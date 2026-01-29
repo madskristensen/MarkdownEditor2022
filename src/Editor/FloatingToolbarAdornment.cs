@@ -20,8 +20,8 @@ namespace MarkdownEditor2022
         private bool _isToolbarVisible;
 
         // Offset from the selection to position the toolbar (gap between toolbar and text)
-        private const double VerticalGap = 50.0;
-        private const double HorizontalPadding = 10.0;
+        private const double _verticalGap = 50.0;
+        private const double _horizontalPadding = 10.0;
 
         public FloatingToolbarAdornment(IWpfTextView view)
         {
@@ -68,7 +68,6 @@ namespace MarkdownEditor2022
             }
 
             // Debounce to avoid flickering - capture span for use in callback
-            SnapshotSpan capturedSpan = selectedSpan;
             _showDebouncer.Debounce(() =>
             {
                 ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -76,7 +75,7 @@ namespace MarkdownEditor2022
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     if (!_isDisposed && !_view.Selection.IsEmpty)
                     {
-                        ShowToolbar(capturedSpan);
+                        ShowToolbar();
                     }
                 }).FireAndForget();
             });
@@ -115,8 +114,7 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            SnapshotSpan selectedSpan = selection.SelectedSpans[0];
-            Point? position = CalculateToolbarPosition(selectedSpan);
+            Point? position = CalculateToolbarPosition();
 
             if (position.HasValue)
             {
@@ -152,7 +150,7 @@ namespace MarkdownEditor2022
             Dispose();
         }
 
-        private void ShowToolbar(SnapshotSpan selectedSpan)
+        private void ShowToolbar()
         {
             if (_isDisposed)
             {
@@ -168,7 +166,7 @@ namespace MarkdownEditor2022
                 _layer.RemoveAllAdornments();
 
                 // Calculate position
-                Point? position = CalculateToolbarPosition(selectedSpan);
+                Point? position = CalculateToolbarPosition();
                 if (!position.HasValue)
                 {
                     return;
@@ -198,13 +196,12 @@ namespace MarkdownEditor2022
             }
         }
 
-        private Point? CalculateToolbarPosition(SnapshotSpan selectedSpan)
+        private Point? CalculateToolbarPosition()
         {
             try
             {
                 // Get the caret line as IWpfTextViewLine which has VisibleArea
-                IWpfTextViewLine caretLine = _view.Caret.ContainingTextViewLine as IWpfTextViewLine;
-                if (caretLine == null || caretLine.VisibilityState == VisibilityState.Unattached)
+                if (_view.Caret.ContainingTextViewLine is not IWpfTextViewLine caretLine || caretLine.VisibilityState == VisibilityState.Unattached)
                 {
                     return null;
                 }
@@ -219,16 +216,16 @@ namespace MarkdownEditor2022
 
                 // Calculate X position - center toolbar on visible area, keep within viewport
                 double x = caretLine.Left;
-                x = Math.Max(HorizontalPadding, x);
+                x = Math.Max(_horizontalPadding, x);
                 //x = Math.Min(_view.ViewportWidth - toolbarWidth - HorizontalPadding, x);
 
                 // Calculate Y position - above the line with gap
-                double y = caretLine.TextTop - toolbarHeight - VerticalGap;
+                double y = caretLine.TextTop - toolbarHeight - _verticalGap;
 
                 // If toolbar would go above viewport, position below the line instead
                 if (y < 0)
                 {
-                    y = visibleArea.Y + visibleArea.Height + VerticalGap;
+                    y = visibleArea.Y + visibleArea.Height + _verticalGap;
                 }
 
                 // Ensure toolbar stays within viewport vertically
