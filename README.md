@@ -382,6 +382,28 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 
 **Ctrl+PgDown** moves caret to next heading-->
 
+### Floating toolbar
+
+When you select text in the markdown editor, a floating toolbar appears near the selection with quick access to common formatting commands:
+
+![Floating toolbar](art/floating-toolbar.png)
+
+**Available actions:**
+
+- **Paragraph/Heading dropdown** - Convert selected lines to paragraph or heading levels 1-6
+- **Bold** - Wrap selection with `**`
+- **Italic** - Wrap selection with `_`
+- **Strikethrough** - Wrap selection with `~~`
+- **Inline code** - Wrap selection with backticks
+- **Link** - Convert selection to a markdown link
+- **Bullet list** - Convert selected lines to a bulleted list
+- **Numbered list** - Convert selected lines to a numbered list
+- **Task list** - Convert selected lines to a task/checkbox list
+
+The toolbar automatically positions itself above the selected text, or below if there isn't enough room above. It stays within the visible editor area and follows horizontal scrolling.
+
+Enable or disable this feature in **Tools -> Options -> Text Editor -> Markdown -> Advanced -> Enable floating toolbar**.
+
 ## Automation
 
 ### VS command URL scheme support
