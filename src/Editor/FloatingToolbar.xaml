@@ -54,6 +54,79 @@
             <Setter Property="Background" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMenuSeparatorKey}}"/>
         </Style>
 
+        <!-- Themed ContextMenu Style -->
+        <Style x:Key="ThemedContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMenuBackgroundGradientKey}}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMenuBorderKey}}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarTextActiveKey}}"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Themed MenuItem Style with custom template for full theming -->
+        <Style x:Key="ThemedMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarTextActiveKey}}"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="MinWidth" Value="100"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderThickness="0"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter ContentSource="Header" 
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMouseOverBackgroundGradientKey}}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Themed Separator Style for Menu -->
+        <Style x:Key="ThemedMenuSeparatorStyle" TargetType="Separator">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMenuSeparatorKey}}"/>
+            <Setter Property="Margin" Value="4,2"/>
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Background="{DynamicResource {x:Static vs:VsBrushes.CommandBarMenuSeparatorKey}}" 
+                                Height="1" 
+                                Margin="4,2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="DropdownButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="24"/>
             <Setter Property="MinWidth" Value="70"/>
@@ -117,15 +190,15 @@
                     ToolTip="Header Level"
                     Click="HeaderButton_Click">
                 <Button.ContextMenu>
-                    <ContextMenu x:Name="HeaderMenu" Placement="Bottom">
-                        <MenuItem Header="Paragraph" Tag="0" Click="HeaderMenuItem_Click"/>
-                        <Separator/>
-                        <MenuItem Header="Heading 1" Tag="1" Click="HeaderMenuItem_Click"/>
-                        <MenuItem Header="Heading 2" Tag="2" Click="HeaderMenuItem_Click"/>
-                        <MenuItem Header="Heading 3" Tag="3" Click="HeaderMenuItem_Click"/>
-                        <MenuItem Header="Heading 4" Tag="4" Click="HeaderMenuItem_Click"/>
-                        <MenuItem Header="Heading 5" Tag="5" Click="HeaderMenuItem_Click"/>
-                        <MenuItem Header="Heading 6" Tag="6" Click="HeaderMenuItem_Click"/>
+                    <ContextMenu x:Name="HeaderMenu" Placement="Bottom" Style="{StaticResource ThemedContextMenuStyle}">
+                        <MenuItem Header="Paragraph" Tag="0" Click="HeaderMenuItem_Click" Style="{StaticResource ThemedMenuItemStyle}"/>
+                        <Separator Style="{StaticResource ThemedMenuSeparatorStyle}"/>
+                        <MenuItem Header="Heading 1" Tag="1" Click="HeaderMenuItem_Click" Style="{StaticResource ThemedMenuItemStyle}"/>
+                        <MenuItem Header="Heading 2" Tag="2" Click="HeaderMenuItem_Click" Style="{StaticResource ThemedMenuItemStyle}"/>
+                        <MenuItem Header="Heading 3" Tag="3" Click="HeaderMenuItem_Click" Style="{StaticResource ThemedMenuItemStyle}"/>
+                        <MenuItem Header="Heading 4" Tag="4" Click="HeaderMenuItem_Click" Style="{StaticResource ThemedMenuItemStyle}"/>
+                        <MenuItem Header="Heading 5" Tag="5" Click="HeaderMenuItem_Click" Style="{StaticResource ThemedMenuItemStyle}"/>
+                        <MenuItem Header="Heading 6" Tag="6" Click="HeaderMenuItem_Click" Style="{StaticResource ThemedMenuItemStyle}"/>
                     </ContextMenu>
                 </Button.ContextMenu>
                 <TextBlock x:Name="HeaderText" Text="Paragraph" FontSize="11"/>
