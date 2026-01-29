@@ -20,8 +20,12 @@ namespace MarkdownEditor2022
         private bool _isToolbarVisible;
 
         // Offset from the selection to position the toolbar (gap between toolbar and text)
-        private const double _verticalGap = 50.0;
+        private const double _verticalGap = 8.0;
         private const double _horizontalPadding = 10.0;
+
+        // Fixed toolbar dimensions (toolbar has a fixed layout)
+        private const double _toolbarWidth = 350.0;
+        private const double _toolbarHeight = 32.0;
 
         public FloatingToolbarAdornment(IWpfTextView view)
         {
@@ -174,7 +178,6 @@ namespace MarkdownEditor2022
 
                 // Position and show toolbar
                 _toolbar.Visibility = Visibility.Visible;
-                _toolbar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
                 Canvas.SetLeft(_toolbar, position.Value.X);
                 Canvas.SetTop(_toolbar, position.Value.Y);
@@ -200,40 +203,37 @@ namespace MarkdownEditor2022
         {
             try
             {
-                // Get the caret line as IWpfTextViewLine which has VisibleArea
-                if (_view.Caret.ContainingTextViewLine is not IWpfTextViewLine caretLine || caretLine.VisibilityState == VisibilityState.Unattached)
+                IWpfTextViewLine caretLine = _view.Caret.ContainingTextViewLine as IWpfTextViewLine;
+                if (caretLine == null || caretLine.VisibilityState == VisibilityState.Unattached)
                 {
                     return null;
                 }
 
-                // Measure toolbar to get its size
-                _toolbar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                double toolbarWidth = _toolbar.DesiredSize.Width;
-                double toolbarHeight = _toolbar.DesiredSize.Height;
-
-                // VisibleArea is in viewport-relative coordinates
-                Rect visibleArea = caretLine.VisibleArea;
-
-                // Calculate X position - center toolbar on visible area, keep within viewport
-                double x = caretLine.Left;
-                x = Math.Max(_horizontalPadding, x);
-                //x = Math.Min(_view.ViewportWidth - toolbarWidth - HorizontalPadding, x);
-
-                // Calculate Y position - above the line with gap
-                double y = caretLine.TextTop - toolbarHeight - _verticalGap;
-
-                // Get the line number of the caret position
-                int lineNumber = _view.TextSnapshot.GetLineNumberFromPosition(_view.Caret.Position.BufferPosition);
-
-                // If on first 3 lines or toolbar would go above viewport, position below the line instead
-                if (caretLine.TextTop - visibleArea.Y < 80)
+                // Calculate X position based on selection start
+                double x = _horizontalPadding;
+                ITextSelection selection = _view.Selection;
+                if (!selection.IsEmpty && selection.SelectedSpans.Count > 0)
                 {
-                    y = visibleArea.Y + caretLine.Bottom + 10;
+                    SnapshotPoint selectionStart = selection.SelectedSpans[0].Start;
+                    ITextViewLine selectionLine = _view.GetTextViewLineContainingBufferPosition(selectionStart);
+                    if (selectionLine != null)
+                    {
+                        x = selectionLine.GetCharacterBounds(selectionStart).Left - _view.ViewportLeft;
+                    }
                 }
 
-                // Ensure toolbar stays within viewport vertically
-                y = Math.Max(0, y);
-                //y = Math.Min(_view.ViewportHeight - toolbarHeight, y);
+                // Clamp X to keep toolbar within viewport
+                double maxX = _view.ViewportWidth - _toolbarWidth - 20;
+                x = Math.Max(_horizontalPadding, Math.Min(maxX, x));
+
+                // Calculate Y position - above the caret line
+                double y = caretLine.Top - _toolbarHeight - _verticalGap;
+
+                // If toolbar would go above viewport, position below the line
+                if (y < 0)
+                {
+                    y = caretLine.Bottom + _verticalGap;
+                }
 
                 return new Point(x, y);
             }
