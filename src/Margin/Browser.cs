@@ -566,8 +566,9 @@ namespace MarkdownEditor2022
                     bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
                     bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                         html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool needsMath = html.IndexOf("class=\"math\"", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                    string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
+                    string scripts = BuildInitialScriptTags(needsPrism, needsMermaid, needsMath);
                     string fullHtml = template.Replace("[content]", html).Replace("[scripts]", scripts);
 
                     _browser.NavigateToString(fullHtml);
@@ -1192,6 +1193,7 @@ namespace MarkdownEditor2022
             // Feature detection
             bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
             bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 || html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool needsMath = html.IndexOf("class=\"math\"", StringComparison.OrdinalIgnoreCase) >= 0;
 
             if (isInit)
             {
@@ -1211,8 +1213,13 @@ namespace MarkdownEditor2022
                     string mermaidTheme = GetMermaidTheme();
                     script.Append(@"if(!window.mermaid && !window.__mermaidLoading){window.__mermaidLoading=true;var sm=document.createElement('script');sm.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mermaid.min.js';sm.onload=function(){try{mermaid.initialize({ securityLevel: 'loose', theme: '").Append(mermaidTheme).Append(@"', flowchart:{ htmlLabels:false }, sequence:{ useMaxWidth:true }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}};document.head.appendChild(sm);} else if(window.mermaid){try{mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}}");
                 }
+                if (needsMath)
+                {
+                    // MathJax lazy load or re-typeset
+                    script.Append(@"if(!window.MathJax && !window.__mathjaxLoading){window.__mathjaxLoading=true;var sj=document.createElement('script');sj.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mathjax.js';sj.onload=function(){if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}};document.head.appendChild(sj);} else if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}");
+                }
 
-                // Inline anchor adjustment to avoid extra round-trip
+                // Inline anchor adjustment
                 script.Append(@"(function(){for (const anchor of document.links){try{if(anchor && anchor.protocol==='file:'){var pathName=null,hash=anchor.hash;if(hash){pathName=anchor.pathname;anchor.hash=null;anchor.pathname='';}anchor.protocol='about:';if(hash){if(pathName==null||pathName.endsWith('/')){pathName='blank';}anchor.pathname=pathName;anchor.hash=hash;}}}catch(e){}}})();");
                 script.Append("})();");
 
@@ -1222,15 +1229,15 @@ namespace MarkdownEditor2022
             {
                 // Initial navigation path: build scripts only for needed features.
                 string htmlTemplate = GetHtmlTemplate();
-                string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
+                string scripts = BuildInitialScriptTags(needsPrism, needsMermaid, needsMath);
                 html = htmlTemplate.Replace("[content]", html).Replace("[scripts]", scripts);
                 _browser.NavigateToString(html);
             }
         }
 
-        private static string BuildInitialScriptTags(bool prism, bool mermaid)
+        private static string BuildInitialScriptTags(bool prism, bool mermaid, bool math = false)
         {
-            if (!prism && !mermaid)
+            if (!prism && !mermaid && !math)
             {
                 return string.Empty;
             }
@@ -1244,6 +1251,10 @@ namespace MarkdownEditor2022
             {
                 string theme = GetMermaidTheme();
                 sb.Append("<script src=\"http://").Append(_mappedMarkdownEditorVirtualHostName).Append("/margin/mermaid.min.js\" onload=\"try{mermaid.initialize({ securityLevel:'loose', theme:'").Append(theme).Append("', flowchart:{ htmlLabels:true }, sequence:{ useMaxWidth:true }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}\"></script>");
+            }
+            if (math)
+            {
+                sb.Append("<script src=\"http://").Append(_mappedMarkdownEditorVirtualHostName).Append("/margin/mathjax.js\" onload=\"if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}\"></script>");
             }
             return sb.ToString();
         }
