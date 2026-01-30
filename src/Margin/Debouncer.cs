@@ -1,4 +1,4 @@
-﻿// From https://stackoverflow.com/a/47933557
+// From https://stackoverflow.com/a/47933557
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -17,15 +17,19 @@ namespace MarkdownEditor2022
         {
             key ??= "default";
 
-            // Cancel previous debouncer for this key
-            if (_debouncers.TryGetValue(key, out CancellationTokenSource existingToken))
-            {
-                existingToken.Cancel();
-                existingToken.Dispose();
-            }
-
             CancellationTokenSource newTokenSrc = new();
-            _debouncers[key] = newTokenSrc;
+
+            // Use AddOrUpdate for atomic replacement - this ensures thread-safe token management
+            CancellationTokenSource oldToken = _debouncers.AddOrUpdate(
+                key,
+                newTokenSrc,
+                (k, existing) =>
+                {
+                    // Cancel and dispose the existing token atomically during the update
+                    existing.Cancel();
+                    existing.Dispose();
+                    return newTokenSrc;
+                });
 
             _ = Task.Delay(_millisecondsToWait, newTokenSrc.Token).ContinueWith(task =>
             {

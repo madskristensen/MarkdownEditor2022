@@ -48,6 +48,12 @@ namespace MarkdownEditor2022
         {
             ThreadHelper.ThrowIfOnUIThread();
 
+            // Guard against null Markdown (document not yet parsed or parsing failed)
+            if (_document.Markdown == null)
+            {
+                return Task.CompletedTask;
+            }
+
             List<ITagSpan<TokenTag>> list = [];
             IEnumerable<MarkdownObject> descendants = _document.Markdown.Descendants();
 

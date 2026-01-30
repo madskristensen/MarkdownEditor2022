@@ -268,7 +268,6 @@ namespace MarkdownEditor2022
             else
             {
                 using Bitmap image = (Bitmap)data.GetData("System.Drawing.Bitmap");
-                using MemoryStream ms = new();
                 image.Save(existingFile, GetImageFormat(Path.GetExtension(existingFile)));
             }
         }

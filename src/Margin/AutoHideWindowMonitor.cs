@@ -53,6 +53,21 @@ namespace MarkdownEditor2022
         }
 
         /// <summary>
+        /// Disposes the singleton instance. Should be called during package shutdown.
+        /// </summary>
+        public static void DisposeInstance()
+        {
+            lock (_lock)
+            {
+                if (_instance != null)
+                {
+                    _instance.Dispose();
+                    _instance = null;
+                }
+            }
+        }
+
+        /// <summary>
         /// Initializes the monitor by subscribing to VS shell window frame events.
         /// Must be called on the UI thread.
         /// </summary>

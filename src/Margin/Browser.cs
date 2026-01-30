@@ -65,8 +65,8 @@ namespace MarkdownEditor2022
         /// </summary>
         private static readonly TimeSpan _scrollSyncSuppressionDuration = TimeSpan.FromMilliseconds(1000);
 
-        // Cache StringBuilder and Regex for better performance
-        private static StringWriter _htmlWriterStatic;
+        // Cache StringBuilder pool and Regex for better performance
+        // Note: StringWriter is created per-render from pooled StringBuilder for thread-safety
         private static readonly ConcurrentQueue<StringBuilder> _stringBuilderPool = new();
         private static readonly Regex _languageRegex = new("\"language-([^\"]+)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _mermaidRegex = new("class=\"language-mermaid\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -991,11 +991,10 @@ namespace MarkdownEditor2022
 
         private static async Task<string> RenderHtmlDocumentAsync(MarkdownDocument md)
         {
-            StringWriter htmlWriter = null;
+            StringBuilder sb = GetOrCreateStringBuilder();
             try
             {
-                htmlWriter = (_htmlWriterStatic ??= new StringWriter(GetOrCreateStringBuilder()));
-                htmlWriter.GetStringBuilder().Clear();
+                using StringWriter htmlWriter = new(sb);
 
                 HtmlRenderer htmlRenderer = new(htmlWriter);
                 Document.Pipeline.Setup(htmlRenderer);
@@ -1032,7 +1031,8 @@ namespace MarkdownEditor2022
             }
             finally
             {
-                if (htmlWriter?.GetStringBuilder() is StringBuilder sb && sb.Capacity <= 8192)
+                // Return StringBuilder to pool if not too large
+                if (sb.Capacity <= 8192)
                 {
                     sb.Clear();
                     _stringBuilderPool.Enqueue(sb);

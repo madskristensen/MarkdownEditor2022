@@ -61,8 +61,9 @@ namespace MarkdownEditor2022
 
             if (disposing)
             {
-                // Dispose the auto-hide window monitor to stop event processing during shutdown
-                AutoHideWindowMonitor.GetInstance().Dispose();
+                // Dispose the auto-hide window monitor singleton to stop event processing during shutdown
+                // and clear the static instance to prevent memory leaks
+                AutoHideWindowMonitor.DisposeInstance();
             }
 
             base.Dispose(disposing);

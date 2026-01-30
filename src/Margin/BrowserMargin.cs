@@ -20,7 +20,7 @@ namespace MarkdownEditor2022
         private double _lastScrollPosition;
         private bool _isDisposed;
         private DateTime _lastEdit;
-        private static readonly Debouncer _debouncer = new(150); // Reduced debounce time for better responsiveness
+        private readonly Debouncer _debouncer = new(150); // Per-instance debouncer for correct behavior with multiple documents
         private bool _isPreviewHiddenByAutoHide;
         private bool _isRegisteredWithAutoHideMonitor;
 
