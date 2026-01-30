@@ -169,9 +169,11 @@ This is useful when you want to maintain complex diagrams as separate files or s
 
 ### Root path configuration for Jekyll/GitHub Pages
 
-When working with static site generators like Jekyll or GitHub Pages, you may want to use root-relative paths (paths starting with `/`) in your markdown files. The extension supports configuring a root path via YAML front matter to properly resolve these paths in the preview.
+When working with static site generators like Jekyll or GitHub Pages, you may want to use root-relative paths (paths starting with `/`) in your markdown files. The extension supports configuring a root path to properly resolve these paths in the preview.
 
-**Example usage:**
+#### Option 1: YAML front matter (per-file)
+
+Add `root_path` to the YAML front matter of individual markdown files:
 
 ```yaml
 ---
@@ -183,7 +185,20 @@ title: My Blog Post
 [About Page](/about.md)
 ```
 
-In this example:
+#### Option 2: .editorconfig (project-wide)
+
+Add `md_root_path` to your `.editorconfig` file to apply the setting to all markdown files in your project:
+
+```ini
+[*.md]
+md_root_path = C:\Projects\myblog
+```
+
+This is useful when you want to set the root path once for an entire project rather than adding front matter to each file.
+
+**Priority:** YAML front matter takes precedence over `.editorconfig`, allowing per-file overrides when needed.
+
+In these examples:
 
 - The image path `/images/header.jpg` resolves to `C:\Projects\myblog\images\header.jpg`
 - The link `/about.md` resolves to `C:\Projects\myblog\about.md`
@@ -192,7 +207,7 @@ In this example:
 
 - Works with both images (`src`) and links (`href`)
 - Supports Windows paths (`C:\Projects\blog`) and Unix paths (`/home/user/website`)
-- Case-insensitive (`root_path` or `ROOT_PATH`)
+- Case-insensitive (`root_path` or `ROOT_PATH` in front matter)
 - Can be quoted if the path contains spaces: `root_path: "C:\My Projects\Site"`
 - Regular relative paths (not starting with `/`) continue to work as before
 - Paths starting with `<http://`,> `<https://`,> `data:`, or `#` are left unchanged
@@ -201,14 +216,13 @@ In this example:
 
 ```text
 myblog/
+├── .editorconfig               ← Add md_root_path here
 ├── _posts/
 │   └── 2024-01-15-my-post.md   ← Edit this file
 ├── images/
-│   └── header.jpg               ← Referenced as /images/header.jpg
+│   └── header.jpg              ← Referenced as /images/header.jpg
 └── _config.yml
 ```
-
-By adding `root_path: C:\Users\Me\myblog` to your post's front matter, root-relative paths in your Jekyll posts will render correctly in the Visual Studio preview.
 
 This feature is particularly useful when editing Jekyll blog posts where the actual URL structure differs from the file system layout.
 

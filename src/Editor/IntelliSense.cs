@@ -330,12 +330,31 @@ namespace MarkdownEditor2022
             if (string.IsNullOrWhiteSpace(pathPart))
                 return CompletionContext.Empty;
 
-            // Handle relative path prefixes
-            if (pathPart.StartsWith("./")) pathPart = pathPart.Substring(2);
-            while (pathPart.StartsWith("../"))
+            // Handle root-relative paths (starting with /)
+            bool isRootRelative = pathPart.StartsWith("/");
+            if (isRootRelative)
             {
-                searchDir = Path.GetDirectoryName(searchDir) ?? searchDir;
-                pathPart = pathPart.Substring(3);
+                string rootPath = GetEffectiveRootPath();
+                if (!string.IsNullOrEmpty(rootPath) && Directory.Exists(rootPath))
+                {
+                    searchDir = rootPath;
+                    pathPart = pathPart.TrimStart('/');
+                }
+                else
+                {
+                    // No root path configured, can't complete root-relative paths
+                    return CompletionContext.Empty;
+                }
+            }
+            else
+            {
+                // Handle relative path prefixes
+                if (pathPart.StartsWith("./")) pathPart = pathPart.Substring(2);
+                while (pathPart.StartsWith("../"))
+                {
+                    searchDir = Path.GetDirectoryName(searchDir) ?? searchDir;
+                    pathPart = pathPart.Substring(3);
+                }
             }
 
             // If path contains /, navigate to that subdirectory
@@ -357,14 +376,15 @@ namespace MarkdownEditor2022
             bool atPathStart = string.IsNullOrEmpty(fullTypedPath)
                 || fullTypedPath == "."
                 || fullTypedPath == ".."
+                || fullTypedPath == "/"
                 || fullTypedPath.All(c => c == '.' || c == '/');
 
             List<CompletionItem> items = [];
 
             try
             {
-                // Add ../ to navigate up (only at path start, and if not at root)
-                if (atPathStart)
+                // Add ../ to navigate up (only at path start, and if not at root, and not for root-relative paths)
+                if (atPathStart && !isRootRelative)
                 {
                     string parentDir = Path.GetDirectoryName(searchDir);
                     if (!string.IsNullOrEmpty(parentDir))
@@ -415,6 +435,16 @@ namespace MarkdownEditor2022
 
         public Task<object> GetDescriptionAsync(IAsyncCompletionSession session, CompletionItem item, CancellationToken token)
             => Task.FromResult<object>(item.InsertText);
+
+        /// <summary>
+        /// Gets the effective root path for resolving root-relative paths.
+        /// </summary>
+        /// <returns>The root path if found from any source, otherwise null.</returns>
+        private string GetEffectiveRootPath()
+        {
+            Document doc = textView.TextBuffer.GetDocument();
+            return RootPathResolver.GetEffectiveRootPath(doc?.Markdown, textView);
+        }
     }
 
 

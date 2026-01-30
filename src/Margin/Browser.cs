@@ -1052,79 +1052,47 @@ namespace MarkdownEditor2022
             }
 
             string html = await RenderHtmlDocumentAsync(markdown);
-            string rootPath = GetRootPathFromFrontMatter(markdown);
+            string rootPath = GetEffectiveRootPath(markdown);
             string baseDirectory = Path.GetDirectoryName(_file);
 
             return ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
         }
 
         /// <summary>
-        /// Extracts the root_path value from YAML front matter in a MarkdownDocument.
+        /// Gets the effective root path for resolving root-relative paths.
+        /// Priority order: 1) YAML front matter root_path, 2) .editorconfig md_root_path.
         /// </summary>
-        /// <param name="md">The parsed markdown document.</param>
-        /// <returns>The root_path value if found, otherwise null.</returns>
-        private static string GetRootPathFromFrontMatter(MarkdownDocument md)
+        /// <param name="markdown">The parsed markdown document.</param>
+        /// <returns>The root path if found from any source, otherwise null.</returns>
+        private string GetEffectiveRootPath(MarkdownDocument markdown)
         {
-            if (md == null)
-            {
-                return null;
-            }
-
-            // Find the YamlFrontMatterBlock in the document
-            YamlFrontMatterBlock frontMatter = md.Descendants<YamlFrontMatterBlock>().FirstOrDefault();
-            if (frontMatter == null)
-            {
-                return null;
-            }
-
-            // Parse the YAML lines to find root_path
-            foreach (Markdig.Helpers.StringLine line in frontMatter.Lines.Lines)
-            {
-                string lineText = line.ToString().Trim();
-
-                // Look for root_path: value
-                if (lineText.StartsWith("root_path:", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Extract the value after the colon
-                    int colonIndex = lineText.IndexOf(':');
-                    if (colonIndex >= 0 && colonIndex < lineText.Length - 1)
-                    {
-                        string value = lineText.Substring(colonIndex + 1).Trim();
-
-                        // Remove matching quotes if present (both single or double)
-                        if (value.Length >= 2)
-                        {
-                            char firstChar = value[0];
-                            char lastChar = value[value.Length - 1];
-
-                            if ((firstChar == '"' && lastChar == '"') ||
-                                (firstChar == '\'' && lastChar == '\''))
-                            {
-                                value = value.Substring(1, value.Length - 2);
-                            }
-                        }
-
-                        return string.IsNullOrWhiteSpace(value) ? null : value;
-                    }
-                }
-            }
-
-            return null;
+            return RootPathResolver.GetEffectiveRootPath(markdown, _textView);
         }
+
+        // Pre-computed virtual host URL prefix to avoid repeated string concatenation
+        private const string _virtualHostUrlPrefix = "http://" + _mappedBrowsingFileVirtualHostName + "/";
 
         /// <summary>
         /// Resolves relative paths in HTML src and href attributes to absolute virtual host URLs.
         /// This fixes issue #60 where paths with parent directory navigation (../) were being
         /// normalized away by the browser before we could handle them.
-        /// Also supports root-relative paths (starting with /) when a root_path is specified in front matter.
+        /// Also supports root-relative paths (starting with /) when a root_path is specified in front matter
+        /// or md_root_path is specified in .editorconfig.
         /// </summary>
         /// <param name="html">The HTML content with potentially relative paths.</param>
         /// <param name="baseDirectory">The directory to resolve relative paths against.</param>
-        /// <param name="rootPath">Optional root path from front matter for resolving root-relative paths (paths starting with /).</param>
+        /// <param name="rootPath">Optional root path from front matter or .editorconfig for resolving root-relative paths (paths starting with /).</param>
         /// <returns>HTML with relative paths converted to absolute virtual host URLs.</returns>
         private static string ResolveRelativePathsToAbsoluteUrls(string html, string baseDirectory, string rootPath = null)
         {
             if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(baseDirectory))
+            {
+                return html;
+            }
+
+            // Early exit if no src= or href= attributes to process (avoids regex scan)
+            if (html.IndexOf("src=", StringComparison.OrdinalIgnoreCase) < 0 &&
+                html.IndexOf("href=", StringComparison.OrdinalIgnoreCase) < 0)
             {
                 return html;
             }
@@ -1147,27 +1115,24 @@ namespace MarkdownEditor2022
 
                     try
                     {
-                        // Decode HTML entities in the path (e.g., %20 for spaces)
-                        string decodedPath = WebUtility.UrlDecode(relativePath);
+                        // Only decode if path contains encoded characters (avoid allocation otherwise)
+                        string decodedPath = relativePath.IndexOf('%') >= 0
+                            ? WebUtility.UrlDecode(relativePath)
+                            : relativePath;
 
-                        // Remove leading slash
+                        // Remove leading slash and normalize path separators
                         string pathWithoutLeadingSlash = decodedPath.TrimStart('/');
-
-                        // Normalize path separators
                         pathWithoutLeadingSlash = pathWithoutLeadingSlash.Replace('/', Path.DirectorySeparatorChar);
 
                         // Resolve against the root path
                         string fullPath = Path.GetFullPath(Path.Combine(rootPath, pathWithoutLeadingSlash));
 
                         // Convert to virtual host URL relative to drive root
-                        string relativeToDrive = fullPath;
-                        if (fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase))
-                        {
-                            relativeToDrive = fullPath.Substring(driveRoot.Length);
-                        }
-                        string virtualUrl = "http://" + _mappedBrowsingFileVirtualHostName + "/" + relativeToDrive.Replace(Path.DirectorySeparatorChar, '/');
+                        string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                            ? fullPath.Substring(driveRoot.Length)
+                            : fullPath;
 
-                        return $"{attr}=\"{virtualUrl}\"";
+                        return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
                     }
                     catch
                     {
@@ -1191,8 +1156,10 @@ namespace MarkdownEditor2022
 
                 try
                 {
-                    // Decode HTML entities in the path (e.g., %20 for spaces)
-                    string decodedPath = WebUtility.UrlDecode(relativePath);
+                    // Only decode if path contains encoded characters (avoid allocation otherwise)
+                    string decodedPath = relativePath.IndexOf('%') >= 0
+                        ? WebUtility.UrlDecode(relativePath)
+                        : relativePath;
 
                     // Normalize path separators
                     decodedPath = decodedPath.Replace('/', Path.DirectorySeparatorChar);
@@ -1202,14 +1169,11 @@ namespace MarkdownEditor2022
 
                     // Convert to virtual host URL relative to drive root
                     // e.g., C:\Projects\images\foo.png -> http://browsing-file-host/Projects/images/foo.png
-                    string relativeToDrive = fullPath;
-                    if (fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase))
-                    {
-                        relativeToDrive = fullPath.Substring(driveRoot.Length);
-                    }
-                    string virtualUrl = "http://" + _mappedBrowsingFileVirtualHostName + "/" + relativeToDrive.Replace(Path.DirectorySeparatorChar, '/');
+                    string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                        ? fullPath.Substring(driveRoot.Length)
+                        : fullPath;
 
-                    return $"{attr}=\"{virtualUrl}\"";
+                    return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
                 }
                 catch
                 {
