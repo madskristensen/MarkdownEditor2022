@@ -196,6 +196,8 @@ md_root_path = C:\Projects\myblog
 
 This is useful when you want to set the root path once for an entire project rather than adding front matter to each file.
 
+> **💡 Tip:** Install the [EditorConfig Language Service](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.EditorConfig) extension to get IntelliSense for the `md_root_path` property in your `.editorconfig` files.
+
 **Priority:** YAML front matter takes precedence over `.editorconfig`, allowing per-file overrides when needed.
 
 In these examples:
@@ -308,7 +310,16 @@ Type `#` inside a link to get completions for all headings in the current docume
 [Jump to section](#heading-name)
 ```
 
-Headings are shown with their level indicator (##, ###, etc.) and automatically generate GitHub-compatible anchor slugs. Duplicate headings are handled with `-1`, `-2` suffixes.
+Headings are shown with their level indicator (H1, H2, etc.) and automatically generate GitHub-compatible anchor slugs. Duplicate headings are handled with `-1`, `-2` suffixes.
+
+**Cross-document anchors:** You can also get anchor completions for other markdown files by typing the file path followed by `#`:
+
+```markdown
+[See other file](other-file.md#section-name)
+[Relative path](../docs/guide.md#getting-started)
+```
+
+IntelliSense will parse the target markdown file and show all available headings.
 
 ### Heading-based navigation
 
@@ -465,6 +476,17 @@ Control the settings for this extension under
 | Enable table sorting        | Allows clicking table headers to sort columns (underlines headers when enabled)                  |
 | Optimize images on paste    | Automatically optimizes pasted images using Image Optimizer (requires Image Optimizer extension) |
 | Show trailing whitespace    | Displays dots for trailing double-spaces (soft line breaks) in the editor                        |
+
+### Community Feature Requests
+
+This extension addresses several popular feature requests from the Visual Studio Developer Community:
+
+- [Mermaid extension files not supported](https://developercommunity.visualstudio.com/t/Mermaid-extension-files-not-supported-/10967755)
+- [Improved Markdown Rendering in Visual Studio](https://developercommunity.visualstudio.com/t/Improved-Markdown-Rendering-in-Visual-St/10895171)
+- [Split markdown preview horizontally](https://developercommunity.visualstudio.com/t/Split-markdown-preview-horizontally/10695179)
+- [Support for Cross-Document Anchor Links](https://developercommunity.visualstudio.com/t/Support-for-Cross-Document-Anchor-Links/10993308)
+- [Markdown preview does not show math formulas](https://developercommunity.visualstudio.com/t/Markdown-preview-does-not-show-math-form/11031535)
+- [Support Syntax Highlighting in Markdown](https://developercommunity.visualstudio.com/t/Support-Syntax-Highlighting-in-Markdown/10195482)
 
 ### How can I help?
 

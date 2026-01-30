@@ -354,6 +354,11 @@ namespace MarkdownEditor2022
         private static Task<CoreWebView2Environment> _cachedEnvironmentTask;
         private static readonly object _environmentLock = new();
 
+        // Pending fragment navigations for cross-document links
+        // When a markdown file is opened with a fragment (e.g., file.md#heading), store the fragment here
+        // and navigate to it when the document's Browser finishes initializing
+        private static readonly ConcurrentDictionary<string, string> _pendingFragmentNavigations = new(StringComparer.OrdinalIgnoreCase);
+
         // Pre-warmed CSS content for faster first render
         private static string _cachedHighlightCssLight;
         private static string _cachedHighlightCssDark;
@@ -697,6 +702,11 @@ namespace MarkdownEditor2022
             // File exists - open it
             if (File.Exists(filePath))
             {
+                // Store pending fragment navigation before opening the file
+                if (hasFragment)
+                {
+                    _pendingFragmentNavigations[filePath] = fragment;
+                }
                 VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
                 return;
             }
@@ -709,6 +719,11 @@ namespace MarkdownEditor2022
                     string withExt = filePath + ext;
                     if (File.Exists(withExt))
                     {
+                        // Store pending fragment navigation before opening the file
+                        if (hasFragment)
+                        {
+                            _pendingFragmentNavigations[withExt] = fragment;
+                        }
                         VS.Documents.OpenInPreviewTabAsync(withExt).FireAndForget();
                         return;
                     }
@@ -974,8 +989,15 @@ namespace MarkdownEditor2022
 
                 await UpdateContentAsync(html);
 
+                // Check for pending cross-document fragment navigation
+                if (_pendingFragmentNavigations.TryRemove(_file, out string pendingFragment))
+                {
+                    // Small delay to ensure content is fully rendered before scrolling
+                    await Task.Delay(100);
+                    await NavigateToFragmentAsync(pendingFragment);
+                }
                 // Only sync navigation if scroll sync is enabled (not applicable for mermaid files)
-                if (!IsMermaidFile && AdvancedOptions.Instance.EnableScrollSync)
+                else if (!IsMermaidFile && AdvancedOptions.Instance.EnableScrollSync)
                 {
                     await SyncNavigationAsync(isTyping: false);
                 }

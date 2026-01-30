@@ -220,13 +220,28 @@ namespace MarkdownEditor2022
             if (openParen < 0)
                 return CompletionStartData.DoesNotParticipateInCompletion;
 
-            // Span only covers the current segment (after last / or from ()
-            // This allows VS to show items when caret is right after /
+            // Span only covers the current segment (after last / or # or from ()
+            // This allows VS to show items when caret is right after / or #
             string pathInLink = textBefore.Substring(openParen + 1);
+            int lastHash = pathInLink.LastIndexOf('#');
             int lastSlash = pathInLink.LastIndexOf('/');
-            int spanStart = lastSlash >= 0
-                ? line.Start + openParen + 1 + lastSlash + 1  // after last /
-                : line.Start + openParen + 1;                  // after (
+
+            int spanStart;
+            if (lastHash >= 0)
+            {
+                // For anchor completions, span starts after #
+                spanStart = line.Start + openParen + 1 + lastHash + 1;
+            }
+            else if (lastSlash >= 0)
+            {
+                // For file completions, span starts after last /
+                spanStart = line.Start + openParen + 1 + lastSlash + 1;
+            }
+            else
+            {
+                // Start right after (
+                spanStart = line.Start + openParen + 1;
+            }
 
             SnapshotSpan span = new(triggerLocation.Snapshot, spanStart, triggerLocation - spanStart);
             return new CompletionStartData(CompletionParticipation.ProvidesItems, span);
@@ -248,9 +263,17 @@ namespace MarkdownEditor2022
 
             string fullPath = lineText.Substring(openParen + 1, triggerLocation - line.Start - openParen - 1);
 
-            // If starts with #, show anchor completions (document headings)
+            // If starts with #, show anchor completions (current document headings)
             if (fullPath.StartsWith("#"))
                 return GetAnchorCompletions();
+
+            // Check for cross-document anchor pattern: file.md# or path/to/file.md#
+            int hashIndex = fullPath.LastIndexOf('#');
+            if (hashIndex > 0)
+            {
+                string filePath = fullPath.Substring(0, hashIndex);
+                return await GetCrossDocumentAnchorCompletionsAsync(filePath, triggerLocation);
+            }
 
             // Otherwise, show file/folder completions
             return await GetFileCompletionsAsync(fullPath, triggerLocation);
@@ -298,11 +321,141 @@ namespace MarkdownEditor2022
                 }
 
                 items.Add(new CompletionItem(text, this, _anchorIcon, ImmutableArray<CompletionFilter>.Empty,
-                    suffix: $" (H{heading.Level})", insertText: "#" + slug, sortText: heading.Line.ToString("D5"),
+                    suffix: $" (H{heading.Level})", insertText: slug, sortText: heading.Line.ToString("D5"),
                     filterText: text, attributeIcons: ImmutableArray<ImageElement>.Empty));
             }
 
             return new CompletionContext(items.ToImmutableArray());
+        }
+
+        private async Task<CompletionContext> GetCrossDocumentAnchorCompletionsAsync(string relativePath, SnapshotPoint triggerLocation)
+        {
+            // Get document directory to resolve relative path
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            ITextBuffer buffer = triggerLocation.Snapshot.TextBuffer;
+            if (!buffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument textDoc))
+                return CompletionContext.Empty;
+
+            string docDir = Path.GetDirectoryName(textDoc.FilePath);
+            if (string.IsNullOrEmpty(docDir))
+                return CompletionContext.Empty;
+
+            // Resolve the target file path
+            string targetPath = ResolveTargetFilePath(relativePath, docDir);
+            if (string.IsNullOrEmpty(targetPath) || !File.Exists(targetPath))
+                return CompletionContext.Empty;
+
+            // Parse the target markdown file
+            string content;
+            try
+            {
+                content = File.ReadAllText(targetPath);
+            }
+            catch
+            {
+                return CompletionContext.Empty;
+            }
+
+            MarkdownDocument markdown = Markdig.Markdown.Parse(content, Document.Pipeline);
+
+            List<CompletionItem> items = [];
+            Dictionary<string, int> slugCounts = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (HeadingBlock heading in markdown.Descendants<HeadingBlock>())
+            {
+                // Get heading text from the source content
+                string text = content.Substring(heading.Span.Start, heading.Span.Length).TrimStart('#').Trim();
+
+                // Strip {#custom-id} attribute syntax from display text
+                int attrIndex = text.LastIndexOf("{#", StringComparison.Ordinal);
+                if (attrIndex > 0 && text.EndsWith("}"))
+                {
+                    text = text.Substring(0, attrIndex).Trim();
+                }
+
+                // Use the ID generated by Markdig's AutoIdentifier extension
+                string slug = heading.GetAttributes().Id;
+
+                // Skip headings that result in empty slugs
+                if (string.IsNullOrEmpty(slug))
+                {
+                    continue;
+                }
+
+                // Handle duplicate headings
+                if (slugCounts.TryGetValue(slug, out int count))
+                {
+                    slugCounts[slug] = count + 1;
+                    slug = $"{slug}-{count}";
+                }
+                else
+                {
+                    slugCounts[slug] = 1;
+                }
+
+                items.Add(new CompletionItem(text, this, _anchorIcon, ImmutableArray<CompletionFilter>.Empty,
+                    suffix: $" (H{heading.Level})", insertText: slug, sortText: heading.Line.ToString("D5"),
+                    filterText: text, attributeIcons: ImmutableArray<ImageElement>.Empty));
+            }
+
+            return new CompletionContext(items.ToImmutableArray());
+        }
+
+        private string ResolveTargetFilePath(string relativePath, string docDir)
+        {
+            // Strip quotes and other illegal path characters
+            relativePath = relativePath.Trim('"', '\'', '<', '>', '|');
+            if (string.IsNullOrWhiteSpace(relativePath))
+                return null;
+
+            // Handle root-relative paths (starting with /)
+            if (relativePath.StartsWith("/"))
+            {
+                string rootPath = GetEffectiveRootPath();
+                if (!string.IsNullOrEmpty(rootPath) && Directory.Exists(rootPath))
+                {
+                    relativePath = relativePath.TrimStart('/');
+                    string absolutePath = Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+                    return TryResolveMarkdownFile(absolutePath);
+                }
+                return null;
+            }
+
+            // Handle relative path prefixes
+            string searchDir = docDir;
+            if (relativePath.StartsWith("./"))
+            {
+                relativePath = relativePath.Substring(2);
+            }
+            while (relativePath.StartsWith("../"))
+            {
+                searchDir = Path.GetDirectoryName(searchDir) ?? searchDir;
+                relativePath = relativePath.Substring(3);
+            }
+
+            string fullPath = Path.Combine(searchDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            return TryResolveMarkdownFile(fullPath);
+        }
+
+        private static string TryResolveMarkdownFile(string path)
+        {
+            if (File.Exists(path))
+                return path;
+
+            // Try adding common markdown extensions if no extension was specified
+            string extension = Path.GetExtension(path);
+            if (string.IsNullOrEmpty(extension))
+            {
+                string[] markdownExtensions = [".md", ".markdown", ".mdown", ".mkd", ".mdx"];
+                foreach (string ext in markdownExtensions)
+                {
+                    string withExt = path + ext;
+                    if (File.Exists(withExt))
+                        return withExt;
+                }
+            }
+
+            return null;
         }
 
         private async Task<CompletionContext> GetFileCompletionsAsync(string fullTypedPath, SnapshotPoint triggerLocation)
