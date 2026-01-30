@@ -83,7 +83,7 @@ body {
     }
 
     .markdown-body mark {
-        background-color: rgba(187,128,9,0.15);
+        background-color: rgba(255, 235, 59, 0.4);
         color: #c9d1d9;
     }
 

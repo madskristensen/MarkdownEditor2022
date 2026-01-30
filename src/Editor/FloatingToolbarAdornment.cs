@@ -24,7 +24,7 @@ namespace MarkdownEditor2022
         private const double _horizontalPadding = 10.0;
 
         // Fixed toolbar dimensions (toolbar has a fixed layout)
-        private const double _toolbarWidth = 350.0;
+        private const double _toolbarWidth = 390.0;
         private const double _toolbarHeight = 32.0;
 
         public FloatingToolbarAdornment(IWpfTextView view)
@@ -203,8 +203,7 @@ namespace MarkdownEditor2022
         {
             try
             {
-                IWpfTextViewLine caretLine = _view.Caret.ContainingTextViewLine as IWpfTextViewLine;
-                if (caretLine == null || caretLine.VisibilityState == VisibilityState.Unattached)
+                if (_view.Caret.ContainingTextViewLine is not IWpfTextViewLine caretLine || caretLine.VisibilityState == VisibilityState.Unattached)
                 {
                     return null;
                 }

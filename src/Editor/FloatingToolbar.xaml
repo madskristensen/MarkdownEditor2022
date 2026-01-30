@@ -48,6 +48,44 @@
             </Setter>
         </Style>
 
+        <!-- Toggle button style for format buttons that can show checked/active state -->
+        <Style x:Key="ToggleToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource ToolbarButtonStyle}">
+            <Setter Property="Tag" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Checked/active state (Tag="True") -->
+                            <Trigger Property="Tag" Value="True">
+                                <Setter TargetName="border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarSelectedKey}}"/>
+                                <Setter TargetName="border" Property="BorderBrush" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarSelectedBorderKey}}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMouseOverBackgroundGradientKey}}"/>
+                                <Setter TargetName="border" Property="BorderBrush" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarHoverOverSelectedIconBorderKey}}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" 
+                                        Value="{DynamicResource {x:Static vs:VsBrushes.CommandBarMouseDownBackgroundGradientKey}}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="SeparatorStyle" TargetType="Border">
             <Setter Property="Width" Value="1"/>
             <Setter Property="Margin" Value="4,4,4,4"/>
@@ -208,7 +246,7 @@
 
             <!-- Bold -->
             <Button x:Name="BoldButton" 
-                    Style="{StaticResource ToolbarButtonStyle}" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
                     ToolTip="Bold (Ctrl+B)"
                     Click="BoldButton_Click">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Bold}"/>
@@ -216,7 +254,7 @@
 
             <!-- Italic -->
             <Button x:Name="ItalicButton" 
-                    Style="{StaticResource ToolbarButtonStyle}" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
                     ToolTip="Italic (Ctrl+I)"
                     Click="ItalicButton_Click">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Italic}"/>
@@ -224,17 +262,48 @@
 
             <!-- Strikethrough -->
             <Button x:Name="StrikethroughButton" 
-                    Style="{StaticResource ToolbarButtonStyle}" 
-                    ToolTip="Strikethrough)"
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
+                    ToolTip="Strikethrough"
                     Click="StrikethroughButton_Click">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.StrikeThrough}"/>
+            </Button>
+
+            <!-- Highlight/Mark -->
+            <Button x:Name="HighlightButton" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
+                    ToolTip="Highlight (==text==)"
+                    Click="HighlightButton_Click">
+                <TextBlock Text="ab" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource {x:Static vs:VsBrushes.CommandBarTextActiveKey}}">
+                    <TextBlock.Background>
+                        <SolidColorBrush Color="Yellow" Opacity="0.6"/>
+                    </TextBlock.Background>
+                </TextBlock>
+            </Button>
+
+            <!-- Subscript -->
+            <Button x:Name="SubscriptButton" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
+                    ToolTip="Subscript (~text~)"
+                    Click="SubscriptButton_Click">
+                <TextBlock Text="X₂" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource {x:Static vs:VsBrushes.CommandBarTextActiveKey}}"/>
+            </Button>
+
+            <!-- Superscript -->
+            <Button x:Name="SuperscriptButton" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
+                    ToolTip="Superscript (^text^)"
+                    Click="SuperscriptButton_Click">
+                <TextBlock Text="X²" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource {x:Static vs:VsBrushes.CommandBarTextActiveKey}}"/>
             </Button>
 
             <Border Style="{StaticResource SeparatorStyle}"/>
 
             <!-- Inline Code -->
             <Button x:Name="CodeButton" 
-                    Style="{StaticResource ToolbarButtonStyle}" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
                     ToolTip="Inline Code"
                     Click="CodeButton_Click">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Code}"/>
@@ -252,7 +321,7 @@
 
             <!-- Bullet List -->
             <Button x:Name="BulletListButton" 
-                    Style="{StaticResource ToolbarButtonStyle}" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
                     ToolTip="Bullet List"
                     Click="BulletListButton_Click">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.BulletList}"/>
@@ -260,7 +329,7 @@
 
             <!-- Numbered List -->
             <Button x:Name="NumberedListButton" 
-                    Style="{StaticResource ToolbarButtonStyle}" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
                     ToolTip="Numbered List"
                     Click="NumberedListButton_Click">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.OrderedList}"/>
@@ -268,7 +337,7 @@
 
             <!-- Task List -->
             <Button x:Name="TaskListButton" 
-                    Style="{StaticResource ToolbarButtonStyle}" 
+                    Style="{StaticResource ToggleToolbarButtonStyle}" 
                     ToolTip="Task List"
                     Click="TaskListButton_Click">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.CheckBoxList}"/>

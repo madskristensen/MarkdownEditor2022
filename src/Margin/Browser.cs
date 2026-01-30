@@ -71,7 +71,6 @@ namespace MarkdownEditor2022
         private static readonly Regex _languageRegex = new("\"language-([^\"]+)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _mermaidRegex = new("class=\"language-mermaid\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _escapeRegex = new(@"[\\\r\n""]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-        private static readonly Regex _bgColorRegex = new(@"background(-color)?\s*:\s*#[0-9a-fA-F]{3,8}\b", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
 
         // Regex for resolving relative paths in HTML attributes to absolute file:// URLs
@@ -1339,13 +1338,15 @@ namespace MarkdownEditor2022
     <meta charset=""utf-8"" />
     <style>
         html, body {{margin: 0; padding:0; min-height: 100%; display: block; background-color: {themeBgColor}; color: {themeFgColor};}}
-        .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}
         #___markdown-content___ {{padding: 5px 5px 10px 5px; min-height: {_browser.ActualHeight - 15}px}}
         .markdown-alert {{padding: 1em 1em .5em 1em; margin-bottom: 1em; border-radius: 1em; background: #c0c0c022}}
         .markdown-alert-title {{font-weight: bold; color:inherit}}
         .markdown-alert-title svg {{margin-right: 5px; margin-top: -1px;}}
         {scrollbarCss}
         {css}
+        /* Theme overrides - must come after imported CSS to take precedence */
+        .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}
+        .markdown-body img {{background-color: transparent;}}
     </style>";
                 string defaultContent = @"
     <div id=""___markdown-content___"" class=""markdown-body"" [CONTENTEDITABLE]>
@@ -1384,8 +1385,7 @@ namespace MarkdownEditor2022
                         return cached;
                     }
                 }
-                string content = File.ReadAllText(path);
-                return _bgColorRegex.Replace(content, "background-color:inherit");
+                return File.ReadAllText(path);
             }
 
             static string GetPrismCss(bool useLightTheme, string path)
@@ -1396,8 +1396,7 @@ namespace MarkdownEditor2022
                     return cached;
                 }
 
-                string content = File.ReadAllText(path);
-                return _bgColorRegex.Replace(content, "background-color:inherit");
+                return File.ReadAllText(path);
             }
 
             static DateTime SafeGetWriteTime(string path)
@@ -1631,22 +1630,22 @@ namespace MarkdownEditor2022
 
                     if (File.Exists(highlightLightPath))
                     {
-                        _cachedHighlightCssLight = _bgColorRegex.Replace(File.ReadAllText(highlightLightPath), "background-color:inherit");
+                        _cachedHighlightCssLight = File.ReadAllText(highlightLightPath);
                     }
 
                     if (File.Exists(highlightDarkPath))
                     {
-                        _cachedHighlightCssDark = _bgColorRegex.Replace(File.ReadAllText(highlightDarkPath), "background-color:inherit");
+                        _cachedHighlightCssDark = File.ReadAllText(highlightDarkPath);
                     }
 
                     if (File.Exists(prismLightPath))
                     {
-                        _cachedPrismCssLight = _bgColorRegex.Replace(File.ReadAllText(prismLightPath), "background-color:inherit");
+                        _cachedPrismCssLight = File.ReadAllText(prismLightPath);
                     }
 
                     if (File.Exists(prismDarkPath))
                     {
-                        _cachedPrismCssDark = _bgColorRegex.Replace(File.ReadAllText(prismDarkPath), "background-color:inherit");
+                        _cachedPrismCssDark = File.ReadAllText(prismDarkPath);
                     }
 
                     if (File.Exists(defaultTemplatePath))

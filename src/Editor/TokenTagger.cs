@@ -338,9 +338,13 @@ namespace MarkdownEditor2022
                 CodeBlock or CodeInline => ClassificationTypes.MarkdownCode,
                 QuoteBlock => ClassificationTypes.MarkdownQuote,
                 LinkInline => ClassificationTypes.MarkdownLink,
-                //EmphasisInline ei when ei.DelimiterCount == 2 && ei.DelimiterChar == '~' => ClassificationTypes.MarkdownStrikethrough,
-                EmphasisInline ei when ei.DelimiterCount == 1 => ClassificationTypes.MarkdownItalic,
-                EmphasisInline ei when ei.DelimiterCount == 2 => ClassificationTypes.MarkdownBold,
+                // Strikethrough: ~~text~~
+                EmphasisInline ei when ei.DelimiterChar == '~' && ei.DelimiterCount == 2 => ClassificationTypes.MarkdownStrikethrough,
+                // Italic: *text* or _text_ (only * and _ characters, not ~ or = or ^)
+                EmphasisInline ei when ei.DelimiterCount == 1 && (ei.DelimiterChar == '*' || ei.DelimiterChar == '_') => ClassificationTypes.MarkdownItalic,
+                // Bold: **text** or __text__ (only * and _ characters, not ~ or = or ^)
+                EmphasisInline ei when ei.DelimiterCount == 2 && (ei.DelimiterChar == '*' || ei.DelimiterChar == '_') => ClassificationTypes.MarkdownBold,
+                // Other emphasis types (==highlight==, ~subscript~, ^superscript^) - no special classification for now
                 HtmlBlock html when html.Type == HtmlBlockType.Comment => ClassificationTypes.MarkdownComment,
                 HtmlBlock or HtmlInline or HtmlEntityInline => ClassificationTypes.MarkdownHtml,
                 _ => null,
