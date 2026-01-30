@@ -125,7 +125,7 @@ namespace MarkdownEditor2022
         private void AddTagToList(List<ITagSpan<TokenTag>> list, MarkdownObject item)
         {
             bool supportsOutlining = item is FencedCodeBlock;
-            IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
+            //IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
 
             SnapshotSpan span = new(Buffer.CurrentSnapshot, GetApplicableSpan(item));
 
@@ -145,7 +145,7 @@ namespace MarkdownEditor2022
                 };
             }
 
-            TokenTag tag = CreateToken(tokenType, true, supportsOutlining, errors);
+            TokenTag tag = CreateToken(tokenType, true, supportsOutlining, []);
 
             if (tag.TokenType != null)
             {
@@ -286,7 +286,7 @@ namespace MarkdownEditor2022
             // Error messages
             foreach (MarkdownObject item in items)
             {
-                IEnumerable<ErrorListItem> errors = item?.GetErrors(_document.FileName);
+                IEnumerable<ErrorListItem> errors = [];// item?.GetErrors(_document.FileName);
 
                 if (errors?.Any() == true)
                 {

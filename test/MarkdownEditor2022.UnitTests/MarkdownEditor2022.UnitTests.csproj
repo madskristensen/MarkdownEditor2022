@@ -51,8 +51,6 @@
     <Compile Include="PasteImageCommandTests.cs" />
     <Compile Include="PathResolutionTests.cs" />
     <Compile Include="SlugGeneratorTests.cs" />
-    <Compile Include="UrlValidatorTests.cs" />
-    <Compile Include="ValidationTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -118,8 +118,6 @@
     <Compile Include="SuggestedActions\Actions\OptimizeImageLossyAction.cs" />
     <Compile Include="SuggestedActions\SuggestedActionsSource.cs" />
     <Compile Include="SuggestedActions\SuggestedActionsSourceProvider.cs" />
-    <Compile Include="Validation\UrlValidator.cs" />
-    <Compile Include="Validation\Validator.cs" />
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
