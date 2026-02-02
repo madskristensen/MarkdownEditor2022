@@ -83,12 +83,11 @@ namespace MarkdownEditor2022
         private readonly DateTime _openedDate = DateTime.Now;
 
         [Import] internal IBufferTagAggregatorFactoryService _bufferTagAggregator = null;
-
         protected override void Created(DocumentView docView)
         {
             _document = docView.TextBuffer.GetDocument();
-            _docView ??= docView;
-            _dataSource ??= new TableDataSource(docView.TextBuffer.ContentType.DisplayName);
+            _docView = docView;
+            _dataSource = new TableDataSource(docView.TextBuffer.ContentType.DisplayName);
             _rating = new(Constants.MarketplaceId, Vsix.Name, AdvancedOptions.Instance);
 
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
