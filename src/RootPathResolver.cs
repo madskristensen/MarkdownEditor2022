@@ -12,8 +12,6 @@ namespace MarkdownEditor2022
     /// </summary>
     public static class RootPathResolver
     {
-        private const string _rawCodingConventionsSnapshotOptionName = "CodingConventionsSnapshot";
-
         /// <summary>
         /// Gets the effective root path for resolving root-relative paths.
         /// Priority order: 1) YAML front matter root_path, 2) .editorconfig md_root_path.
@@ -46,7 +44,7 @@ namespace MarkdownEditor2022
             {
                 // Get the coding conventions from the text view options
                 // This contains all .editorconfig properties that apply to the current file
-                if (textView?.Options?.GetOptionValue<IReadOnlyDictionary<string, object>>(_rawCodingConventionsSnapshotOptionName) is IReadOnlyDictionary<string, object> conventions
+                if (textView?.Options?.GetOptionValue<IReadOnlyDictionary<string, object>>("CodingConventionsSnapshot") is IReadOnlyDictionary<string, object> conventions
                     && conventions.TryGetValue("md_root_path", out object value)
                     && value is string rootPath
                     && !string.IsNullOrWhiteSpace(rootPath))
