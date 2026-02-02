@@ -42,9 +42,9 @@ namespace MarkdownEditor2022
         public override void SetDefaultPreferences(LanguagePreferences preferences)
         {
             preferences.EnableCodeSense = false;
-            preferences.EnableMatchBraces = false;
-            preferences.EnableMatchBracesAtCaret = false;
-            preferences.EnableShowMatchingBrace = false;
+            preferences.EnableMatchBraces = true;
+            preferences.EnableMatchBracesAtCaret = true;
+            preferences.EnableShowMatchingBrace = true;
             preferences.EnableCommenting = true;
             preferences.HighlightMatchingBraceFlags = _HighlightMatchingBraceFlags.HMB_USERECTANGLEBRACES;
             preferences.LineNumbers = false;

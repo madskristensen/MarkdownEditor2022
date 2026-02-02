@@ -17,7 +17,7 @@ namespace MarkdownEditor2022
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.MarkdownEditor2022String)]
 
-    [ProvideLanguageService(typeof(MarkdownEditorV2), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, ShowCompletion = true, ShowDropDownOptions = true)]
+    [ProvideLanguageService(typeof(MarkdownEditorV2), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, ShowCompletion = true, ShowDropDownOptions = true, MatchBraces = true)]
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, ["mark", "md", "mdown"])]
     [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMd)]
     [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionRmd)]

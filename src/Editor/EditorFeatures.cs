@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Markdig.Helpers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -59,45 +58,9 @@ namespace MarkdownEditor2022
     [BracePair('[', ']')]
     [BracePair('{', '}')]
     [BracePair('"', '"')]
-    [BracePair('*', '*')]
-    [BracePair(':', ':')]
     [ContentType(Constants.LanguageName)]
-    [Order(Before = "default")]
-    [ProvideBraceCompletion(Constants.LanguageName)]
     internal sealed class BraceCompletion : BraceCompletionBase
-    {
-        protected override bool IsValidBraceCompletionContext(SnapshotPoint openingPoint)
-        {
-            if (!base.IsValidBraceCompletionContext(openingPoint))
-            {
-                return false;
-            }
-
-            // Don't auto-close * at column 0 (start of line) - it's likely a bullet point
-            ITextSnapshotLine line = openingPoint.GetContainingLine();
-            if (openingPoint == line.Start)
-            {
-                return false;
-            }
-
-            bool isPrevOk = true;
-            bool isNextOk = true;
-
-            if (openingPoint > 0 &&
-                openingPoint.Subtract(1) is SnapshotPoint prev &&
-                !prev.GetChar().IsWhiteSpaceOrZero())
-            {
-                isPrevOk = false;
-            }
-
-            if (openingPoint < openingPoint.Snapshot.Length && !openingPoint.GetChar().IsWhiteSpaceOrZero())
-            {
-                isNextOk = false;
-            }
-
-            return isPrevOk && isNextOk;
-        }
-    }
+    { }
 
     [Export(typeof(IAsyncCompletionCommitManagerProvider))]
     [ContentType(Constants.LanguageName)]
