@@ -71,7 +71,10 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            // Debounce to avoid flickering - capture span for use in callback
+            // Hide the toolbar while the selection is actively changing so it
+            // doesn't obscure the text being selected, then debounce re-show.
+            HideToolbar();
+
             _showDebouncer.Debounce(() =>
             {
                 ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
