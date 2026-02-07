@@ -193,7 +193,11 @@ namespace MarkdownEditor2022
 
             _dataSource.CleanAllErrors();
             _document.Parsed -= OnParsed;
-            _docView.Document.FileActionOccurred -= Document_FileActionOccurred;
+
+            if (_docView?.Document != null)
+            {
+                _docView.Document.FileActionOccurred -= Document_FileActionOccurred;
+            }
         }
     }
 }
