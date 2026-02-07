@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -21,7 +22,7 @@ namespace MarkdownEditor2022
 
         public Task<bool> HasSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories, SnapshotSpan range, CancellationToken cancellationToken)
         {
-            // Has actions if there's a selection OR if cursor is on an image
+            // Has actions if there's a selection OR if cursor is on an image or table
             if (!view.Selection.IsEmpty)
             {
                 return Task.FromResult(true);
@@ -29,7 +30,14 @@ namespace MarkdownEditor2022
 
             // Check if cursor is on an image element
             string imageFilePath = GetImageFilePathAtCursor();
-            return Task.FromResult(imageFilePath != null);
+            if (imageFilePath != null)
+            {
+                return Task.FromResult(true);
+            }
+
+            // Check if cursor is inside a table
+            Table table = GetTableAtCaret();
+            return Task.FromResult(table != null);
         }
 
         public IEnumerable<SuggestedActionSet> GetSuggestedActions(ISuggestedActionCategorySet requestedActionCategories, SnapshotSpan range, CancellationToken cancellationToken)
@@ -58,6 +66,14 @@ namespace MarkdownEditor2022
                 ConvertToLinkAction convertToLink = new(SelectedSpan, view);
                 ConvertToImageAction convertToImage = new(SelectedSpan, file);
                 list.AddRange(CreateActionSet(convertToLink, convertToImage));
+            }
+
+            // Table formatting action (available when cursor is inside a table)
+            Table table = GetTableAtCaret();
+            if (table != null)
+            {
+                FormatTableAction formatTable = new(table, view.TextBuffer);
+                list.AddRange(CreateActionSet(formatTable));
             }
 
             // Blocks
@@ -130,6 +146,30 @@ namespace MarkdownEditor2022
                 catch
                 {
                     // Ignore path resolution errors
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the table at the current caret position, or null if the caret is not inside a table.
+        /// </summary>
+        private Table GetTableAtCaret()
+        {
+            Document doc = view.TextBuffer.GetDocument();
+            if (doc?.Markdown == null)
+            {
+                return null;
+            }
+
+            int caretPosition = view.Caret.Position.BufferPosition.Position;
+
+            foreach (Table table in doc.Markdown.Descendants<Table>())
+            {
+                if (caretPosition >= table.Span.Start && caretPosition <= table.Span.End)
+                {
+                    return table;
                 }
             }
 

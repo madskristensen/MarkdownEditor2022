@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="ColonSyntaxTests.cs" />
     <Compile Include="FileNavigationTests.cs" />
+    <Compile Include="FormatTableTests.cs" />
     <Compile Include="FrontMatterTests.cs" />
     <Compile Include="JavaScriptEscapeTests.cs" />
     <Compile Include="LanguageAliasTests.cs" />

@@ -61,7 +61,6 @@ namespace MarkdownEditor2022
             }
 
             // Get selected span(s)
-            ITextSnapshot snapshot = docView.TextBuffer.CurrentSnapshot;
             List<Table> selectedTables = [];
 
             foreach (SnapshotSpan span in docView.TextView.Selection.SelectedSpans)
@@ -103,7 +102,61 @@ namespace MarkdownEditor2022
             }
         }
 
+        /// <summary>
+        /// Formats a single table in the given buffer.
+        /// </summary>
+        public static void FormatSingleTable(ITextBuffer buffer, Table table)
+        {
+            ITextSnapshot snapshot = buffer.CurrentSnapshot;
+            string formattedTable = FormatTable(table, snapshot);
+
+            if (formattedTable != null)
+            {
+                Span tableSpan = new(table.Span.Start, table.Span.Length);
+                buffer.Replace(tableSpan, formattedTable);
+            }
+        }
+
+        /// <summary>
+        /// Formats all tables found in the given markdown text and returns the full result.
+        /// </summary>
+        public static string FormatTables(string markdownText)
+        {
+            MarkdownDocument doc = Markdig.Markdown.Parse(markdownText, Document.Pipeline);
+            List<Table> tables = [.. doc.Descendants<Table>()];
+
+            if (tables.Count == 0)
+            {
+                return markdownText;
+            }
+
+            // Process tables in reverse order to maintain correct positions
+            foreach (Table table in tables.OrderByDescending(t => t.Span.Start))
+            {
+                string formatted = FormatTable(table, markdownText);
+
+                if (formatted != null)
+                {
+                    markdownText = markdownText.Substring(0, table.Span.Start)
+                                 + formatted
+                                 + markdownText.Substring(table.Span.End + 1);
+                }
+            }
+
+            return markdownText;
+        }
+
+        private static string FormatTable(Table table, string sourceText)
+        {
+            return FormatTableCore(table, (cell) => GetCellContent(cell, sourceText));
+        }
+
         private static string FormatTable(Table table, ITextSnapshot snapshot)
+        {
+            return FormatTableCore(table, (cell) => GetCellContent(cell, snapshot));
+        }
+
+        private static string FormatTableCore(Table table, Func<TableCell, string> getCellContent)
         {
             if (table.Count == 0)
             {
@@ -137,7 +190,7 @@ namespace MarkdownEditor2022
                     if (i < row.Count && row[i] is TableCell cell)
                     {
                         // Get cell content from the source text
-                        string cellText = GetCellContent(cell, snapshot);
+                        string cellText = getCellContent(cell);
                         cells[i] = cellText;
                         columnWidths[i] = Math.Max(columnWidths[i], cellText.Length);
                     }
@@ -233,6 +286,27 @@ namespace MarkdownEditor2022
             }
 
             string rawText = snapshot.GetText(start, length);
+
+            // Trim leading/trailing whitespace and pipes
+            return rawText.Trim().Trim('|').Trim();
+        }
+
+        private static string GetCellContent(TableCell cell, string sourceText)
+        {
+            if (cell.Span.Length == 0)
+            {
+                return "";
+            }
+
+            int start = cell.Span.Start;
+            int length = Math.Min(cell.Span.Length, sourceText.Length - start);
+
+            if (length <= 0 || start >= sourceText.Length)
+            {
+                return "";
+            }
+
+            string rawText = sourceText.Substring(start, length);
 
             // Trim leading/trailing whitespace and pipes
             return rawText.Trim().Trim('|').Trim();

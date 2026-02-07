@@ -236,6 +236,8 @@ Use Visual Studio's standard format commands to align and beautify pipe tables:
 
 **Ctrl+K, Ctrl+F** formats tables within the current selection.
 
+**Suggested action:** When your cursor is inside a pipe table, a lightbulb suggestion offers **Format Table** to align and pad the table in place.
+
 The formatter aligns columns, pads cells to consistent widths, and respects column alignment markers (`:---`, `:---:`, `---:`).
 
 Before:

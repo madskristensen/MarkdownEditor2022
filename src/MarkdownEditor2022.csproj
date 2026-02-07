@@ -115,6 +115,7 @@
     <Compile Include="SuggestedActions\Actions\ConvertToQuoteAction.cs" />
     <Compile Include="SuggestedActions\Actions\ConvertToTaskList.cs" />
     <Compile Include="SuggestedActions\Actions\ConvertToUnorderedList.cs" />
+    <Compile Include="SuggestedActions\Actions\FormatTableAction.cs" />
     <Compile Include="SuggestedActions\Actions\OptimizeImageLosslessAction.cs" />
     <Compile Include="SuggestedActions\Actions\OptimizeImageLossyAction.cs" />
     <Compile Include="SuggestedActions\SuggestedActionsSource.cs" />
