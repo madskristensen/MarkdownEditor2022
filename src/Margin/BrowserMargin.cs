@@ -301,7 +301,7 @@ namespace MarkdownEditor2022
                     }
                 }
 
-                // Debounced resize handler
+                // Debounced resize handler — reuse a single timer to avoid leaking DispatcherTimer instances
                 void OnViewportWidthChanged(object s, EventArgs e)
                 {
                     if (isUpdating || isDragging)
@@ -309,17 +309,23 @@ namespace MarkdownEditor2022
                         return;
                     }
 
-                    // Reset timer on each event
-                    resizeTimer?.Stop();
-                    resizeTimer = new System.Windows.Threading.DispatcherTimer
+                    if (resizeTimer == null)
                     {
-                        Interval = TimeSpan.FromMilliseconds(50)
-                    };
-                    resizeTimer.Tick += (_, __) =>
+                        resizeTimer = new System.Windows.Threading.DispatcherTimer
+                        {
+                            Interval = TimeSpan.FromMilliseconds(50)
+                        };
+                        resizeTimer.Tick += (_, __) =>
+                        {
+                            resizeTimer.Stop();
+                            UpdateWidthFromPercentage();
+                        };
+                    }
+                    else
                     {
                         resizeTimer.Stop();
-                        UpdateWidthFromPercentage();
-                    };
+                    }
+
                     resizeTimer.Start();
                 }
 

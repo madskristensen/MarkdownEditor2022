@@ -55,15 +55,22 @@ namespace MarkdownEditor2022
             }
 
             List<ITagSpan<TokenTag>> list = [];
-            IEnumerable<MarkdownObject> descendants = _document.Markdown.Descendants();
+            bool enableTableSorting = AdvancedOptions.Instance.EnableTableSorting;
+            List<Table> tables = enableTableSorting ? [] : null;
 
-            foreach (MarkdownObject item in descendants)
+            foreach (MarkdownObject item in _document.Markdown.Descendants())
             {
                 if (_document.IsParsing)
                 {
                     return Task.CompletedTask;
                 }
                 AddTagToList(list, item);
+
+                // Collect tables during the same walk to avoid a second Descendants() call
+                if (enableTableSorting && item is Table table)
+                {
+                    tables.Add(table);
+                }
             }
 
             // Use analysis for headings to avoid duplicate descendant filtering
@@ -81,9 +88,9 @@ namespace MarkdownEditor2022
             }
 
             // Add table header cell classifications (cells aren't included in Descendants())
-            if (AdvancedOptions.Instance.EnableTableSorting)
+            if (tables != null)
             {
-                foreach (Table table in _document.Markdown.Descendants<Table>())
+                foreach (Table table in tables)
                 {
                     if (_document.IsParsing)
                     {

@@ -345,26 +345,28 @@ namespace MarkdownEditor2022
             if (string.IsNullOrEmpty(targetPath) || !File.Exists(targetPath))
                 return CompletionContext.Empty;
 
-            // Parse the target markdown file
-            string content;
+            // Parse the target markdown file on a background thread to avoid blocking the UI
+            (MarkdownDocument markdown, string content) result;
             try
             {
-                content = File.ReadAllText(targetPath);
+                result = await Task.Run(() =>
+                {
+                    string text = File.ReadAllText(targetPath);
+                    return (Markdig.Markdown.Parse(text, Document.Pipeline), text);
+                });
             }
             catch
             {
                 return CompletionContext.Empty;
             }
 
-            MarkdownDocument markdown = Markdig.Markdown.Parse(content, Document.Pipeline);
-
             List<CompletionItem> items = [];
             Dictionary<string, int> slugCounts = new(StringComparer.OrdinalIgnoreCase);
 
-            foreach (HeadingBlock heading in markdown.Descendants<HeadingBlock>())
+            foreach (HeadingBlock heading in result.markdown.Descendants<HeadingBlock>())
             {
                 // Get heading text from the source content
-                string text = content.Substring(heading.Span.Start, heading.Span.Length).TrimStart('#').Trim();
+                string text = result.content.Substring(heading.Span.Start, heading.Span.Length).TrimStart('#').Trim();
 
                 // Strip {#custom-id} attribute syntax from display text
                 int attrIndex = text.LastIndexOf("{#", StringComparison.Ordinal);

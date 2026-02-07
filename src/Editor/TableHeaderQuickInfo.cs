@@ -1,9 +1,9 @@
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Markdig.Extensions.Tables;
-using Markdig.Syntax;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Utilities;
@@ -22,15 +22,8 @@ namespace MarkdownEditor2022
         }
     }
 
-    internal sealed class TableHeaderQuickInfoSource : IAsyncQuickInfoSource
+    internal sealed class TableHeaderQuickInfoSource(ITextBuffer buffer) : IAsyncQuickInfoSource
     {
-        private readonly ITextBuffer _buffer;
-
-        public TableHeaderQuickInfoSource(ITextBuffer buffer)
-        {
-            _buffer = buffer;
-        }
-
         public Task<QuickInfoItem> GetQuickInfoItemAsync(IAsyncQuickInfoSession session, CancellationToken cancellationToken)
         {
             if (!AdvancedOptions.Instance.EnableTableSorting)
@@ -38,13 +31,13 @@ namespace MarkdownEditor2022
                 return Task.FromResult<QuickInfoItem>(null);
             }
 
-            SnapshotPoint? triggerPoint = session.GetTriggerPoint(_buffer.CurrentSnapshot);
+            SnapshotPoint? triggerPoint = session.GetTriggerPoint(buffer.CurrentSnapshot);
             if (!triggerPoint.HasValue)
             {
                 return Task.FromResult<QuickInfoItem>(null);
             }
 
-            Document doc = _buffer.GetDocument();
+            Document doc = buffer.GetDocument();
             if (doc?.Markdown == null)
             {
                 return Task.FromResult<QuickInfoItem>(null);
@@ -52,8 +45,15 @@ namespace MarkdownEditor2022
 
             int position = triggerPoint.Value.Position;
 
+            // Use pre-computed tables from DocumentAnalysis to avoid walking the AST
+            IReadOnlyList<Table> tables = doc.Analysis?.Tables;
+            if (tables == null || tables.Count == 0)
+            {
+                return Task.FromResult<QuickInfoItem>(null);
+            }
+
             // Check if position is in a table header cell
-            foreach (Table table in doc.Markdown.Descendants<Table>())
+            foreach (Table table in tables)
             {
                 TableRow headerRow = table.OfType<TableRow>().FirstOrDefault(r => r.IsHeader);
                 if (headerRow == null)
@@ -72,7 +72,7 @@ namespace MarkdownEditor2022
                 {
                     if (position >= cell.Span.Start && position <= cell.Span.End)
                     {
-                        ITrackingSpan applicableSpan = _buffer.CurrentSnapshot.CreateTrackingSpan(
+                        ITrackingSpan applicableSpan = buffer.CurrentSnapshot.CreateTrackingSpan(
                             cell.Span.Start,
                             cell.Span.Length,
                             SpanTrackingMode.EdgeInclusive);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
@@ -18,6 +19,10 @@ namespace MarkdownEditor2022
         private readonly IAdornmentLayer _layer;
         private readonly Brush _whitespaceBrush;
         private Typeface _typeface;
+
+        // Pool of reusable TextBlock elements to reduce GC pressure on redraw
+        private readonly List<TextBlock> _textBlockPool = [];
+        private int _poolIndex;
 
         public TrailingWhitespaceAdornment(IWpfTextView view)
         {
@@ -64,7 +69,12 @@ namespace MarkdownEditor2022
 
         private void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
         {
-            if (e.NewSnapshot != e.OldSnapshot || e.VerticalTranslation)
+            // Redraw when: text changed, viewport scrolled, or lines were reformatted.
+            // The reformatted-lines check is essential: when the user types the second
+            // trailing space, the first LayoutChanged fires with the new snapshot but
+            // line geometry may not be ready yet (GetMarkerGeometry returns null).
+            // The subsequent reformat pass provides valid geometry for the adornments.
+            if (e.NewSnapshot != e.OldSnapshot || e.VerticalTranslation || e.NewOrReformattedLines.Count > 0)
             {
                 RedrawAdornments();
             }
@@ -73,6 +83,7 @@ namespace MarkdownEditor2022
         private void RedrawAdornments()
         {
             _layer.RemoveAllAdornments();
+            _poolIndex = 0;
 
             // Don't show when the extension option is disabled
             if (!AdvancedOptions.Instance.ShowTrailingWhitespace)
@@ -116,6 +127,25 @@ namespace MarkdownEditor2022
             }
         }
 
+        private TextBlock GetOrCreateTextBlock()
+        {
+            if (_poolIndex < _textBlockPool.Count)
+            {
+                return _textBlockPool[_poolIndex++];
+            }
+
+            TextBlock textBlock = new()
+            {
+                Text = Constants.SpaceDot.ToString(),
+                Foreground = _whitespaceBrush,
+                TextAlignment = System.Windows.TextAlignment.Center,
+                ToolTip = "Soft line break (2 trailing spaces)"
+            };
+            _textBlockPool.Add(textBlock);
+            _poolIndex++;
+            return textBlock;
+        }
+
         private void DrawSpaceDot(int position)
         {
             ITextSnapshot snapshot = _view.TextSnapshot;
@@ -130,16 +160,10 @@ namespace MarkdownEditor2022
             System.Windows.Rect bounds = geometry.Bounds;
             double fontSize = _view.FormattedLineSource?.DefaultTextProperties?.FontRenderingEmSize ?? 12;
 
-            TextBlock textBlock = new()
-            {
-                Text = Constants.SpaceDot.ToString(),
-                FontFamily = _typeface.FontFamily,
-                FontSize = fontSize,
-                Foreground = _whitespaceBrush,
-                Width = bounds.Width,
-                TextAlignment = System.Windows.TextAlignment.Center,
-                ToolTip = "Soft line break (2 trailing spaces)"
-            };
+            TextBlock textBlock = GetOrCreateTextBlock();
+            textBlock.FontFamily = _typeface.FontFamily;
+            textBlock.FontSize = fontSize;
+            textBlock.Width = bounds.Width;
 
             Canvas.SetLeft(textBlock, bounds.Left);
             Canvas.SetTop(textBlock, bounds.Top);

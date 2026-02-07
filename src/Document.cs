@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Markdig;
 using Markdig.Extensions.AutoIdentifiers;
+using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using MarkdownEditor2022.Extensions;
 using Microsoft.VisualStudio.Text;
@@ -175,6 +176,7 @@ namespace MarkdownEditor2022
         {
             List<HeadingBlock> headings = [];
             List<HtmlBlock> htmlComments = [];
+            List<Table> tables = [];
 
             foreach (MarkdownObject obj in md.Descendants())
             {
@@ -186,9 +188,13 @@ namespace MarkdownEditor2022
                 {
                     htmlComments.Add(hb2);
                 }
+                else if (obj is Table table)
+                {
+                    tables.Add(table);
+                }
             }
 
-            return new DocumentAnalysis(headings, htmlComments);
+            return new DocumentAnalysis(headings, htmlComments, tables);
         }
 
         /// <summary>

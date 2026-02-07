@@ -20,6 +20,24 @@ namespace MarkdownEditor2022
             ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"
         };
 
+        // Cached results from HasSuggestedActionsAsync to avoid redundant AST walks in GetSuggestedActions
+        private string _cachedImageFilePath;
+        private Table _cachedTable;
+        private int _cachedCaretPosition = -1;
+
+        private void RefreshCachedResults()
+        {
+            int caretPosition = view.Caret.Position.BufferPosition.Position;
+            if (caretPosition == _cachedCaretPosition)
+            {
+                return;
+            }
+
+            _cachedCaretPosition = caretPosition;
+            _cachedImageFilePath = GetImageFilePathAtCursor(caretPosition);
+            _cachedTable = GetTableAtCaret(caretPosition);
+        }
+
         public Task<bool> HasSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories, SnapshotSpan range, CancellationToken cancellationToken)
         {
             // Has actions if there's a selection OR if cursor is on an image or table
@@ -28,16 +46,8 @@ namespace MarkdownEditor2022
                 return Task.FromResult(true);
             }
 
-            // Check if cursor is on an image element
-            string imageFilePath = GetImageFilePathAtCursor();
-            if (imageFilePath != null)
-            {
-                return Task.FromResult(true);
-            }
-
-            // Check if cursor is inside a table
-            Table table = GetTableAtCaret();
-            return Task.FromResult(table != null);
+            RefreshCachedResults();
+            return Task.FromResult(_cachedImageFilePath != null || _cachedTable != null);
         }
 
         public IEnumerable<SuggestedActionSet> GetSuggestedActions(ISuggestedActionCategorySet requestedActionCategories, SnapshotSpan range, CancellationToken cancellationToken)
@@ -52,12 +62,14 @@ namespace MarkdownEditor2022
 
             List<SuggestedActionSet> list = [];
 
+            // Use cached results from HasSuggestedActionsAsync (refresh if caret moved)
+            RefreshCachedResults();
+
             // Image optimization actions (available when cursor is on an image element)
-            string imageFilePath = GetImageFilePathAtCursor();
-            if (imageFilePath != null)
+            if (_cachedImageFilePath != null)
             {
-                OptimizeImageLosslessAction optimizeLossless = new(imageFilePath);
-                OptimizeImageLossyAction optimizeLossy = new(imageFilePath);
+                OptimizeImageLosslessAction optimizeLossless = new(_cachedImageFilePath);
+                OptimizeImageLossyAction optimizeLossy = new(_cachedImageFilePath);
                 list.AddRange(CreateActionSet(optimizeLossless, optimizeLossy));
             }
 
@@ -69,10 +81,9 @@ namespace MarkdownEditor2022
             }
 
             // Table formatting action (available when cursor is inside a table)
-            Table table = GetTableAtCaret();
-            if (table != null)
+            if (_cachedTable != null)
             {
-                FormatTableAction formatTable = new(table, view.TextBuffer);
+                FormatTableAction formatTable = new(_cachedTable, view.TextBuffer);
                 list.AddRange(CreateActionSet(formatTable));
             }
 
@@ -93,16 +104,14 @@ namespace MarkdownEditor2022
         /// <summary>
         /// Gets the full file path of an image if the cursor is positioned on an image markdown element.
         /// </summary>
-        /// <returns>The full path to the image file, or null if not on an image or the file doesn't exist.</returns>
-        private string GetImageFilePathAtCursor()
+        /// <returns>The full path to the image file, or null if not on an image or the file doesn't have a supported extension.</returns>
+        private string GetImageFilePathAtCursor(int caretPosition)
         {
             Document doc = view.TextBuffer.GetDocument();
             if (doc?.Markdown == null)
             {
                 return null;
             }
-
-            int caretPosition = view.Caret.Position.BufferPosition.Position;
 
             // Find image links at the cursor position
             foreach (LinkInline link in doc.Markdown.Descendants<LinkInline>())
@@ -132,16 +141,12 @@ namespace MarkdownEditor2022
                     continue;
                 }
 
-                // Resolve relative path to absolute path
+                // Resolve relative path to absolute path (skip File.Exists on the hot path;
+                // the suggested action itself will handle missing files gracefully)
                 try
                 {
                     string currentDir = Path.GetDirectoryName(file);
-                    string fullPath = Path.GetFullPath(Path.Combine(currentDir, url));
-
-                    if (File.Exists(fullPath))
-                    {
-                        return fullPath;
-                    }
+                    return Path.GetFullPath(Path.Combine(currentDir, url));
                 }
                 catch
                 {
@@ -155,15 +160,13 @@ namespace MarkdownEditor2022
         /// <summary>
         /// Gets the table at the current caret position, or null if the caret is not inside a table.
         /// </summary>
-        private Table GetTableAtCaret()
+        private Table GetTableAtCaret(int caretPosition)
         {
             Document doc = view.TextBuffer.GetDocument();
             if (doc?.Markdown == null)
             {
                 return null;
             }
-
-            int caretPosition = view.Caret.Position.BufferPosition.Position;
 
             foreach (Table table in doc.Markdown.Descendants<Table>())
             {

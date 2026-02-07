@@ -162,9 +162,16 @@ namespace MarkdownEditor2022
                 return null;
             }
 
+            // Use pre-computed tables from DocumentAnalysis to avoid walking the AST
+            IReadOnlyList<Table> tables = doc.Analysis?.Tables;
+            if (tables == null || tables.Count == 0)
+            {
+                return null;
+            }
+
             int bufferPosition = position.Position;
 
-            foreach (Table table in doc.Markdown.Descendants<Table>())
+            foreach (Table table in tables)
             {
                 TableRow headerRow = table.OfType<TableRow>().FirstOrDefault(r => r.IsHeader);
                 if (headerRow == null)

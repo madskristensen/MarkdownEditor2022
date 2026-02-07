@@ -30,14 +30,20 @@ namespace MarkdownEditor2022
     /// </summary>
     internal sealed class MermaidCommentClassifier : IClassifier
     {
-        private readonly ITextBuffer _buffer;
         private readonly IClassificationType _commentType;
+        private readonly bool _isMermaidFile;
         private static readonly string[] _mermaidExtensions = [".mermaid", ".mmd"];
 
         public MermaidCommentClassifier(ITextBuffer buffer, IClassificationTypeRegistryService registry)
         {
-            _buffer = buffer;
             _commentType = registry.GetClassificationType(PredefinedClassificationTypeNames.Comment);
+
+            // Cache the result once — file type never changes for a given buffer
+            if (buffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument document))
+            {
+                string ext = System.IO.Path.GetExtension(document.FilePath);
+                _isMermaidFile = Array.Exists(_mermaidExtensions, e => e.Equals(ext, StringComparison.OrdinalIgnoreCase));
+            }
         }
 
         public event EventHandler<ClassificationChangedEventArgs> ClassificationChanged { add { } remove { } }
@@ -47,7 +53,7 @@ namespace MarkdownEditor2022
             List<ClassificationSpan> result = [];
 
             // Only apply to mermaid files
-            if (!IsMermaidFile())
+            if (!_isMermaidFile)
             {
                 return result;
             }
@@ -76,17 +82,6 @@ namespace MarkdownEditor2022
             }
 
             return result;
-        }
-
-        private bool IsMermaidFile()
-        {
-            if (!_buffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument document))
-            {
-                return false;
-            }
-
-            string ext = System.IO.Path.GetExtension(document.FilePath);
-            return Array.Exists(_mermaidExtensions, e => e.Equals(ext, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
