@@ -94,8 +94,15 @@ namespace MarkdownEditor2022
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
             //_docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
 
-            _document.Parsed += OnParsed;
-            _docView.Document.FileActionOccurred += Document_FileActionOccurred;
+            if (_document != null)
+            {
+                _document.Parsed += OnParsed;
+            }
+
+            if (_docView.Document != null)
+            {
+                _docView.Document.FileActionOccurred += Document_FileActionOccurred;
+            }
         }
 
         private void Document_FileActionOccurred(object sender, TextDocumentFileActionEventArgs e)
@@ -192,7 +199,11 @@ namespace MarkdownEditor2022
             }
 
             _dataSource.CleanAllErrors();
-            _document.Parsed -= OnParsed;
+
+            if (_document != null)
+            {
+                _document.Parsed -= OnParsed;
+            }
 
             if (_docView?.Document != null)
             {
