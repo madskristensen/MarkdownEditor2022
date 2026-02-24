@@ -71,9 +71,12 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            // Hide the toolbar while the selection is actively changing so it
-            // doesn't obscure the text being selected, then debounce re-show.
-            HideToolbar();
+            // If toolbar is visible, hide it immediately during active selection changes
+            // to avoid obscuring text. Only invoke debouncer if toolbar was visible.
+            if (_isToolbarVisible)
+            {
+                HideToolbar();
+            }
 
             _showDebouncer.Debounce(() =>
             {
@@ -247,6 +250,11 @@ namespace MarkdownEditor2022
 
         private void HideToolbar()
         {
+            if (!_isToolbarVisible)
+            {
+                return;
+            }
+
             _toolbar.Visibility = Visibility.Collapsed;
             _layer.RemoveAllAdornments();
             _isToolbarVisible = false;

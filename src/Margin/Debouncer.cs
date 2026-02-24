@@ -1,62 +1,75 @@
-// From https://stackoverflow.com/a/47933557
-
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace MarkdownEditor2022
 {
-    internal class Debouncer(int millisecondsToWait = 300) : IDisposable
+    /// <summary>
+    /// Lightweight debouncer using a single timer. Optimized for high-frequency calls
+    /// like selection changed events during keyboard repeat.
+    /// </summary>
+    internal class Debouncer : IDisposable
     {
-        private readonly ConcurrentDictionary<object, CancellationTokenSource> _debouncers = new();
-        private readonly int _millisecondsToWait = millisecondsToWait;
-        private readonly object _lockThis = new(); // Use a locking object to prevent the debouncer to trigger again while the func is still running
+        private readonly int _millisecondsToWait;
+        private readonly object _lock = new();
+        private Timer _timer;
+        private Action _pendingAction;
+        private bool _isDisposed;
+
+        public Debouncer(int millisecondsToWait = 300)
+        {
+            _millisecondsToWait = millisecondsToWait;
+        }
 
         public void Debounce(Action func, object key = null)
         {
-            key ??= "default";
-
-            CancellationTokenSource newTokenSrc = new();
-
-            // Use AddOrUpdate for atomic replacement - this ensures thread-safe token management
-            CancellationTokenSource oldToken = _debouncers.AddOrUpdate(
-                key,
-                newTokenSrc,
-                (k, existing) =>
-                {
-                    // Cancel and dispose the existing token atomically during the update
-                    existing.Cancel();
-                    existing.Dispose();
-                    return newTokenSrc;
-                });
-
-            _ = Task.Delay(_millisecondsToWait, newTokenSrc.Token).ContinueWith(task =>
+            // key parameter kept for API compatibility but ignored in this simple implementation
+            lock (_lock)
             {
-                if (!newTokenSrc.IsCancellationRequested)
+                if (_isDisposed)
                 {
-                    // Remove from dictionary and cleanup
-                    _debouncers.TryRemove(key, out _);
-                    lock (_lockThis)
-                    {
-                        if (!newTokenSrc.IsCancellationRequested)
-                        {
-                            func(); // run
-                        }
-                    }
+                    return;
                 }
-                newTokenSrc.Dispose();
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+                _pendingAction = func;
+
+                if (_timer == null)
+                {
+                    // Create timer on first use (lazy initialization)
+                    _timer = new Timer(OnTimerElapsed, null, _millisecondsToWait, Timeout.Infinite);
+                }
+                else
+                {
+                    // Reset the timer - this is very cheap (no allocations)
+                    _timer.Change(_millisecondsToWait, Timeout.Infinite);
+                }
+            }
+        }
+
+        private void OnTimerElapsed(object state)
+        {
+            Action actionToRun;
+            lock (_lock)
+            {
+                if (_isDisposed || _pendingAction == null)
+                {
+                    return;
+                }
+
+                actionToRun = _pendingAction;
+                _pendingAction = null;
+            }
+
+            actionToRun();
         }
 
         public void Dispose()
         {
-            foreach (KeyValuePair<object, CancellationTokenSource> kvp in _debouncers)
+            lock (_lock)
             {
-                kvp.Value.Cancel();
-                kvp.Value.Dispose();
+                _isDisposed = true;
+                _pendingAction = null;
+                _timer?.Dispose();
+                _timer = null;
             }
-            _debouncers.Clear();
         }
     }
 }
