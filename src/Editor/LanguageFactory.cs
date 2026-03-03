@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.Package;
+using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 
@@ -66,6 +67,13 @@ namespace MarkdownEditor2022
 
         public override TypeAndMemberDropdownBars CreateDropDownHelper(IVsTextView textView)
         {
+            IWpfTextView view = textView.ToIWpfTextView();
+
+            if (view?.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole) == true)
+            {
+                return null;
+            }
+
             _dropdownBars?.Dispose();
             _dropdownBars = new DropdownBars(textView, this);
 
