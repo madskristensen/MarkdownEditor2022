@@ -31,6 +31,11 @@ namespace MarkdownEditor2022
                     return CommandProgression.Continue;
                 }
 
+                if (!AdvancedOptions.Instance.EnableAutoFormatTables)
+                {
+                    return CommandProgression.Continue;
+                }
+
                 Document document = docView.TextBuffer.GetDocument();
 
                 if (document?.Markdown == null)

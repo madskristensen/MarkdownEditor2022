@@ -240,6 +240,8 @@ Use Visual Studio's standard format commands to align and beautify pipe tables:
 
 The formatter aligns columns, pads cells to consistent widths, and respects column alignment markers (`:---`, `:---:`, `---:`).
 
+Enable or disable this behavior in **Tools -> Options -> Text Editor -> Markdown -> Advanced -> Auto-format tables**.
+
 Before:
 
 ```markdown

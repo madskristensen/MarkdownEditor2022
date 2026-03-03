@@ -30,6 +30,12 @@ namespace MarkdownEditor2022
         public bool EnableTableSorting { get; set; } = true;
 
         [Category("Editor")]
+        [DisplayName("Auto-format tables")]
+        [Description("Determines if markdown tables should be automatically aligned when running format commands.")]
+        [DefaultValue(true)]
+        public bool EnableAutoFormatTables { get; set; } = true;
+
+        [Category("Editor")]
         [DisplayName("Show trailing whitespace")]
         [Description("Shows dot adornments for the two trailing spaces that create a soft line break in Markdown.")]
         [DefaultValue(true)]
