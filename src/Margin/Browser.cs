@@ -1353,20 +1353,25 @@ namespace MarkdownEditor2022
         ::-webkit-scrollbar-thumb:hover {{ background: {themeFgColor}80; }}
         ::-webkit-scrollbar-corner {{ background: {themeBgColor}; }}";
 
+                string themeColorCss = usingCustomHighlight
+                    ? string.Empty
+                    : $@"
+        html, body {{background-color: {themeBgColor}; color: {themeFgColor};}}
+        .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}";
+
                 string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
     <style>
-        html, body {{margin: 0; padding:0; min-height: 100%; display: block; background-color: {themeBgColor}; color: {themeFgColor};}}
+        html, body {{margin: 0; padding:0; min-height: 100%; display: block;}}
         #___markdown-content___ {{padding: 5px 5px 10px 5px; min-height: {_browser.ActualHeight - 15}px}}
         .markdown-alert {{padding: 1em 1em .5em 1em; margin-bottom: 1em; border-radius: 1em; background: #c0c0c022}}
         .markdown-alert-title {{font-weight: bold; color:inherit}}
         .markdown-alert-title svg {{margin-right: 5px; margin-top: -1px;}}
         {scrollbarCss}
         {css}
-        /* Theme overrides - must come after imported CSS to take precedence */
-        .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}
+        {themeColorCss}
         .markdown-body img {{background-color: transparent;}}
     </style>";
                 string defaultContent = @"
@@ -1377,11 +1382,12 @@ namespace MarkdownEditor2022
     [clicksyncscript]
     ";
                 string clickSyncScript = AdvancedOptions.Instance.EnablePreviewClickSync ? GetClickToSyncScript() : string.Empty;
+                string bodyStyle = usingCustomHighlight ? string.Empty : $" style=\"background-color:{themeBgColor};color:{themeFgColor}\"";
                 string processed = templateRaw
                     .Replace("<head>", defaultHeadBeg)
                     .Replace("[content]", defaultContent)
                     .Replace("[title]", "Markdown Preview")
-                    .Replace("<body>", $"<body style=\"background-color:{themeBgColor};color:{themeFgColor}\">")
+                    .Replace("<body>", $"<body{bodyStyle}>")
                     .Replace("[clicksyncscript]", clickSyncScript);
                 _templateCache[cacheKey] = processed;
                 cachedTemplate = processed;
