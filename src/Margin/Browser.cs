@@ -370,6 +370,11 @@ namespace MarkdownEditor2022
 
         // Pre-computed HTML template ready for content insertion (computed on first use per theme)
         private readonly Task<string> _precomputedTemplateTask;
+        private bool _isTemplateLoaded;
+
+        // Cache recursive file discovery to avoid repeated directory traversal on frequent preview refreshes
+        private static readonly TimeSpan _fileDiscoveryCacheDuration = TimeSpan.FromSeconds(5);
+        private static readonly ConcurrentDictionary<string, (string path, DateTime expiresUtc)> _recursiveFileLookupCache = new();
 
         public Browser(string file, Document document, IWpfTextView textView, IEditorFormatMapService formatMapService)
         {
@@ -417,6 +422,7 @@ namespace MarkdownEditor2022
             if (_browser.CoreWebView2 != null)
             {
                 _browser.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+                _browser.CoreWebView2.NavigationCompleted -= OnNavigationCompleted;
             }
 
             _browser.Dispose();
@@ -533,6 +539,7 @@ namespace MarkdownEditor2022
 
                 // Subscribe to messages from JavaScript for click-to-sync feature
                 _browser.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+                _browser.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 // Listen for VS theme changes to update preview colors (deferred from constructor for faster startup)
                 VSColorTheme.ThemeChanged += OnThemeChanged;
@@ -587,6 +594,7 @@ namespace MarkdownEditor2022
                     string scripts = BuildInitialScriptTags(needsPrism, needsMermaid, needsMath);
                     string fullHtml = template.Replace("[content]", html).Replace("[scripts]", scripts);
 
+                    _isTemplateLoaded = false;
                     _browser.NavigateToString(fullHtml);
 
                     // Get initial height for scroll calculations
@@ -969,8 +977,7 @@ namespace MarkdownEditor2022
 
         private async Task<bool> IsHtmlTemplateLoadedAsync()
         {
-            string hasContentResult = await _browser.ExecuteScriptAsync($@"document.getElementById(""___markdown-content___"") !== null;");
-            return hasContentResult == "true";
+            return _isTemplateLoaded;
         }
 
         public async Task UpdateBrowserAsync()
@@ -1269,6 +1276,7 @@ namespace MarkdownEditor2022
                 string htmlTemplate = GetHtmlTemplate();
                 string scripts = BuildInitialScriptTags(needsPrism, needsMermaid, needsMath);
                 html = htmlTemplate.Replace("[content]", html).Replace("[scripts]", scripts);
+                _isTemplateLoaded = false;
                 _browser.NavigateToString(html);
             }
         }
@@ -1690,18 +1698,34 @@ namespace MarkdownEditor2022
                 return fallbackFileName;
             }
 
+            string cacheKey = string.Concat(folder, "|", fileName, "|", fallbackFileName ?? string.Empty);
+            DateTime nowUtc = DateTime.UtcNow;
+            if (_recursiveFileLookupCache.TryGetValue(cacheKey, out (string path, DateTime expiresUtc) cached) && cached.expiresUtc > nowUtc)
+            {
+                return cached.path;
+            }
+
             DirectoryInfo dir = new(folder);
+            string resolvedPath = fallbackFileName;
             do
             {
                 string candidate = Path.Combine(dir.FullName, fileName);
                 if (File.Exists(candidate))
                 {
-                    return candidate;
+                    resolvedPath = candidate;
+                    break;
                 }
 
                 dir = dir.Parent;
             } while (dir != null);
-            return fallbackFileName;
+
+            _recursiveFileLookupCache[cacheKey] = (resolvedPath, nowUtc.Add(_fileDiscoveryCacheDuration));
+            return resolvedPath;
+        }
+
+        private void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            _isTemplateLoaded = e.IsSuccess;
         }
 
         private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)

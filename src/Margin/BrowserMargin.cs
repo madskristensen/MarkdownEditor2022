@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.IO;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
@@ -152,9 +153,20 @@ namespace MarkdownEditor2022
                 InitializeAutoHideMonitorAsync().FireAndForget();
             }
 
-            // Trigger initial render now that browser is ready
-            // For mermaid files, this is essential since they don't depend on markdown parsing
-            _ = Browser.UpdateBrowserAsync();
+            // Browser performs its own initial render during WebView2 initialization.
+            // Trigger an extra startup render only for standalone mermaid files,
+            // which use a separate rendering path.
+            if (IsStandaloneMermaidFile(_textView.TextBuffer.GetFileName()))
+            {
+                _ = Browser.UpdateBrowserAsync();
+            }
+        }
+
+        private static bool IsStandaloneMermaidFile(string filePath)
+        {
+            string extension = Path.GetExtension(filePath);
+            return string.Equals(extension, ".mermaid", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".mmd", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
