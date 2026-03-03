@@ -76,6 +76,14 @@ namespace MarkdownEditor2022
     {
         private static readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex _tocRegex = new(@"<!--\s*TOC\s*-->.+?<!--\s*/?TOC\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        private static readonly string[] _matchingTextHighlightOptionNames =
+        [
+            "Enable Highlight References",
+            "EnableHighlightReferences",
+            "HighlightReferences",
+            "EnableWordHighlight",
+            "WordHighlight"
+        ];
         private TableDataSource _dataSource;
         private DocumentView _docView;
         private Document _document;
@@ -92,6 +100,7 @@ namespace MarkdownEditor2022
 
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
+            ApplyMatchingTextHighlightSetting();
             //_docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
 
             if (_document != null)
@@ -102,6 +111,26 @@ namespace MarkdownEditor2022
             if (_docView.Document != null)
             {
                 _docView.Document.FileActionOccurred += Document_FileActionOccurred;
+            }
+        }
+
+        private void ApplyMatchingTextHighlightSetting()
+        {
+            IEditorOptions options = _docView?.TextView?.Options;
+
+            if (options == null)
+            {
+                return;
+            }
+
+            foreach (string optionName in _matchingTextHighlightOptionNames)
+            {
+                if (!options.IsOptionDefined(optionName, true))
+                {
+                    continue;
+                }
+
+                options.SetOptionValue(optionName, false);
             }
         }
 
