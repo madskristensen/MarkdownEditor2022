@@ -373,7 +373,7 @@ namespace MarkdownEditor2022
 
         public Browser(string file, Document document, IWpfTextView textView, IEditorFormatMapService formatMapService)
         {
-            _file = file;
+            _file = file ?? string.Empty;
             _document = document;
             _textView = textView;
             _formatMapService = formatMapService;
@@ -541,12 +541,23 @@ namespace MarkdownEditor2022
             void SetVirtualFolderMapping()
             {
                 // Map markdown-editor-host for extension resources (CSS, JS for syntax highlighting, etc.)
-                _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedMarkdownEditorVirtualHostName, GetFolder(), CoreWebView2HostResourceAccessKind.Allow);
+                string extensionFolder = GetFolder();
+                if (!string.IsNullOrWhiteSpace(_mappedMarkdownEditorVirtualHostName) &&
+                    !string.IsNullOrWhiteSpace(extensionFolder) &&
+                    Directory.Exists(extensionFolder))
+                {
+                    _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedMarkdownEditorVirtualHostName, extensionFolder, CoreWebView2HostResourceAccessKind.Allow);
+                }
 
                 // Map browsing-file-host to the drive root so relative paths with any number of ../ can be resolved
                 // This fixes issue #60 where paths like ../../images/foo.png were being normalized away
                 string driveRoot = Path.GetPathRoot(_file);
-                _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, driveRoot, CoreWebView2HostResourceAccessKind.Allow);
+                if (!string.IsNullOrWhiteSpace(_mappedBrowsingFileVirtualHostName) &&
+                    !string.IsNullOrWhiteSpace(driveRoot) &&
+                    Directory.Exists(driveRoot))
+                {
+                    _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, driveRoot, CoreWebView2HostResourceAccessKind.Allow);
+                }
             }
 
             async Task RenderInitialContentAsync(string template)
@@ -663,8 +674,13 @@ namespace MarkdownEditor2022
                 // Handle browsing-file-host links (resolved absolute paths via virtual host)
                 if (uri.Authority == _mappedBrowsingFileVirtualHostName)
                 {
-                    string localPath = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/'));
                     string driveRoot = Path.GetPathRoot(_file);
+                    if (string.IsNullOrWhiteSpace(driveRoot))
+                    {
+                        return;
+                    }
+
+                    string localPath = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/'));
                     string absolutePath = Path.Combine(driveRoot, localPath.Replace('/', Path.DirectorySeparatorChar));
                     await HandleFileNavigationAsync(absolutePath, uri.Fragment);
                     return;
@@ -990,7 +1006,7 @@ namespace MarkdownEditor2022
                 await UpdateContentAsync(html);
 
                 // Check for pending cross-document fragment navigation
-                if (_pendingFragmentNavigations.TryRemove(_file, out string pendingFragment))
+                if (!string.IsNullOrWhiteSpace(_file) && _pendingFragmentNavigations.TryRemove(_file, out string pendingFragment))
                 {
                     // Small delay to ensure content is fully rendered before scrolling
                     await Task.Delay(100);

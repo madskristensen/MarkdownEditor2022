@@ -187,6 +187,17 @@ namespace MarkdownEditor2022.UnitTests
         #region Virtual Host Path Conversion Tests
 
         /// <summary>
+        /// Determines if virtual host mapping should be applied.
+        /// Mirrors guard logic from Browser.SetVirtualFolderMapping.
+        /// </summary>
+        private static bool ShouldSetVirtualHostMapping(string hostName, string folderPath, Func<string, bool> directoryExists)
+        {
+            return !string.IsNullOrWhiteSpace(hostName) &&
+                   !string.IsNullOrWhiteSpace(folderPath) &&
+                   directoryExists(folderPath);
+        }
+
+        /// <summary>
         /// Converts a virtual host URI path to an absolute file system path.
         /// Mirrors logic from BrowserNavigationStarting for browsing-file-host URIs.
         /// </summary>
@@ -228,6 +239,40 @@ namespace MarkdownEditor2022.UnitTests
             string result = ConvertVirtualHostPathToAbsolute(localPath, currentFile);
 
             Assert.AreEqual(@"E:\folder\file.md", result);
+        }
+
+        [DataRow(null, @"C:\", false)]
+        [DataRow("", @"C:\", false)]
+        [DataRow("browsing-file-host", null, false)]
+        [DataRow("browsing-file-host", "", false)]
+        [DataRow("browsing-file-host", @"C:\", true)]
+        [TestMethod]
+        public void ShouldSetVirtualHostMapping_VariousInputs_ReturnsExpected(string hostName, string folderPath, bool expected)
+        {
+            bool result = ShouldSetVirtualHostMapping(hostName, folderPath, path => path == @"C:\");
+
+            Assert.AreEqual(expected, result);
+        }
+
+        /// <summary>
+        /// Determines if pending fragment removal can safely use current file key.
+        /// Mirrors guard logic from UpdateBrowserAsync.
+        /// </summary>
+        private static bool CanRemovePendingFragment(string currentFile)
+        {
+            return !string.IsNullOrWhiteSpace(currentFile);
+        }
+
+        [DataRow(null, false)]
+        [DataRow("", false)]
+        [DataRow(" ", false)]
+        [DataRow(@"C:\Projects\Docs\readme.md", true)]
+        [TestMethod]
+        public void CanRemovePendingFragment_VariousKeys_ReturnsExpected(string currentFile, bool expected)
+        {
+            bool result = CanRemovePendingFragment(currentFile);
+
+            Assert.AreEqual(expected, result);
         }
 
         #endregion
