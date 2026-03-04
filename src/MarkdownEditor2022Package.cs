@@ -30,6 +30,7 @@ namespace MarkdownEditor2022
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionRmd, 1000)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMermaid, 1000)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMmd, 1000)]
+    [ProvideEditorExtension(typeof(MarkdownEditorV2), "*", 22)]
 
     [ProvideFileIcon(Constants.FileExtensionMd, "KnownMonikers.MarkdownFile")]
     [ProvideFileIcon(Constants.FileExtensionRmd, "KnownMonikers.MarkdownFile")]
