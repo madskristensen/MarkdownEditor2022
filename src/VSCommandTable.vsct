@@ -61,6 +61,17 @@
         </Strings>
       </Button>
 
+      <Button guid="MarkdownEditor2022" id="GenerateHtml" priority="100" type="Button">
+        <Parent guid="VSMainMenu" id="ItemNode.PropertiesGroup" />
+        <Icon guid="ImageCatalogGuid" id="Refresh"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Generate HTML file</ButtonText>
+          <LocCanonicalName>.Markdown.GenerateHtmlFile</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="MarkdownEditor2022" id="Refresh" priority="150" type="Button">
         <Parent guid="MarkdownEditor2022" id="PreviewGroup" />
         <Icon guid="ImageCatalogGuid" id="Refresh"/>
@@ -161,6 +172,7 @@
     <VisibilityItem guid="MarkdownEditor2022" id="GenerateTOC" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="MakeBold" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="MakeItalic" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="GenerateHtml" context="MarkdownFileSelected" />
   </VisibilityConstraints>
 
   <KeyBindings>
@@ -172,6 +184,7 @@
   </KeyBindings>
 
   <Symbols>
+    <GuidSymbol name="MarkdownFileSelected" value="{288e3b08-3da7-4867-b227-b676b9e585c6}" />
     <GuidSymbol name="EditorFactory" value="{24510b54-a648-4d69-a6c5-f68cbdf07546}" />
     <GuidSymbol name="MarkdownEditor2022" value="{0b1dfe17-2eb2-4fcc-8054-b6ab002a579d}">
       <IDSymbol name="MarkdownMenu" value="0x0100"/>
@@ -190,6 +203,7 @@
       <IDSymbol name="GenerateTOC" value="0x1080"/>
       <IDSymbol name="TogglePreview" value="0x1090"/>
       <IDSymbol name="ToggleSpellChecking" value="0x1100"/>
+      <IDSymbol name="GenerateHtml" value="0x1110"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>

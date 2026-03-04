@@ -30,12 +30,18 @@ namespace MarkdownEditor2022
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionRmd, 1000)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMermaid, 1000)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMmd, 1000)]
-    [ProvideEditorExtension(typeof(MarkdownEditorV2), "*", 22)]
+    [ProvideEditorExtension(typeof(MarkdownEditorV2), ".*", 22)]
 
     [ProvideFileIcon(Constants.FileExtensionMd, "KnownMonikers.MarkdownFile")]
     [ProvideFileIcon(Constants.FileExtensionRmd, "KnownMonikers.MarkdownFile")]
     [ProvideFileIcon(Constants.FileExtensionMermaid, "KnownMonikers.SkinFile")]
     [ProvideFileIcon(Constants.FileExtensionMmd, "KnownMonikers.SkinFile")]
+
+    [ProvideUIContextRule(PackageGuids.MarkdownFileSelectedString,
+    name: "Markdown selected",
+    expression: "markdown",
+    termNames: ["markdown"],
+    termValues: ["HierSingleSelectionName:.(md|rmd|mermaid|mmd)$"])]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
     {
         private static DTE _dte;

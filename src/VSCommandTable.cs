@@ -13,6 +13,9 @@ namespace MarkdownEditor2022
     /// </summary>
     internal sealed partial class PackageGuids
     {
+        public const string MarkdownFileSelectedString = "288e3b08-3da7-4867-b227-b676b9e585c6";
+        public static Guid MarkdownFileSelected = new Guid(MarkdownFileSelectedString);
+
         public const string EditorFactoryString = "24510b54-a648-4d69-a6c5-f68cbdf07546";
         public static Guid EditorFactory = new Guid(EditorFactoryString);
 
@@ -41,5 +44,6 @@ namespace MarkdownEditor2022
         public const int GenerateTOC = 0x1080;
         public const int TogglePreview = 0x1090;
         public const int ToggleSpellChecking = 0x1100;
+        public const int GenerateHtml = 0x1110;
     }
 }

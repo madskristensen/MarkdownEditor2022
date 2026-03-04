@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -52,6 +52,8 @@
     <Compile Include="Commands\EnablePreviewSyncCommand.cs" />
     <Compile Include="Commands\FormatTableCommand.cs" />
     <Compile Include="Commands\GenerateTocCommand.cs" />
+    <Compile Include="Commands\GenerateHtmlCommand.cs" />
+    <Compile Include="Commands\HtmlGenerationService.cs" />
     <Compile Include="Commands\IndentationCommand.cs" />
     <Compile Include="Commands\InsertLinkCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />

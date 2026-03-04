@@ -55,6 +55,7 @@ This extension delivers a full featured Markdown editor with live preview, synta
 
 - Extensive keyboard shortcuts speed up formatting, linking, commenting, and checklist maintenance.
 - VS command URL links trigger Visual Studio commands straight from the preview pane.
+- Generate `.html` output from markdown files and keep it nested under the source file in Solution Explorer.
 
 The sections below dive deeper into each area and include screenshots for quick orientation.
 
@@ -456,6 +457,15 @@ You can provide your own .CSS and HTML templates used to render the preview wind
 The HTML template must contain the string **[content]** which is where the rendered markdown will be injected.
 
 You have to refresh the preview window after making changes to the custom CSS and HTML file. You can do that from the markdown editor context menu or by hitting **Ctrl+Alt+R**.
+
+## HTML generation in Solution Explorer
+
+Right-click a markdown file in **Solution Explorer** and select **Generate HTML file** to enable automatic HTML output.
+
+- The extension generates a sibling `.html` file from the markdown content.
+- The generated file is nested under the markdown file in Solution Explorer.
+- On subsequent saves of the markdown file, the `.html` file is regenerated automatically.
+- Run the command again to disable this behavior and remove the generated file.
 
 ## Context menu
 

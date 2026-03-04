@@ -160,6 +160,11 @@ namespace MarkdownEditor2022
 
                     }, VsTaskRunContext.UIThreadIdlePriority).FireAndForget();
                 }
+
+                if (HtmlGenerationService.IsMarkdownFile(e.FilePath) && HtmlGenerationService.HtmlGenerationEnabled(e.FilePath))
+                {
+                    HtmlGenerationService.GenerateAndNestHtmlFileAsync(e.FilePath).FireAndForget();
+                }
             }
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using MarkdownEditor2022;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MarkdownEditor2022.UnitTests
@@ -328,6 +329,243 @@ namespace MarkdownEditor2022.UnitTests
             string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Projects/Site/my docs/test file.md", result);
+        }
+
+        #endregion
+
+        #region HTML Generation Tests
+
+        [TestMethod]
+        public void IsMarkdownFile_MarkdownExtensions_ReturnsExpectedResult()
+        {
+            Assert.IsTrue(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.md"));
+            Assert.IsTrue(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.rmd"));
+            Assert.IsTrue(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.mermaid"));
+            Assert.IsTrue(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.mmd"));
+            Assert.IsFalse(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.txt"));
+        }
+
+        [TestMethod]
+        public void GetHtmlFileName_ReplacesExtensionWithHtml()
+        {
+            string result = HtmlGenerationService.GetHtmlFileName(@"C:\Docs\readme.md");
+
+            Assert.AreEqual(@"C:\Docs\readme.html", result);
+        }
+
+        [TestMethod]
+        public void CreateFromHtmlTemplate_WithTemplate_ReplacesTitleAndContent()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                string markdownFile = Path.Combine(tempDir, "readme.md");
+                string templateFile = Path.Combine(tempDir, "md-template.html");
+
+                File.WriteAllText(markdownFile, "# Test");
+                File.WriteAllText(templateFile, "<html><head><title>[title]</title></head><body>[content]</body></html>");
+
+                string result = HtmlGenerationService.CreateFromHtmlTemplate(markdownFile, "My Title", "<p>Body</p>");
+
+                Assert.AreEqual("<html><head><title>My Title</title></head><body><p>Body</p></body></html>", result);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void CreateFromHtmlTemplate_WithoutContentToken_ReturnsHtmlContent()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                string markdownFile = Path.Combine(tempDir, "readme.md");
+                string templateFile = Path.Combine(tempDir, "md-template.html");
+
+                File.WriteAllText(markdownFile, "# Test");
+                File.WriteAllText(templateFile, "<html><body>no token</body></html>");
+
+                string result = HtmlGenerationService.CreateFromHtmlTemplate(markdownFile, "Title", "<p>Body</p>");
+
+                Assert.AreEqual("<p>Body</p>", result);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void BuildHtmlDocument_UsesFirstHeadingAsTitle()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                string markdownFile = Path.Combine(tempDir, "readme.md");
+                string templateFile = Path.Combine(tempDir, "md-template.html");
+
+                File.WriteAllText(markdownFile, "# My Heading\n\nBody");
+                File.WriteAllText(templateFile, "<html><head><title>[title]</title></head><body>[content]</body></html>");
+
+                string result = HtmlGenerationService.BuildHtmlDocument(markdownFile);
+
+                StringAssert.Contains(result, "<title>My Heading</title>");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void BuildHtmlDocument_NoHeading_UsesFileNameAsTitle()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                string markdownFile = Path.Combine(tempDir, "notes.md");
+                string templateFile = Path.Combine(tempDir, "md-template.html");
+
+                File.WriteAllText(markdownFile, "plain text without heading");
+                File.WriteAllText(templateFile, "<html><head><title>[title]</title></head><body>[content]</body></html>");
+
+                string result = HtmlGenerationService.BuildHtmlDocument(markdownFile);
+
+                StringAssert.Contains(result, "<title>notes</title>");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void CreateFromHtmlTemplate_WhenTemplateResolutionThrows_FallsBackToRawHtml()
+        {
+            string markdownFile = "C:\\bad|path\\readme.md";
+
+            string result = HtmlGenerationService.CreateFromHtmlTemplate(markdownFile, "Title", "<p>Body</p>");
+
+            Assert.AreEqual("<p>Body</p>", result);
+        }
+
+        [TestMethod]
+        public void CreateFromHtmlTemplate_PrefersNearestParentTemplate()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            string rootDir = Path.Combine(tempDir, "root");
+            string nestedDir = Path.Combine(rootDir, "docs", "nested");
+            Directory.CreateDirectory(nestedDir);
+
+            try
+            {
+                string markdownFile = Path.Combine(nestedDir, "readme.md");
+                string rootTemplate = Path.Combine(rootDir, "md-template.html");
+                string nearestTemplate = Path.Combine(Path.Combine(rootDir, "docs"), "md-template.html");
+
+                File.WriteAllText(markdownFile, "# Test");
+                File.WriteAllText(rootTemplate, "<html><body>root-[content]</body></html>");
+                File.WriteAllText(nearestTemplate, "<html><body>nearest-[content]</body></html>");
+
+                string result = HtmlGenerationService.CreateFromHtmlTemplate(markdownFile, "Title", "<p>Body</p>");
+
+                StringAssert.Contains(result, "nearest-<p>Body</p>");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void CreateFromHtmlTemplate_FallsBackToUserProfileTemplate()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string profileTemplate = Path.Combine(userProfile, "md-template.html");
+            bool hadExistingProfileTemplate = File.Exists(profileTemplate);
+            string originalProfileTemplateContent = hadExistingProfileTemplate ? File.ReadAllText(profileTemplate) : null;
+
+            try
+            {
+                string markdownFile = Path.Combine(tempDir, "readme.md");
+                File.WriteAllText(markdownFile, "# Test");
+                File.WriteAllText(profileTemplate, "<html><body>profile-[content]</body></html>");
+
+                string result = HtmlGenerationService.CreateFromHtmlTemplate(markdownFile, "Title", "<p>Body</p>");
+
+                StringAssert.Contains(result, "profile-<p>Body</p>");
+            }
+            finally
+            {
+                if (hadExistingProfileTemplate)
+                {
+                    File.WriteAllText(profileTemplate, originalProfileTemplateContent);
+                }
+                else if (File.Exists(profileTemplate))
+                {
+                    File.Delete(profileTemplate);
+                }
+
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void HtmlGenerationEnabled_WhenHtmlSiblingExists_ReturnsTrue()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                string markdownFile = Path.Combine(tempDir, "readme.md");
+                string htmlFile = Path.Combine(tempDir, "readme.html");
+
+                File.WriteAllText(markdownFile, "# Title");
+                File.WriteAllText(htmlFile, "<html></html>");
+
+                bool result = HtmlGenerationService.HtmlGenerationEnabled(markdownFile);
+
+                Assert.IsTrue(result);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
         }
 
         #endregion

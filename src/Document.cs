@@ -33,6 +33,15 @@ namespace MarkdownEditor2022
             .UseEmojiAndSmiley()
             .Build();
 
+        public static MarkdownPipeline PipelineToGenerateHtml { get; } = new MarkdownPipelineBuilder()
+            .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)  // Must be BEFORE UseAdvancedExtensions to override default
+            .UseAdvancedExtensions()
+            .UseTocToken()  // Support for [[_TOC_]] Azure DevOps wiki syntax
+            .UsePreciseSourceLocation()
+            .UseYamlFrontMatter()
+            .UseEmojiAndSmiley()
+            .Build();
+
         // Compiled regex for better performance
         // Converts Azure DevOps triple-colon syntax to standard fenced code blocks
         // Handles both ":::mermaid" and "::: mermaid" (with space) formats
