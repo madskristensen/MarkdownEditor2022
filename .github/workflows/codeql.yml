@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: "CodeQL Analysis"
+
+on:
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '30 1 * * 0'  # Weekly on Sunday at 01:30 UTC
+
+jobs:
+  check-commits:
+    name: Check for new commits
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      has_new_commits: ${{ steps.check.outputs.has_new_commits }}
+    steps:
+      - name: Check for commits since last successful run
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last_run=$(gh api "repos/${{ github.repository }}/actions/workflows/codeql.yml/runs?status=success&per_page=1" \
+            --jq '.workflow_runs[0].updated_at')
+
+          if [ -z "$last_run" ] || [ "$last_run" = "null" ]; then
+            echo "No previous successful run found, proceeding with analysis"
+            echo "has_new_commits=true" >> "$GITHUB_OUTPUT"
+          else
+            commit_count=$(gh api "repos/${{ github.repository }}/commits?sha=master&since=$last_run" --jq 'length')
+            if [ "$commit_count" -gt "0" ]; then
+              echo "Found $commit_count new commit(s) since last successful run ($last_run)"
+              echo "has_new_commits=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No new commits to master since last successful run ($last_run), skipping analysis"
+              echo "has_new_commits=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  analyze:
+    name: Analyze (csharp)
+    runs-on: windows-latest
+    needs: [check-commits]
+    if: |
+      always() &&
+      (github.event_name == 'pull_request' ||
+       (github.event_name == 'schedule' && needs.check-commits.outputs.has_new_commits == 'true'))
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: csharp
+
+    - name: Setup .NET build dependencies
+      uses: timheuer/bootstrap-dotnet@v1
+      with:
+        nuget: 'false'
+        sdk: 'false'
+        msbuild: 'true'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.slnx', '**/*.sln', '**/*.csproj', '**/packages.config', '**/packages.lock.json', '**/nuget.config') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore NuGet packages
+      run: msbuild /v:m /t:restore
+
+    - name: Build
+      run: msbuild /v:m
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:csharp"

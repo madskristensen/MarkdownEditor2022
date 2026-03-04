@@ -258,7 +258,10 @@ namespace MarkdownEditor2022
 
             try
             {
-                htmlItem.Properties?.Item("DependentUpon").Value = Path.GetFileName(markdownFile);
+                if (htmlItem.Properties != null)
+                {
+                    htmlItem.Properties.Item("DependentUpon").Value = Path.GetFileName(markdownFile);
+                }
             }
             catch
             {
