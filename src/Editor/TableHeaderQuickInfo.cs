@@ -77,7 +77,7 @@ namespace MarkdownEditor2022
                             cell.Span.Length,
                             SpanTrackingMode.EdgeInclusive);
 
-                        return Task.FromResult(new QuickInfoItem(applicableSpan, "Click to sort by this column"));
+                        return Task.FromResult(new QuickInfoItem(applicableSpan, "Double-click to sort by this column"));
                     }
                 }
             }

@@ -27,13 +27,18 @@ namespace MarkdownEditor2022
 
     /// <summary>
     /// Handles mouse clicks on table column headers to sort the table.
-    /// Clicking a header sorts ascending, clicking again sorts descending.
+    /// Double-clicking a header sorts ascending, double-clicking again sorts descending.
     /// </summary>
     internal sealed class TableSortHandler
     {
+        private const double DoubleClickTimeMilliseconds = 500;
+        private const double DoubleClickDistanceThreshold = 4;
+
         private readonly IWpfTextView _view;
         private Cursor _originalCursor;
         private bool _isOverHeader;
+        private System.Windows.Point? _lastClickPosition;
+        private DateTime _lastClickTimeUtc;
 
         // Sort state per table (keyed by header row line number for stability)
         private readonly Dictionary<int, (int columnIndex, bool ascending)> _sortStates = [];
@@ -107,6 +112,12 @@ namespace MarkdownEditor2022
 
             // Get position under mouse
             System.Windows.Point position = e.GetPosition(_view.VisualElement);
+
+            if (!IsDoubleClick(position))
+            {
+                return;
+            }
+
             SnapshotPoint? bufferPosition = GetBufferPositionFromMousePosition(position);
 
             if (!bufferPosition.HasValue)
@@ -139,6 +150,25 @@ namespace MarkdownEditor2022
             SortTable(headerInfo.Value.table, headerInfo.Value.columnIndex, ascending);
 
             e.Handled = true;
+        }
+
+        private bool IsDoubleClick(System.Windows.Point currentPosition)
+        {
+            DateTime now = DateTime.UtcNow;
+            bool isWithinTime = _lastClickTimeUtc != default && (now - _lastClickTimeUtc).TotalMilliseconds <= DoubleClickTimeMilliseconds;
+
+            bool isWithinDistance = false;
+            if (_lastClickPosition.HasValue)
+            {
+                double dx = currentPosition.X - _lastClickPosition.Value.X;
+                double dy = currentPosition.Y - _lastClickPosition.Value.Y;
+                isWithinDistance = (dx * dx) + (dy * dy) <= DoubleClickDistanceThreshold * DoubleClickDistanceThreshold;
+            }
+
+            _lastClickTimeUtc = now;
+            _lastClickPosition = currentPosition;
+
+            return isWithinTime && isWithinDistance;
         }
 
         private SnapshotPoint? GetBufferPositionFromMousePosition(System.Windows.Point position)

@@ -263,7 +263,7 @@ After:
 
 ### Table sorting
 
-Click any table header to sort the table by that column. Click again to toggle between ascending and descending order. Table headers are underlined to indicate they are clickable.
+Double-click any table header to sort the table by that column. Double-click again to toggle between ascending and descending order. Table headers are underlined to indicate they are clickable.
 
 Before (unsorted):
 
@@ -487,7 +487,7 @@ Control the settings for this extension under
 | Preview window position     | Choose between right-side or bottom placement                                                    |
 | Preview window width/height | Set the size of the preview pane                                                                 |
 | Auto-hide for tool windows  | Temporarily hides the preview when auto-hide tool windows expand, preventing overlap issues      |
-| Enable table sorting        | Allows clicking table headers to sort columns (underlines headers when enabled)                  |
+| Enable table sorting        | Allows double-clicking table headers to sort columns (underlines headers when enabled)           |
 | Optimize images on paste    | Automatically optimizes pasted images using Image Optimizer (requires Image Optimizer extension) |
 | Show trailing whitespace    | Displays dots for trailing double-spaces (soft line breaks) in the editor                        |
 
