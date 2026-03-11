@@ -428,6 +428,15 @@ namespace MarkdownEditor2022
             _browser.Dispose();
         }
 
+        /// <summary>
+        /// Invalidates cached theme colors and template cache so the next render picks up any theme changes.
+        /// </summary>
+        public void InvalidateThemeCache()
+        {
+            _templateCache.Clear();
+            _cachedThemeColors = null;
+        }
+
         private void OnThemeChanged(ThemeChangedEventArgs e)
         {
             // Clear template cache so new theme colors and CSS files are picked up

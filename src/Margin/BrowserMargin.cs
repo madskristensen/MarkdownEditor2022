@@ -383,6 +383,7 @@ namespace MarkdownEditor2022
 
         private void AdvancedOptions_Saved(AdvancedOptions options)
         {
+            Browser.InvalidateThemeCache();
             RefreshAsync().FireAndForget();
         }
 
