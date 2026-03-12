@@ -1456,6 +1456,13 @@ namespace MarkdownEditor2022
                 return _cachedThemeColors.Value;
             }
 
+            if (TryGetForcedThemeColors(out (bool useLightTheme, Color bgColor, Color fgColor) forcedThemeColors))
+            {
+                (bool useLightTheme, string, string) forcedResult = (forcedThemeColors.useLightTheme, ColorToHex(forcedThemeColors.bgColor), ColorToHex(forcedThemeColors.fgColor));
+                _cachedThemeColors = forcedResult;
+                return forcedResult;
+            }
+
             (Color bgColor, Color fgColor) = TryGetColorsFromFormatMap();
 
             bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
@@ -1481,8 +1488,31 @@ namespace MarkdownEditor2022
         /// </summary>
         private Color GetPreviewBackgroundColor()
         {
+            if (TryGetForcedThemeColors(out (bool useLightTheme, Color bgColor, Color fgColor) forcedThemeColors))
+            {
+                return forcedThemeColors.bgColor;
+            }
+
             (Color bgColor, _) = TryGetColorsFromFormatMap();
             return bgColor;
+        }
+
+        private static bool TryGetForcedThemeColors(out (bool useLightTheme, Color bgColor, Color fgColor) colors)
+        {
+            if (AdvancedOptions.Instance.Theme == Theme.Light)
+            {
+                colors = (true, Colors.White, Colors.Black);
+                return true;
+            }
+
+            if (AdvancedOptions.Instance.Theme == Theme.Dark)
+            {
+                colors = (false, Color.FromRgb(0x1E, 0x1E, 0x1E), Color.FromRgb(0xD4, 0xD4, 0xD4));
+                return true;
+            }
+
+            colors = default;
+            return false;
         }
 
         /// <summary>
