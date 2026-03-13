@@ -1,13 +1,14 @@
-# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# yaml-language-server: $schema=https://www.schemastore.org/github-workflow.json
 name: "Build"
 permissions:
   actions: write
+  checks: write
   contents: write
 
 on:
   push:
     branches: [master]
-  pull_request:
+  pull_request_target:
     branches: [master]
   workflow_dispatch:
 
@@ -24,20 +25,19 @@ jobs:
       VsixManifestSourcePath: src\source.extension.cs
 
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup .NET build dependencies
-      uses: timheuer/bootstrap-dotnet@v2
+    - uses: actions/checkout@v5
       with:
-        nuget: 'false'
-        sdk: 'false'
-        msbuild: 'true'
+        ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
 
     - name: Cache NuGet packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.slnx', '**/*.sln', '**/*.csproj', '**/packages.config', '**/packages.lock.json', '**/nuget.config') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
@@ -52,10 +52,18 @@ jobs:
       run: msbuild /v:m -restore /p:OutDir=\_built
 
     - name: Run tests
-      run: dotnet vstest /_built/MarkdownEditor2022.UnitTests.dll
+      run: dotnet vstest /_built/MarkdownEditor2022.UnitTests.dll --logger "trx;LogFileName=test-results.trx"
+
+    - name: Report test results
+      uses: dorny/test-reporter@v2
+      if: ${{ always() && (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      with:
+        name: Test Results
+        path: '**/test-results.trx'
+        reporter: dotnet-trx
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ github.event.repository.name }}.vsix
         path: /_built/**/*.vsix
@@ -66,10 +74,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download Package artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ github.event.repository.name }}.vsix
 
