@@ -101,10 +101,16 @@ namespace MarkdownEditor2022
             _parseCts = new CancellationTokenSource();
             CancellationToken localToken = _parseCts.Token;
 
-            // Use semaphore to prevent multiple concurrent parsing operations
-            if (!await _parseSemaphore.WaitAsync(0, _disposalTokenSource.Token))
+            // Use semaphore to prevent multiple concurrent parsing operations.
+            // Always wait for the semaphore so parse requests are queued instead of dropped,
+            // which can otherwise leave initial parsing incomplete.
+            try
             {
-                return; // Another parse operation is already in progress (it will get cancelled if outdated)
+                await _parseSemaphore.WaitAsync(_disposalTokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
             }
 
             int snapshotVersion = _buffer.CurrentSnapshot.Version.VersionNumber;
