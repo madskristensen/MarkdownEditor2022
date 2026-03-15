@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/MarkdownEditor2022.csproj" Id="fefc92e3-9ce6-4c8e-b308-2cd8e98f3dce" />
+  <Project Path="test/MarkdownEditor2022.UnitTests/MarkdownEditor2022.UnitTests.csproj" Id="f3039c96-4eda-48e0-8b77-2ced114627fa" />
+</Solution>
