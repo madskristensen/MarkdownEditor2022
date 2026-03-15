@@ -24,6 +24,30 @@ namespace MarkdownEditor2022
         public bool EnableFilePathIntelliSense { get; set; } = true;
 
         [Category("Editor")]
+        [DisplayName("Table sorting")]
+        [Description("Shows sort chevrons on table column headers when hovering over a table. Click to sort ascending, click again to sort descending.")]
+        [DefaultValue(true)]
+        public bool EnableTableSorting { get; set; } = true;
+
+        [Category("Editor")]
+        [DisplayName("Auto-format tables")]
+        [Description("Determines if markdown tables should be automatically aligned when running format commands.")]
+        [DefaultValue(true)]
+        public bool EnableAutoFormatTables { get; set; } = true;
+
+        [Category("Editor")]
+        [DisplayName("Show trailing whitespace")]
+        [Description("Shows dot adornments for the two trailing spaces that create a soft line break in Markdown.")]
+        [DefaultValue(true)]
+        public bool ShowTrailingWhitespace { get; set; } = true;
+
+        [Category("Editor")]
+        [DisplayName("Enable floating toolbar")]
+        [Description("Shows a floating formatting toolbar when text is selected, providing quick access to bold, italic, strikethrough, code, links, and list formatting.")]
+        [DefaultValue(true)]
+        public bool EnableFloatingToolbar { get; set; } = true;
+
+        [Category("Editor")]
         [DisplayName("Format pasted URLs as links")]
         [Description("When enabled, pasting a URL from a browser will automatically format it as a markdown link [title](url). When disabled, only the raw URL is pasted.")]
         [DefaultValue(true)]
@@ -92,6 +116,12 @@ namespace MarkdownEditor2022
         [Description("Validates if links point to local files and folders actually exist on disk.")]
         [DefaultValue(true)]
         public bool ValidateUrls { get; set; } = true;
+
+        [Category("Image Optimizer")]
+        [DisplayName("Optimize images on paste")]
+        [Description("When enabled, images pasted into the document will be automatically optimized using the Image Optimizer extension (if installed).")]
+        [DefaultValue(true)]
+        public bool OptimizeImagesOnPaste { get; set; } = true;
 
         [Browsable(false)]
         public int RatingRequests { get; set; }

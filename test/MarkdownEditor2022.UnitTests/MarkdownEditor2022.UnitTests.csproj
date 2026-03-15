@@ -43,9 +43,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ColonSyntaxTests.cs" />
+    <Compile Include="FileNavigationTests.cs" />
+    <Compile Include="FormatTableTests.cs" />
+    <Compile Include="FrontMatterTests.cs" />
+    <Compile Include="JavaScriptEscapeTests.cs" />
+    <Compile Include="LanguageAliasTests.cs" />
+    <Compile Include="MermaidClassConversionTests.cs" />
     <Compile Include="PasteImageCommandTests.cs" />
-    <Compile Include="UrlValidatorTests.cs" />
-    <Compile Include="ValidationTests.cs" />
+    <Compile Include="PathResolutionTests.cs" />
+    <Compile Include="SlugGeneratorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

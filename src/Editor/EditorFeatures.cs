@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Markdig.Helpers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -59,45 +58,9 @@ namespace MarkdownEditor2022
     [BracePair('[', ']')]
     [BracePair('{', '}')]
     [BracePair('"', '"')]
-    [BracePair('*', '*')]
-    [BracePair(':', ':')]
     [ContentType(Constants.LanguageName)]
-    [Order(Before = "default")]
-    [ProvideBraceCompletion(Constants.LanguageName)]
     internal sealed class BraceCompletion : BraceCompletionBase
-    {
-        protected override bool IsValidBraceCompletionContext(SnapshotPoint openingPoint)
-        {
-            if (!base.IsValidBraceCompletionContext(openingPoint))
-            {
-                return false;
-            }
-
-            // Don't auto-close * at column 0 (start of line) - it's likely a bullet point
-            ITextSnapshotLine line = openingPoint.GetContainingLine();
-            if (openingPoint == line.Start)
-            {
-                return false;
-            }
-
-            bool isPrevOk = true;
-            bool isNextOk = true;
-
-            if (openingPoint > 0 &&
-                openingPoint.Subtract(1) is SnapshotPoint prev &&
-                !prev.GetChar().IsWhiteSpaceOrZero())
-            {
-                isPrevOk = false;
-            }
-
-            if (openingPoint < openingPoint.Snapshot.Length && !openingPoint.GetChar().IsWhiteSpaceOrZero())
-            {
-                isNextOk = false;
-            }
-
-            return isPrevOk && isNextOk;
-        }
-    }
+    { }
 
     [Export(typeof(IAsyncCompletionCommitManagerProvider))]
     [ContentType(Constants.LanguageName)]
@@ -106,23 +69,21 @@ namespace MarkdownEditor2022
         public override IEnumerable<char> CommitChars => [' ', '\'', '"', ',', '.', ';', ':', '\\'];
     }
 
-    [Export(typeof(IViewTaggerProvider))]
-    [TagType(typeof(TextMarkerTag))]
-    [ContentType(Constants.LanguageName)]
-    internal sealed class BraceMatchingTaggerProvider : BraceMatchingBase { }
-
-    [Export(typeof(IViewTaggerProvider))]
-    [ContentType(Constants.LanguageName)]
-    [TagType(typeof(TextMarkerTag))]
-    public class SameWordHighlighter : SameWordHighlighterBase { }
-
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType(Constants.LanguageName)]
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class HideMargins : WpfTextViewCreationListener
     {
         private static readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex _tocRegex = new(@"<!--TOC-->.+<!--/TOC-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        private static readonly Regex _tocRegex = new(@"<!--\s*TOC\s*-->.+?<!--\s*/?TOC\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        private static readonly string[] _matchingTextHighlightOptionNames =
+        [
+            "Enable Highlight References",
+            "EnableHighlightReferences",
+            "HighlightReferences",
+            "EnableWordHighlight",
+            "WordHighlight"
+        ];
         private TableDataSource _dataSource;
         private DocumentView _docView;
         private Document _document;
@@ -130,33 +91,66 @@ namespace MarkdownEditor2022
         private readonly DateTime _openedDate = DateTime.Now;
 
         [Import] internal IBufferTagAggregatorFactoryService _bufferTagAggregator = null;
-
         protected override void Created(DocumentView docView)
         {
             _document = docView.TextBuffer.GetDocument();
-            _docView ??= docView;
-            _dataSource ??= new TableDataSource(docView.TextBuffer.ContentType.DisplayName);
+            _docView = docView;
+            _dataSource = new TableDataSource(docView.TextBuffer.ContentType.DisplayName);
             _rating = new(Constants.MarketplaceId, Vsix.Name, AdvancedOptions.Instance);
 
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
-            _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
+            ApplyMatchingTextHighlightSetting();
+            //_docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
 
-            _document.Parsed += OnParsed;
-            _docView.Document.FileActionOccurred += Document_FileActionOccurred;
+            if (_document != null)
+            {
+                _document.Parsed += OnParsed;
+            }
+
+            if (_docView.Document != null)
+            {
+                _docView.Document.FileActionOccurred += Document_FileActionOccurred;
+            }
+        }
+
+        private void ApplyMatchingTextHighlightSetting()
+        {
+            IEditorOptions options = _docView?.TextView?.Options;
+
+            if (options == null)
+            {
+                return;
+            }
+
+            foreach (string optionName in _matchingTextHighlightOptionNames)
+            {
+                if (!options.IsOptionDefined(optionName, true))
+                {
+                    continue;
+                }
+
+                options.SetOptionValue(optionName, false);
+            }
         }
 
         private void Document_FileActionOccurred(object sender, TextDocumentFileActionEventArgs e)
         {
             if (e.FileActionType == FileActionTypes.ContentSavedToDisk)
             {
-                Match match = _tocRegex.Match(_docView.TextBuffer.CurrentSnapshot.GetText());
+                MatchCollection matches = _tocRegex.Matches(_docView.TextBuffer.CurrentSnapshot.GetText());
 
-                if (match.Success)
+                if (matches.Count > 0)
                 {
-                    string toc = GenerateTocCommand.Generate(_docView, _document, match.Index + match.Length);
-                    Span span = new(match.Index, match.Length);
-                    _docView.TextBuffer.Replace(span, toc);
+                    // Process matches in reverse order to avoid offset issues when replacing
+                    for (int i = matches.Count - 1; i >= 0; i--)
+                    {
+                        Match match = matches[i];
+                        string toc = GenerateTocCommand.Generate(_docView, _document, match.Index + match.Length);
+                        Span span = new(match.Index, match.Length);
+                        _docView.TextBuffer.Replace(span, toc);
+                    }
+
                     _docView.Document.SaveCopy(e.FilePath, true);
 
                     ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
@@ -165,6 +159,11 @@ namespace MarkdownEditor2022
                         _docView.Document.UpdateDirtyState(false, System.IO.File.GetLastWriteTime(e.FilePath));
 
                     }, VsTaskRunContext.UIThreadIdlePriority).FireAndForget();
+                }
+
+                if (HtmlGenerationService.IsMarkdownFile(e.FilePath) && HtmlGenerationService.HtmlGenerationEnabled(e.FilePath))
+                {
+                    HtmlGenerationService.GenerateAndNestHtmlFileAsync(e.FilePath).FireAndForget();
                 }
             }
         }
@@ -234,8 +233,16 @@ namespace MarkdownEditor2022
             }
 
             _dataSource.CleanAllErrors();
-            _document.Parsed -= OnParsed;
-            _docView.Document.FileActionOccurred -= Document_FileActionOccurred;
+
+            if (_document != null)
+            {
+                _document.Parsed -= OnParsed;
+            }
+
+            if (_docView?.Document != null)
+            {
+                _docView.Document.FileActionOccurred -= Document_FileActionOccurred;
+            }
         }
     }
 }

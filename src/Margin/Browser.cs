@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -11,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.PlatformUI;
@@ -19,6 +22,8 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
+
+#pragma warning disable VSSDK007 // Use JoinableTaskFactory - fire-and-forget is intentional for async event handlers
 
 namespace MarkdownEditor2022
 {
@@ -38,6 +43,8 @@ namespace MarkdownEditor2022
 
         private const string _mappedMarkdownEditorVirtualHostName = "markdown-editor-host";
         private const string _mappedBrowsingFileVirtualHostName = "browsing-file-host";
+        private static readonly string[] _markdownExtensions = [".md", ".markdown", ".mdown", ".mkd"];
+        private static readonly string[] _mermaidExtensions = [".mermaid", ".mmd"];
 
         public readonly WebView2 _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
 
@@ -58,17 +65,299 @@ namespace MarkdownEditor2022
         /// </summary>
         private static readonly TimeSpan _scrollSyncSuppressionDuration = TimeSpan.FromMilliseconds(1000);
 
-        // Cache StringBuilder and Regex for better performance
-        private static StringWriter _htmlWriterStatic;
+        // Cache StringBuilder pool and Regex for better performance
+        // Note: StringWriter is created per-render from pooled StringBuilder for thread-safety
         private static readonly ConcurrentQueue<StringBuilder> _stringBuilderPool = new();
-        private static readonly Regex _languageRegex = new("\"language-(c#|C#|cs|dotnet)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex _languageRegex = new("\"language-([^\"]+)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex _mermaidRegex = new("class=\"language-mermaid\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _escapeRegex = new(@"[\\\r\n""]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-        private static readonly Regex _bgColorRegex = new(@"background(-color)?\s*:\s*#[0-9a-fA-F]{3,8}\b", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
+
+        // Regex for resolving relative paths in HTML attributes to absolute file:// URLs
+        // Matches src="..." and href="..." attributes with relative paths (not starting with http, https, data, #, or /)
+        private static readonly Regex _relativePathRegex = new(
+            @"(?<attr>src|href)\s*=\s*""(?<path>(?!https?://|data:|#|/)[^""]+)""",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        // Regex for resolving root-relative paths (paths starting with /) in HTML attributes
+        // Matches src="..." and href="..." attributes with paths starting with / (but not //)
+        private static readonly Regex _rootRelativePathRegex = new(
+            @"(?<attr>src|href)\s*=\s*""(?<path>/(?!/)[^""]+)""",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        // PrismJS language alias mappings (based on components.json from PrismJS)
+        // Maps common aliases to their canonical PrismJS language identifiers
+        private static readonly Dictionary<string, string> _languageAliasMap = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // C# aliases
+            ["c#"] = "csharp",
+            ["cs"] = "csharp",
+            ["dotnet"] = "csharp",
+
+            // CoffeeScript aliases
+            ["coffee"] = "coffeescript",
+
+            // JavaScript aliases
+            ["js"] = "javascript",
+
+            // TypeScript aliases
+            ["ts"] = "typescript",
+
+            // Python aliases
+            ["py"] = "python",
+
+            // Ruby aliases
+            ["rb"] = "ruby",
+
+            // Bash/Shell aliases
+            ["sh"] = "bash",
+            ["shell"] = "bash",
+
+            // Markup/HTML aliases
+            ["html"] = "markup",
+            ["xml"] = "markup",
+            ["svg"] = "markup",
+            ["mathml"] = "markup",
+            ["ssml"] = "markup",
+            ["atom"] = "markup",
+            ["rss"] = "markup",
+
+            // Markdown aliases
+            ["md"] = "markdown",
+
+            // YAML aliases
+            ["yml"] = "yaml",
+
+            // Docker aliases
+            ["dockerfile"] = "docker",
+
+            // Objective-C aliases
+            ["objc"] = "objectivec",
+
+            // Haskell aliases
+            ["hs"] = "haskell",
+
+            // Arduino aliases
+            ["ino"] = "arduino",
+
+            // Kotlin aliases
+            ["kt"] = "kotlin",
+            ["kts"] = "kotlin",
+
+            // LaTeX aliases
+            ["tex"] = "latex",
+            ["context"] = "latex",
+
+            // PowerQuery aliases
+            ["pq"] = "powerquery",
+            ["mscript"] = "powerquery",
+
+            // Q# aliases
+            ["qs"] = "qsharp",
+
+            // Visual Basic aliases
+            ["vb"] = "visual-basic",
+            ["vba"] = "visual-basic",
+
+            // Handlebars/Mustache aliases
+            ["hbs"] = "handlebars",
+            ["mustache"] = "handlebars",
+
+            // Gettext aliases
+            ["po"] = "gettext",
+
+            // ANTLR4 aliases
+            ["g4"] = "antlr4",
+
+            // ARM Assembly aliases
+            ["arm-asm"] = "armasm",
+
+            // AsciiDoc aliases
+            ["adoc"] = "asciidoc",
+
+            // Avisynth aliases
+            ["avs"] = "avisynth",
+
+            // Avro IDL aliases
+            ["avdl"] = "avro-idl",
+
+            // AWK aliases
+            ["gawk"] = "awk",
+
+            // BBcode aliases
+            ["shortcode"] = "bbcode",
+
+            // BNF aliases
+            ["rbnf"] = "bnf",
+
+            // BSL aliases
+            ["oscript"] = "bsl",
+
+            // CFScript aliases
+            ["cfc"] = "cfscript",
+
+            // Cilk aliases
+            ["cilk-c"] = "cilkc",
+            ["cilk-cpp"] = "cilkcpp",
+            ["cilk"] = "cilkcpp",
+
+            // Concurnas aliases
+            ["conc"] = "concurnas",
+
+            // Django/Jinja2 aliases
+            ["jinja2"] = "django",
+
+            // DNS zone file aliases
+            ["dns-zone"] = "dns-zone-file",
+
+            // DOT (Graphviz) aliases
+            ["gv"] = "dot",
+
+            // EJS/Eta aliases
+            ["eta"] = "ejs",
+
+            // Excel Formula aliases
+            ["xlsx"] = "excel-formula",
+            ["xls"] = "excel-formula",
+
+            // GameMaker Language aliases
+            ["gamemakerlanguage"] = "gml",
+
+            // GN aliases
+            ["gni"] = "gn",
+
+            // GNU Linker Script aliases
+            ["ld"] = "linker-script",
+
+            // Go module aliases
+            ["go-mod"] = "go-module",
+
+            // Idris aliases
+            ["idr"] = "idris",
+
+            // .ignore aliases
+            ["gitignore"] = "ignore",
+            ["hgignore"] = "ignore",
+            ["npmignore"] = "ignore",
+
+            // JSON aliases
+            ["webmanifest"] = "json",
+
+            // LilyPond aliases
+            ["ly"] = "lilypond",
+
+            // Lisp aliases
+            ["emacs"] = "lisp",
+            ["elisp"] = "lisp",
+            ["emacs-lisp"] = "lisp",
+
+            // MoonScript aliases
+            ["moon"] = "moonscript",
+
+            // N4JS aliases
+            ["n4jsd"] = "n4js",
+
+            // Naninovel Script aliases
+            ["nani"] = "naniscript",
+
+            // OpenQasm aliases
+            ["qasm"] = "openqasm",
+
+            // Pascal aliases
+            ["objectpascal"] = "pascal",
+
+            // PC-Axis aliases
+            ["px"] = "pcaxis",
+
+            // PeopleCode aliases
+            ["pcode"] = "peoplecode",
+
+            // PlantUML aliases
+            ["plantuml"] = "plant-uml",
+
+            // PureBasic aliases
+            ["pbfasm"] = "purebasic",
+
+            // PureScript aliases
+            ["purs"] = "purescript",
+
+            // Racket aliases
+            ["rkt"] = "racket",
+
+            // Razor C# aliases
+            ["razor"] = "cshtml",
+
+            // Ren'py aliases
+            ["rpy"] = "renpy",
+
+            // ReScript aliases
+            ["res"] = "rescript",
+
+            // Robot Framework aliases
+            ["robot"] = "robotframework",
+
+            // Shell session aliases
+            ["sh-session"] = "shell-session",
+            ["shellsession"] = "shell-session",
+
+            // SML aliases
+            ["smlnj"] = "sml",
+
+            // Solidity aliases
+            ["sol"] = "solidity",
+
+            // Solution file aliases
+            ["sln"] = "solution-file",
+
+            // SPARQL aliases
+            ["rq"] = "sparql",
+
+            // SuperCollider aliases
+            ["sclang"] = "supercollider",
+
+            // T4 Text Templates aliases
+            ["t4"] = "t4-cs",
+
+            // Tremor aliases
+            ["trickle"] = "tremor",
+            ["troy"] = "tremor",
+
+            // Turtle/TriG aliases
+            ["trig"] = "turtle",
+
+            // TypoScript aliases
+            ["tsconfig"] = "typoscript",
+
+            // UnrealScript aliases
+            ["uscript"] = "unrealscript",
+            ["uc"] = "unrealscript",
+
+            // URI aliases
+            ["url"] = "uri",
+
+            // Web IDL aliases
+            ["webidl"] = "web-idl",
+
+            // Wolfram language aliases
+            ["mathematica"] = "wolfram",
+            ["nb"] = "wolfram",
+            ["wl"] = "wolfram",
+
+            // Xeora aliases
+            ["xeoracube"] = "xeora",
+
+            // Arturo aliases
+            ["art"] = "arturo",
+        };
 
         // Cache WebView2 environment for faster initialization of subsequent instances
         private static Task<CoreWebView2Environment> _cachedEnvironmentTask;
         private static readonly object _environmentLock = new();
+
+        // Pending fragment navigations for cross-document links
+        // When a markdown file is opened with a fragment (e.g., file.md#heading), store the fragment here
+        // and navigate to it when the document's Browser finishes initializing
+        private static readonly ConcurrentDictionary<string, string> _pendingFragmentNavigations = new(StringComparer.OrdinalIgnoreCase);
 
         // Pre-warmed CSS content for faster first render
         private static string _cachedHighlightCssLight;
@@ -80,11 +369,16 @@ namespace MarkdownEditor2022
         private static readonly object _prewarmLock = new();
 
         // Pre-computed HTML template ready for content insertion (computed on first use per theme)
-        private Task<string> _precomputedTemplateTask;
+        private readonly Task<string> _precomputedTemplateTask;
+        private bool _isTemplateLoaded;
+
+        // Cache recursive file discovery to avoid repeated directory traversal on frequent preview refreshes
+        private static readonly TimeSpan _fileDiscoveryCacheDuration = TimeSpan.FromSeconds(5);
+        private static readonly ConcurrentDictionary<string, (string path, DateTime expiresUtc)> _recursiveFileLookupCache = new();
 
         public Browser(string file, Document document, IWpfTextView textView, IEditorFormatMapService formatMapService)
         {
-            _file = file;
+            _file = file ?? string.Empty;
             _document = document;
             _textView = textView;
             _formatMapService = formatMapService;
@@ -98,13 +392,25 @@ namespace MarkdownEditor2022
             PrewarmStaticResources();
 
             // Start template preparation in parallel with WebView2 init
-            _precomputedTemplateTask = Task.Run(() => GetHtmlTemplate());
+            _precomputedTemplateTask = Task.Run(GetHtmlTemplate);
 
             _browser.Initialized += BrowserInitialized;
             _browser.NavigationStarting += BrowserNavigationStarting;
 
             // Set the WPF Background to match VS theme (WebView2 DefaultBackgroundColor is set after init)
             _browser.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
+        }
+
+        /// <summary>
+        /// Returns true if the current file is a standalone mermaid file (.mermaid or .mmd).
+        /// </summary>
+        private bool IsMermaidFile
+        {
+            get
+            {
+                string ext = Path.GetExtension(_file);
+                return Array.Exists(_mermaidExtensions, e => e.Equals(ext, StringComparison.OrdinalIgnoreCase));
+            }
         }
 
         public void Dispose()
@@ -116,9 +422,19 @@ namespace MarkdownEditor2022
             if (_browser.CoreWebView2 != null)
             {
                 _browser.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+                _browser.CoreWebView2.NavigationCompleted -= OnNavigationCompleted;
             }
 
             _browser.Dispose();
+        }
+
+        /// <summary>
+        /// Invalidates cached theme colors and template cache so the next render picks up any theme changes.
+        /// </summary>
+        public void InvalidateThemeCache()
+        {
+            _templateCache.Clear();
+            _cachedThemeColors = null;
         }
 
         private void OnThemeChanged(ThemeChangedEventArgs e)
@@ -154,16 +470,27 @@ namespace MarkdownEditor2022
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
-                await _document.WaitForInitialParseAsync(timeoutCts.Token);
+                string html;
 
-                MarkdownDocument markdown = _document.Markdown;
-                if (markdown == null)
+                if (IsMermaidFile)
                 {
-                    return;
+                    // For standalone mermaid files, wrap the entire content in a mermaid div
+                    string content = _textView.TextBuffer.CurrentSnapshot.GetText();
+                    html = $"<pre class=\"mermaid\">{WebUtility.HtmlEncode(content)}</pre>";
                 }
+                else
+                {
+                    using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+                    await _document.WaitForInitialParseAsync(timeoutCts.Token);
 
-                string html = await RenderHtmlDocumentAsync(markdown);
+                    MarkdownDocument markdown = _document.Markdown;
+                    if (markdown == null)
+                    {
+                        return;
+                    }
+
+                    html = await RenderMarkdownToHtmlAsync(markdown);
+                }
 
                 // Feature detection
                 bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -221,6 +548,7 @@ namespace MarkdownEditor2022
 
                 // Subscribe to messages from JavaScript for click-to-sync feature
                 _browser.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+                _browser.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 // Listen for VS theme changes to update preview colors (deferred from constructor for faster startup)
                 VSColorTheme.ThemeChanged += OnThemeChanged;
@@ -228,11 +556,24 @@ namespace MarkdownEditor2022
 
             void SetVirtualFolderMapping()
             {
-                _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedMarkdownEditorVirtualHostName, GetFolder(), CoreWebView2HostResourceAccessKind.Allow);
+                // Map markdown-editor-host for extension resources (CSS, JS for syntax highlighting, etc.)
+                string extensionFolder = GetFolder();
+                if (!string.IsNullOrWhiteSpace(_mappedMarkdownEditorVirtualHostName) &&
+                    !string.IsNullOrWhiteSpace(extensionFolder) &&
+                    Directory.Exists(extensionFolder))
+                {
+                    _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedMarkdownEditorVirtualHostName, extensionFolder, CoreWebView2HostResourceAccessKind.Allow);
+                }
 
-                DirectoryInfo parentDir = new(Path.GetDirectoryName(_file));
-                string baseHref = (parentDir.Parent ?? parentDir).FullName.Replace("\\", "/");
-                _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, baseHref, CoreWebView2HostResourceAccessKind.Allow);
+                // Map browsing-file-host to the drive root so relative paths with any number of ../ can be resolved
+                // This fixes issue #60 where paths like ../../images/foo.png were being normalized away
+                string driveRoot = Path.GetPathRoot(_file);
+                if (!string.IsNullOrWhiteSpace(_mappedBrowsingFileVirtualHostName) &&
+                    !string.IsNullOrWhiteSpace(driveRoot) &&
+                    Directory.Exists(driveRoot))
+                {
+                    _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(_mappedBrowsingFileVirtualHostName, driveRoot, CoreWebView2HostResourceAccessKind.Allow);
+                }
             }
 
             async Task RenderInitialContentAsync(string template)
@@ -251,18 +592,18 @@ namespace MarkdownEditor2022
                     }
 
                     MarkdownDocument markdown = _document.Markdown;
-                    string html = markdown != null
-                        ? await RenderHtmlDocumentAsync(markdown)
-                        : string.Empty;
+                    string html = await RenderMarkdownToHtmlAsync(markdown);
 
                     // Feature detection
                     bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
                     bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                         html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool needsMath = html.IndexOf("class=\"math\"", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                    string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
+                    string scripts = BuildInitialScriptTags(needsPrism, needsMermaid, needsMath);
                     string fullHtml = template.Replace("[content]", html).Replace("[scripts]", scripts);
 
+                    _isTemplateLoaded = false;
                     _browser.NavigateToString(fullHtml);
 
                     // Get initial height for scroll calculations
@@ -338,82 +679,93 @@ namespace MarkdownEditor2022
                     return;
                 }
 
-                // Handle browsing-file-host links (relative links and internal anchors)
+                // Handle about: protocol links (internal anchors converted by AdjustAnchorsAsync)
+                // These have format about:blank#fragment or about:pathname#fragment
+                if (uri.Scheme == "about" && !string.IsNullOrEmpty(uri.Fragment))
+                {
+                    string fragment = uri.Fragment.TrimStart('#');
+                    await NavigateToFragmentAsync(fragment);
+                    return;
+                }
+
+                // Handle browsing-file-host links (resolved absolute paths via virtual host)
                 if (uri.Authority == _mappedBrowsingFileVirtualHostName)
                 {
-                    string localPath = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/'));
-                    string fragment = uri.Fragment?.TrimStart('#');
-                    bool hasFragment = !string.IsNullOrEmpty(fragment);
-
-                    // Check if this is an internal anchor link (fragment-only, no file path change)
-                    // Internal links will have the same directory as the base href
-                    string currentDir = Path.GetDirectoryName(_file);
-                    string currentDirName = new DirectoryInfo(currentDir).Name;
-
-                    // If the local path is just the current directory name (or empty), it's an internal anchor
-                    bool isInternalAnchor = string.IsNullOrEmpty(localPath) ||
-                                            localPath.Equals(currentDirName, StringComparison.OrdinalIgnoreCase) ||
-                                            localPath.Equals(currentDirName + "/", StringComparison.OrdinalIgnoreCase);
-
-                    if (isInternalAnchor && hasFragment)
+                    string driveRoot = Path.GetPathRoot(_file);
+                    if (string.IsNullOrWhiteSpace(driveRoot))
                     {
-                        // Navigate to the fragment within the current document
-                        await NavigateToFragmentAsync(fragment);
                         return;
                     }
 
-                    // This is a link to another file
-                    if (!string.IsNullOrEmpty(localPath) && !isInternalAnchor)
-                    {
-                        string file = localPath.Replace('/', Path.DirectorySeparatorChar);
-                        string targetPath = null;
-
-                        // Try to resolve the file path relative to the current document's directory
-                        string relativePath = Path.Combine(currentDir, file);
-                        if (File.Exists(relativePath))
-                        {
-                            targetPath = Path.GetFullPath(relativePath);
-                        }
-                        else
-                        {
-                            // Try relative to the parent directory (where browsing-file-host is mapped)
-                            DirectoryInfo parentDir = new DirectoryInfo(currentDir).Parent;
-                            if (parentDir != null)
-                            {
-                                string parentRelativePath = Path.Combine(parentDir.FullName, file);
-                                if (File.Exists(parentRelativePath))
-                                {
-                                    targetPath = Path.GetFullPath(parentRelativePath);
-                                }
-                            }
-                        }
-
-                        // If still not found, try adding common markdown extensions
-                        if (targetPath == null && string.IsNullOrEmpty(Path.GetExtension(file)))
-                        {
-                            string[] mdExtensions = [".md", ".markdown", ".mdown", ".mkd"];
-                            foreach (string ext in mdExtensions)
-                            {
-                                string withExt = Path.Combine(currentDir, file + ext);
-                                if (File.Exists(withExt))
-                                {
-                                    targetPath = Path.GetFullPath(withExt);
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (targetPath != null)
-                        {
-                            VS.Documents.OpenInPreviewTabAsync(targetPath).FireAndForget();
-                        }
-                    }
+                    string localPath = Uri.UnescapeDataString(uri.LocalPath.TrimStart('/'));
+                    string absolutePath = Path.Combine(driveRoot, localPath.Replace('/', Path.DirectorySeparatorChar));
+                    await HandleFileNavigationAsync(absolutePath, uri.Fragment);
+                    return;
                 }
-                else if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
+
+                // Handle file:// URLs (absolute paths from resolved relative links)
+                if (uri.IsAbsoluteUri && uri.Scheme == "file")
+                {
+                    await HandleFileNavigationAsync(uri.LocalPath, uri.Fragment);
+                    return;
+                }
+
+                if (uri.IsAbsoluteUri && uri.Scheme.StartsWith("http"))
                 {
                     Process.Start(uri.ToString());
                 }
             }).FireAndForget();
+        }
+
+        /// <summary>
+        /// Handles navigation to a local file path, including internal anchors and non-existent files.
+        /// </summary>
+        private async Task HandleFileNavigationAsync(string filePath, string fragment)
+        {
+            fragment = fragment?.TrimStart('#');
+            bool hasFragment = !string.IsNullOrEmpty(fragment);
+
+            // Check if this is an internal anchor (same file with fragment)
+            if (hasFragment && filePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
+            {
+                await NavigateToFragmentAsync(fragment);
+                return;
+            }
+
+            // File exists - open it
+            if (File.Exists(filePath))
+            {
+                // Store pending fragment navigation before opening the file
+                if (hasFragment)
+                {
+                    _pendingFragmentNavigations[filePath] = fragment;
+                }
+                VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
+                return;
+            }
+
+            // Try adding common markdown extensions if no extension was specified
+            if (string.IsNullOrEmpty(Path.GetExtension(filePath)))
+            {
+                foreach (string ext in _markdownExtensions)
+                {
+                    string withExt = filePath + ext;
+                    if (File.Exists(withExt))
+                    {
+                        // Store pending fragment navigation before opening the file
+                        if (hasFragment)
+                        {
+                            _pendingFragmentNavigations[withExt] = fragment;
+                        }
+                        VS.Documents.OpenInPreviewTabAsync(withExt).FireAndForget();
+                        return;
+                    }
+                }
+            }
+
+            // File doesn't exist - offer to create it if it's a markdown file
+            string currentDir = Path.GetDirectoryName(_file);
+            await HandleNonExistentMarkdownLinkAsync(filePath, currentDir);
         }
 
         private async Task NavigateToFragmentAsync(string fragmentId)
@@ -445,6 +797,99 @@ namespace MarkdownEditor2022
                 }})();";
 
             await _browser.ExecuteScriptAsync(script);
+        }
+
+        private async Task HandleNonExistentMarkdownLinkAsync(string file, string currentDir)
+        {
+            // Check if the file has a markdown extension or no extension (so we can add .md)
+            string extension = Path.GetExtension(file);
+
+            bool isMarkdownFile = !string.IsNullOrEmpty(extension) && Array.IndexOf(_markdownExtensions, extension.ToLowerInvariant()) >= 0;
+            bool noExtension = string.IsNullOrEmpty(extension);
+
+            if (!isMarkdownFile && !noExtension)
+            {
+                // Not a markdown file, don't offer to create it
+                return;
+            }
+
+            // If no extension, add .md
+            string targetFile = noExtension ? file + ".md" : file;
+
+            // Determine the full path where the file should be created
+            // The browsing-file-host virtual host is mapped to the parent directory of currentDir,
+            // so paths received from the browser are relative to that parent directory.
+            // We need to resolve relative to the parent directory, not currentDir.
+            DirectoryInfo parentDir = new DirectoryInfo(currentDir).Parent;
+            string baseDir = parentDir?.FullName ?? currentDir;
+            string targetPath = Path.GetFullPath(Path.Combine(baseDir, targetFile));
+
+            // Get the directory that needs to be created
+            string targetDirectory = Path.GetDirectoryName(targetPath);
+
+            // Create a user-friendly message
+            string fileName = Path.GetFileName(targetPath);
+            string relativePath = GetRelativePathForDisplay(targetPath, currentDir);
+            string message = $"The file '{relativePath}' does not exist.\n\nDo you want to create it?";
+
+            if (!Directory.Exists(targetDirectory))
+            {
+                message = $"The file '{relativePath}' does not exist, and its directory doesn't exist either.\n\nDo you want to create the directory and file?";
+            }
+
+            // Show message box asking if user wants to create the file
+            bool result = await VS.MessageBox.ShowConfirmAsync("Create Markdown File", message);
+
+            if (result)
+            {
+                try
+                {
+                    // Create directory if it doesn't exist
+                    if (!Directory.Exists(targetDirectory))
+                    {
+                        Directory.CreateDirectory(targetDirectory);
+                    }
+
+                    // Create the file with empty content (synchronous - .NET Framework 4.8 doesn't have WriteAllTextAsync)
+                    File.WriteAllText(targetPath, string.Empty);
+
+                    // Open the newly created file
+                    await VS.Documents.OpenAsync(targetPath);
+                    await VS.StatusBar.ShowMessageAsync($"Created and opened: {fileName}");
+                }
+                catch (Exception ex)
+                {
+                    await VS.StatusBar.ShowMessageAsync($"Failed to create file: {ex.Message}");
+                }
+            }
+        }
+
+        private string GetRelativePathForDisplay(string targetPath, string currentDir)
+        {
+            try
+            {
+                // Ensure currentDir ends with directory separator for proper URI construction
+                string normalizedCurrentDir = currentDir;
+                if (!normalizedCurrentDir.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                {
+                    normalizedCurrentDir += Path.DirectorySeparatorChar;
+                }
+
+                Uri targetUri = new(targetPath);
+                Uri currentUri = new(normalizedCurrentDir);
+                Uri relativeUri = currentUri.MakeRelativeUri(targetUri);
+                return Uri.UnescapeDataString(relativeUri.ToString().Replace('/', Path.DirectorySeparatorChar));
+            }
+            catch (UriFormatException)
+            {
+                // If we can't compute relative path due to URI issues, just return the file name
+                return Path.GetFileName(targetPath);
+            }
+            catch (InvalidOperationException)
+            {
+                // If MakeRelativeUri fails, return file name
+                return Path.GetFileName(targetPath);
+            }
         }
 
         /// <summary>
@@ -481,12 +926,9 @@ namespace MarkdownEditor2022
         {
             // Suppress scroll sync briefly after a click-to-navigate action
             // to prevent the preview from scrolling away from where the user clicked
-            if (DateTime.UtcNow - _lastClickNavigationTime < _scrollSyncSuppressionDuration)
-            {
-                return Task.CompletedTask;
-            }
-
-            return _currentViewLine == line
+            return DateTime.UtcNow - _lastClickNavigationTime < _scrollSyncSuppressionDuration
+                ? Task.CompletedTask
+                : _currentViewLine == line
                 ? Task.CompletedTask
                 : ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
@@ -544,8 +986,7 @@ namespace MarkdownEditor2022
 
         private async Task<bool> IsHtmlTemplateLoadedAsync()
         {
-            string hasContentResult = await _browser.ExecuteScriptAsync($@"document.getElementById(""___markdown-content___"") !== null;");
-            return hasContentResult == "true";
+            return _isTemplateLoaded;
         }
 
         public async Task UpdateBrowserAsync()
@@ -554,20 +995,44 @@ namespace MarkdownEditor2022
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                // Wait for initial parsing to complete before rendering (fixes #127, #142)
-                // Use a timeout to prevent indefinite waiting
-                using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
-                await _document.WaitForInitialParseAsync(timeoutCts.Token);
+                string html;
 
-                MarkdownDocument markdown = _document.Markdown;
-                if (markdown == null)
+                if (IsMermaidFile)
                 {
-                    return; // Document not yet parsed or parsing failed
+                    // For standalone mermaid files, wrap the entire content in a mermaid div
+                    string content = _textView.TextBuffer.CurrentSnapshot.GetText();
+                    html = $"<pre class=\"mermaid\">{WebUtility.HtmlEncode(content)}</pre>";
+                }
+                else
+                {
+                    // Wait for initial parsing to complete before rendering (fixes #127, #142)
+                    // Use a timeout to prevent indefinite waiting
+                    using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+                    await _document.WaitForInitialParseAsync(timeoutCts.Token);
+
+                    MarkdownDocument markdown = _document.Markdown;
+                    if (markdown == null)
+                    {
+                        return; // Document not yet parsed or parsing failed
+                    }
+
+                    html = await RenderMarkdownToHtmlAsync(markdown);
                 }
 
-                string html = await RenderHtmlDocumentAsync(markdown);
                 await UpdateContentAsync(html);
-                await SyncNavigationAsync(isTyping: false);
+
+                // Check for pending cross-document fragment navigation
+                if (!string.IsNullOrWhiteSpace(_file) && _pendingFragmentNavigations.TryRemove(_file, out string pendingFragment))
+                {
+                    // Small delay to ensure content is fully rendered before scrolling
+                    await Task.Delay(100);
+                    await NavigateToFragmentAsync(pendingFragment);
+                }
+                // Only sync navigation if scroll sync is enabled (not applicable for mermaid files)
+                else if (!IsMermaidFile && AdvancedOptions.Instance.EnableScrollSync)
+                {
+                    await SyncNavigationAsync(isTyping: false);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -581,11 +1046,10 @@ namespace MarkdownEditor2022
 
         private static async Task<string> RenderHtmlDocumentAsync(MarkdownDocument md)
         {
-            StringWriter htmlWriter = null;
+            StringBuilder sb = GetOrCreateStringBuilder();
             try
             {
-                htmlWriter = (_htmlWriterStatic ??= new StringWriter(GetOrCreateStringBuilder()));
-                htmlWriter.GetStringBuilder().Clear();
+                using StringWriter htmlWriter = new(sb);
 
                 HtmlRenderer htmlRenderer = new(htmlWriter);
                 Document.Pipeline.Setup(htmlRenderer);
@@ -594,7 +1058,26 @@ namespace MarkdownEditor2022
 
                 await htmlWriter.FlushAsync();
                 string html = htmlWriter.ToString();
-                html = _languageRegex.Replace(html, "\"language-csharp\"");
+
+                // Replace language aliases with canonical PrismJS language names
+                html = _languageRegex.Replace(html, match =>
+                {
+                    string lang = match.Groups[1].Value;
+
+                    // Check if this is an alias that needs to be mapped
+                    if (_languageAliasMap.TryGetValue(lang, out string canonicalLang))
+                    {
+                        return $"\"language-{canonicalLang}\"";
+                    }
+
+                    // Return original if no mapping exists
+                    return match.Value;
+                });
+
+                // Convert language-mermaid to mermaid class for Mermaid.js rendering
+                // Mermaid.js requires class="mermaid" instead of class="language-mermaid"
+                html = _mermaidRegex.Replace(html, "class=\"mermaid\"");
+
                 return html;
             }
             catch (Exception ex)
@@ -603,12 +1086,158 @@ namespace MarkdownEditor2022
             }
             finally
             {
-                if (htmlWriter?.GetStringBuilder() is StringBuilder sb && sb.Capacity <= 8192)
+                // Return StringBuilder to pool if not too large
+                if (sb.Capacity <= 8192)
                 {
                     sb.Clear();
                     _stringBuilderPool.Enqueue(sb);
                 }
             }
+        }
+
+        /// <summary>
+        /// Renders markdown to HTML and resolves relative paths to absolute virtual host URLs.
+        /// Common pipeline used by all rendering code paths.
+        /// </summary>
+        private async Task<string> RenderMarkdownToHtmlAsync(MarkdownDocument markdown)
+        {
+            if (markdown == null)
+            {
+                return string.Empty;
+            }
+
+            string html = await RenderHtmlDocumentAsync(markdown);
+            string rootPath = GetEffectiveRootPath(markdown);
+            string baseDirectory = Path.GetDirectoryName(_file);
+
+            return ResolveRelativePathsToAbsoluteUrls(html, baseDirectory, rootPath);
+        }
+
+        /// <summary>
+        /// Gets the effective root path for resolving root-relative paths.
+        /// Priority order: 1) YAML front matter root_path, 2) .editorconfig md_root_path.
+        /// </summary>
+        /// <param name="markdown">The parsed markdown document.</param>
+        /// <returns>The root path if found from any source, otherwise null.</returns>
+        private string GetEffectiveRootPath(MarkdownDocument markdown)
+        {
+            return RootPathResolver.GetEffectiveRootPath(markdown, _textView);
+        }
+
+        // Pre-computed virtual host URL prefix to avoid repeated string concatenation
+        private const string _virtualHostUrlPrefix = "http://" + _mappedBrowsingFileVirtualHostName + "/";
+
+        /// <summary>
+        /// Resolves relative paths in HTML src and href attributes to absolute virtual host URLs.
+        /// This fixes issue #60 where paths with parent directory navigation (../) were being
+        /// normalized away by the browser before we could handle them.
+        /// Also supports root-relative paths (starting with /) when a root_path is specified in front matter
+        /// or md_root_path is specified in .editorconfig.
+        /// </summary>
+        /// <param name="html">The HTML content with potentially relative paths.</param>
+        /// <param name="baseDirectory">The directory to resolve relative paths against.</param>
+        /// <param name="rootPath">Optional root path from front matter or .editorconfig for resolving root-relative paths (paths starting with /).</param>
+        /// <returns>HTML with relative paths converted to absolute virtual host URLs.</returns>
+        private static string ResolveRelativePathsToAbsoluteUrls(string html, string baseDirectory, string rootPath = null)
+        {
+            if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(baseDirectory))
+            {
+                return html;
+            }
+
+            // Early exit if no src= or href= attributes to process (avoids regex scan)
+            if (html.IndexOf("src=", StringComparison.OrdinalIgnoreCase) < 0 &&
+                html.IndexOf("href=", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return html;
+            }
+
+            string driveRoot = Path.GetPathRoot(baseDirectory);
+
+            // First, handle root-relative paths (starting with /) if rootPath is specified
+            if (!string.IsNullOrEmpty(rootPath))
+            {
+                html = _rootRelativePathRegex.Replace(html, match =>
+                {
+                    string attr = match.Groups["attr"].Value;
+                    string relativePath = match.Groups["path"].Value;
+
+                    // Skip if it's an anchor-only link
+                    if (string.IsNullOrEmpty(relativePath) || relativePath == "/")
+                    {
+                        return match.Value;
+                    }
+
+                    try
+                    {
+                        // Only decode if path contains encoded characters (avoid allocation otherwise)
+                        string decodedPath = relativePath.IndexOf('%') >= 0
+                            ? WebUtility.UrlDecode(relativePath)
+                            : relativePath;
+
+                        // Remove leading slash and normalize path separators
+                        string pathWithoutLeadingSlash = decodedPath.TrimStart('/');
+                        pathWithoutLeadingSlash = pathWithoutLeadingSlash.Replace('/', Path.DirectorySeparatorChar);
+
+                        // Resolve against the root path
+                        string fullPath = Path.GetFullPath(Path.Combine(rootPath, pathWithoutLeadingSlash));
+
+                        // Convert to virtual host URL relative to drive root
+                        string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                            ? fullPath.Substring(driveRoot.Length)
+                            : fullPath;
+
+                        return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
+                    }
+                    catch
+                    {
+                        // If path resolution fails, keep the original path
+                        return match.Value;
+                    }
+                });
+            }
+
+            // Then handle regular relative paths (not starting with /)
+            html = _relativePathRegex.Replace(html, match =>
+            {
+                string attr = match.Groups["attr"].Value;
+                string relativePath = match.Groups["path"].Value;
+
+                // Skip if it's an anchor-only link or already absolute
+                if (string.IsNullOrEmpty(relativePath) || relativePath.StartsWith("#"))
+                {
+                    return match.Value;
+                }
+
+                try
+                {
+                    // Only decode if path contains encoded characters (avoid allocation otherwise)
+                    string decodedPath = relativePath.IndexOf('%') >= 0
+                        ? WebUtility.UrlDecode(relativePath)
+                        : relativePath;
+
+                    // Normalize path separators
+                    decodedPath = decodedPath.Replace('/', Path.DirectorySeparatorChar);
+
+                    // Resolve the full path using Path.GetFullPath which handles ../ correctly
+                    string fullPath = Path.GetFullPath(Path.Combine(baseDirectory, decodedPath));
+
+                    // Convert to virtual host URL relative to drive root
+                    // e.g., C:\Projects\images\foo.png -> http://browsing-file-host/Projects/images/foo.png
+                    string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                        ? fullPath.Substring(driveRoot.Length)
+                        : fullPath;
+
+                    return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
+                }
+                catch
+                {
+                    // If path resolution fails, keep the original path
+                    return match.Value;
+                }
+            });
+
+            return html;
         }
 
         private async Task UpdateContentAsync(string html)
@@ -618,6 +1247,7 @@ namespace MarkdownEditor2022
             // Feature detection
             bool needsPrism = html.IndexOf("language-", StringComparison.OrdinalIgnoreCase) >= 0;
             bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 || html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool needsMath = html.IndexOf("class=\"math\"", StringComparison.OrdinalIgnoreCase) >= 0;
 
             if (isInit)
             {
@@ -635,10 +1265,15 @@ namespace MarkdownEditor2022
                 if (needsMermaid)
                 {
                     string mermaidTheme = GetMermaidTheme();
-                    script.Append(@"if(!window.mermaid && !window.__mermaidLoading){window.__mermaidLoading=true;var sm=document.createElement('script');sm.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mermaid.min.js';sm.onload=function(){try{mermaid.initialize({ securityLevel: 'loose', theme: '").Append(mermaidTheme).Append(@"', flowchart:{ htmlLabels:false }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}};document.head.appendChild(sm);} else if(window.mermaid){try{mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}}");
+                    script.Append(@"if(!window.mermaid && !window.__mermaidLoading){window.__mermaidLoading=true;var sm=document.createElement('script');sm.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mermaid.min.js';sm.onload=function(){try{mermaid.initialize({ securityLevel: 'loose', theme: '").Append(mermaidTheme).Append(@"', flowchart:{ htmlLabels:false }, sequence:{ useMaxWidth:true }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}};document.head.appendChild(sm);} else if(window.mermaid){try{mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}}");
+                }
+                if (needsMath)
+                {
+                    // MathJax lazy load or re-typeset
+                    script.Append(@"if(!window.MathJax && !window.__mathjaxLoading){window.__mathjaxLoading=true;var sj=document.createElement('script');sj.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mathjax.js';sj.onload=function(){if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}};document.head.appendChild(sj);} else if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}");
                 }
 
-                // Inline anchor adjustment to avoid extra round-trip
+                // Inline anchor adjustment
                 script.Append(@"(function(){for (const anchor of document.links){try{if(anchor && anchor.protocol==='file:'){var pathName=null,hash=anchor.hash;if(hash){pathName=anchor.pathname;anchor.hash=null;anchor.pathname='';}anchor.protocol='about:';if(hash){if(pathName==null||pathName.endsWith('/')){pathName='blank';}anchor.pathname=pathName;anchor.hash=hash;}}}catch(e){}}})();");
                 script.Append("})();");
 
@@ -648,15 +1283,20 @@ namespace MarkdownEditor2022
             {
                 // Initial navigation path: build scripts only for needed features.
                 string htmlTemplate = GetHtmlTemplate();
-                string scripts = BuildInitialScriptTags(needsPrism, needsMermaid);
+                string scripts = BuildInitialScriptTags(needsPrism, needsMermaid, needsMath);
                 html = htmlTemplate.Replace("[content]", html).Replace("[scripts]", scripts);
+                _isTemplateLoaded = false;
                 _browser.NavigateToString(html);
             }
         }
 
-        private static string BuildInitialScriptTags(bool prism, bool mermaid)
+        private static string BuildInitialScriptTags(bool prism, bool mermaid, bool math = false)
         {
-            if (!prism && !mermaid) return string.Empty;
+            if (!prism && !mermaid && !math)
+            {
+                return string.Empty;
+            }
+
             StringBuilder sb = new();
             if (prism)
             {
@@ -665,7 +1305,11 @@ namespace MarkdownEditor2022
             if (mermaid)
             {
                 string theme = GetMermaidTheme();
-                sb.Append("<script src=\"http://").Append(_mappedMarkdownEditorVirtualHostName).Append("/margin/mermaid.min.js\" onload=\"try{mermaid.initialize({ securityLevel:'loose', theme:'").Append(theme).Append("', flowchart:{ htmlLabels:false }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}\"></script>");
+                sb.Append("<script src=\"http://").Append(_mappedMarkdownEditorVirtualHostName).Append("/margin/mermaid.min.js\" onload=\"try{mermaid.initialize({ securityLevel:'loose', theme:'").Append(theme).Append("', flowchart:{ htmlLabels:true }, sequence:{ useMaxWidth:true }}); mermaid.init(undefined, document.querySelectorAll('.mermaid'));}catch(e){}\"></script>");
+            }
+            if (math)
+            {
+                sb.Append("<script src=\"http://").Append(_mappedMarkdownEditorVirtualHostName).Append("/margin/mathjax.js\" onload=\"if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}\"></script>");
             }
             return sb.ToString();
         }
@@ -698,7 +1342,7 @@ namespace MarkdownEditor2022
             long highlightTicks = SafeGetWriteTime(highlightSourcePath).Ticks;
             long prismTicks = SafeGetWriteTime(prismSourcePath).Ticks;
 
-            // Include theme colors in cache key so template updates when VS theme changes
+            // Include theme colors in cache key so template updates correctly
             string cacheKey = string.Join("|", useLightTheme ? "light" : "dark", spellCheck ? "spell" : "plain", templateFileName, templateTicks, highlightSourcePath, highlightTicks, prismSourcePath, prismTicks, themeBgColor, themeFgColor, scrollbarColor);
 
             if (!_templateCache.TryGetValue(cacheKey, out string cachedTemplate))
@@ -709,7 +1353,6 @@ namespace MarkdownEditor2022
                 string cssPrism = GetPrismCss(useLightTheme, prismSourcePath);
 
                 string css = cssHighlight + cssPrism;
-                string dirName = new FileInfo(_file).Directory.Name;
 
                 // Scrollbar styling for WebView2 (Chromium-based)
                 string scrollbarCss = $@"
@@ -719,20 +1362,26 @@ namespace MarkdownEditor2022
         ::-webkit-scrollbar-thumb:hover {{ background: {themeFgColor}80; }}
         ::-webkit-scrollbar-corner {{ background: {themeBgColor}; }}";
 
+                string themeColorCss = usingCustomHighlight
+                    ? string.Empty
+                    : $@"
+        html, body {{background-color: {themeBgColor}; color: {themeFgColor};}}
+        .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}";
+
                 string defaultHeadBeg = $@"
 <head>
     <meta http-equiv=""X-UA-Compatible"" content=""IE=Edge"" />
     <meta charset=""utf-8"" />
-    <base href=""http://{_mappedBrowsingFileVirtualHostName}/{dirName}/"" />
     <style>
-        html, body {{margin: 0; padding:0; min-height: 100%; display: block; background-color: {themeBgColor}; color: {themeFgColor};}}
-        .markdown-body {{background-color: {themeBgColor}; color: {themeFgColor};}}
+        html, body {{margin: 0; padding:0; min-height: 100%; display: block;}}
         #___markdown-content___ {{padding: 5px 5px 10px 5px; min-height: {_browser.ActualHeight - 15}px}}
         .markdown-alert {{padding: 1em 1em .5em 1em; margin-bottom: 1em; border-radius: 1em; background: #c0c0c022}}
         .markdown-alert-title {{font-weight: bold; color:inherit}}
         .markdown-alert-title svg {{margin-right: 5px; margin-top: -1px;}}
         {scrollbarCss}
         {css}
+        {themeColorCss}
+        .markdown-body img {{background-color: transparent;}}
     </style>";
                 string defaultContent = @"
     <div id=""___markdown-content___"" class=""markdown-body"" [CONTENTEDITABLE]>
@@ -742,11 +1391,12 @@ namespace MarkdownEditor2022
     [clicksyncscript]
     ";
                 string clickSyncScript = AdvancedOptions.Instance.EnablePreviewClickSync ? GetClickToSyncScript() : string.Empty;
+                string bodyStyle = usingCustomHighlight ? string.Empty : $" style=\"background-color:{themeBgColor};color:{themeFgColor}\"";
                 string processed = templateRaw
                     .Replace("<head>", defaultHeadBeg)
                     .Replace("[content]", defaultContent)
                     .Replace("[title]", "Markdown Preview")
-                    .Replace("<body>", $"<body style=\"background-color:{themeBgColor};color:{themeFgColor}\">")
+                    .Replace("<body>", $"<body{bodyStyle}>")
                     .Replace("[clicksyncscript]", clickSyncScript);
                 _templateCache[cacheKey] = processed;
                 cachedTemplate = processed;
@@ -758,9 +1408,7 @@ namespace MarkdownEditor2022
             static string GetTemplateContent(string templatePath)
             {
                 string defaultPath = Path.Combine(GetFolder(), "Margin", "md-template.html");
-                if (templatePath == defaultPath && _cachedDefaultTemplate != null)
-                    return _cachedDefaultTemplate;
-                return File.ReadAllText(templatePath);
+                return templatePath == defaultPath && _cachedDefaultTemplate != null ? _cachedDefaultTemplate : File.ReadAllText(templatePath);
             }
 
             static string GetHighlightCss(bool useLightTheme, bool isCustom, string path)
@@ -769,19 +1417,22 @@ namespace MarkdownEditor2022
                 {
                     string cached = useLightTheme ? _cachedHighlightCssLight : _cachedHighlightCssDark;
                     if (cached != null)
+                    {
                         return cached;
+                    }
                 }
-                string content = File.ReadAllText(path);
-                return _bgColorRegex.Replace(content, "background-color:inherit");
+                return File.ReadAllText(path);
             }
 
             static string GetPrismCss(bool useLightTheme, string path)
             {
                 string cached = useLightTheme ? _cachedPrismCssLight : _cachedPrismCssDark;
                 if (cached != null)
+                {
                     return cached;
-                string content = File.ReadAllText(path);
-                return _bgColorRegex.Replace(content, "background-color:inherit");
+                }
+
+                return File.ReadAllText(path);
             }
 
             static DateTime SafeGetWriteTime(string path)
@@ -805,30 +1456,97 @@ namespace MarkdownEditor2022
                 return _cachedThemeColors.Value;
             }
 
+            if (TryGetForcedThemeColors(out (bool useLightTheme, Color bgColor, Color fgColor) forcedThemeColors))
+            {
+                (bool useLightTheme, string, string) forcedResult = (forcedThemeColors.useLightTheme, ColorToHex(forcedThemeColors.bgColor), ColorToHex(forcedThemeColors.fgColor));
+                _cachedThemeColors = forcedResult;
+                return forcedResult;
+            }
+
+            (Color bgColor, Color fgColor) = TryGetColorsFromFormatMap();
+
+            bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
+            if (AdvancedOptions.Instance.Theme == Theme.Automatic)
+            {
+                ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(bgColor);
+                useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
+            }
+
+            (bool useLightTheme, string, string) result = (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
+            _cachedThemeColors = result;
+            return result;
+
+            static string ColorToHex(Color c)
+            {
+                return $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+            }
+        }
+
+        /// <summary>
+        /// Gets the Visual Studio background color that should be used for the preview.
+        /// Uses the editor background if available, falls back to environment colors.
+        /// </summary>
+        private Color GetPreviewBackgroundColor()
+        {
+            if (TryGetForcedThemeColors(out (bool useLightTheme, Color bgColor, Color fgColor) forcedThemeColors))
+            {
+                return forcedThemeColors.bgColor;
+            }
+
+            (Color bgColor, _) = TryGetColorsFromFormatMap();
+            return bgColor;
+        }
+
+        private static bool TryGetForcedThemeColors(out (bool useLightTheme, Color bgColor, Color fgColor) colors)
+        {
+            if (AdvancedOptions.Instance.Theme == Theme.Light)
+            {
+                colors = (true, Colors.White, Colors.Black);
+                return true;
+            }
+
+            if (AdvancedOptions.Instance.Theme == Theme.Dark)
+            {
+                colors = (false, Color.FromRgb(0x1E, 0x1E, 0x1E), Color.FromRgb(0xD4, 0xD4, 0xD4));
+                return true;
+            }
+
+            colors = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Tries to extract background and foreground colors from the editor format map and fallback sources.
+        /// </summary>
+        private (Color background, Color foreground) TryGetColorsFromFormatMap()
+        {
             Color bgColor = default;
             Color fgColor = default;
             bool foundBg = false;
             bool foundFg = false;
 
             // Use IEditorFormatMap to get the actual editor background color
-            // The background is typically in "TextView Background", not "Plain Text"
             if (_formatMapService != null && _textView != null)
             {
                 try
                 {
                     IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
 
-                    // Try multiple format map keys for background - "TextView Background" is the actual editor surface
+                    // Try multiple format map keys for background
                     string[] bgKeys = ["TextView Background", "text", "Plain Text"];
                     foreach (string key in bgKeys)
                     {
-                        if (foundBg) break;
+                        if (foundBg)
+                        {
+                            break;
+                        }
+
                         ResourceDictionary props = formatMap.GetProperties(key);
                         if (props != null)
                         {
                             if (props.Contains(EditorFormatDefinition.BackgroundBrushId) &&
                                 props[EditorFormatDefinition.BackgroundBrushId] is SolidColorBrush bgBrush &&
-                                bgBrush.Color.A > 0) // Ensure not transparent
+                                bgBrush.Color.A > 0)
                             {
                                 bgColor = bgBrush.Color;
                                 foundBg = true;
@@ -869,7 +1587,7 @@ namespace MarkdownEditor2022
                 }
             }
 
-            // Try IWpfTextView.Background as second option (may have actual rendered background)
+            // Try IWpfTextView.Background as second option
             if (!foundBg && _textView?.Background is SolidColorBrush viewBgBrush && viewBgBrush.Color.A > 0)
             {
                 bgColor = viewBgBrush.Color;
@@ -877,16 +1595,16 @@ namespace MarkdownEditor2022
             }
 
             // Fallback to environment colors
-            if (!foundBg)
+            if (!foundBg && Application.Current?.Resources != null)
             {
-                if (Application.Current.Resources[EnvironmentColors.EnvironmentBackgroundBrushKey] is SolidColorBrush envBgBrush)
+                if (Application.Current.Resources[EnvironmentColors.ToolWindowBackgroundBrushKey] is SolidColorBrush envBgBrush)
                 {
                     bgColor = envBgBrush.Color;
                     foundBg = true;
                 }
             }
 
-            if (!foundFg)
+            if (!foundFg && Application.Current?.Resources != null)
             {
                 if (Application.Current.Resources[EnvironmentColors.PanelTextBrushKey] is SolidColorBrush envFgBrush)
                 {
@@ -896,107 +1614,19 @@ namespace MarkdownEditor2022
             }
 
             // Ultimate fallback
-            if (!foundBg) bgColor = Colors.White;
-            if (!foundFg) fgColor = Colors.Black;
-
-            bool useLightTheme = AdvancedOptions.Instance.Theme == Theme.Light;
-            if (AdvancedOptions.Instance.Theme == Theme.Automatic)
-            {
-                ContrastComparisonResult contrast = ColorUtilities.CompareContrastWithBlackAndWhite(bgColor);
-                useLightTheme = contrast == ContrastComparisonResult.ContrastHigherWithBlack;
-            }
-
-            var result = (useLightTheme, ColorToHex(bgColor), ColorToHex(fgColor));
-            _cachedThemeColors = result;
-            return result;
-
-            static string ColorToHex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
-        }
-
-        /// <summary>
-        /// Gets the Visual Studio background color that should be used for the preview.
-        /// Uses the editor background if available, falls back to environment colors.
-        /// </summary>
-        private Color GetPreviewBackgroundColor()
-        {
-            // Try to get the editor background color from the format map
-            if (_formatMapService != null && _textView != null)
-            {
-                try
-                {
-                    IEditorFormatMap formatMap = _formatMapService.GetEditorFormatMap(_textView);
-                    string[] bgKeys = ["TextView Background", "text", "Plain Text"];
-                    foreach (string key in bgKeys)
-                    {
-                        ResourceDictionary props = formatMap.GetProperties(key);
-                        if (props != null)
-                        {
-                            if (props.Contains(EditorFormatDefinition.BackgroundBrushId) &&
-                                props[EditorFormatDefinition.BackgroundBrushId] is SolidColorBrush bgBrush &&
-                                bgBrush.Color.A > 0)
-                            {
-                                return bgBrush.Color;
-                            }
-                            else if (props.Contains(EditorFormatDefinition.BackgroundColorId) &&
-                                     props[EditorFormatDefinition.BackgroundColorId] is Color bgColorVal &&
-                                     bgColorVal.A > 0)
-                            {
-                                return bgColorVal;
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // Fall through to other methods
-                }
-            }
-
-            // Try IWpfTextView.Background
-            if (_textView?.Background is SolidColorBrush viewBgBrush && viewBgBrush.Color.A > 0)
-            {
-                return viewBgBrush.Color;
-            }
-
-            // Try VS theme service
-            try
-            {
-                System.Drawing.Color themeColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
-                if (themeColor != System.Drawing.Color.Empty && themeColor.A > 0)
-                {
-                    return Color.FromArgb(themeColor.A, themeColor.R, themeColor.G, themeColor.B);
-                }
-            }
-            catch
-            {
-                // Fall through
-            }
-
-            // Fallback to WPF resource lookup
-            if (Application.Current?.Resources != null)
-            {
-                if (Application.Current.Resources[EnvironmentColors.ToolWindowBackgroundBrushKey] is SolidColorBrush envBgBrush)
-                {
-                    return envBgBrush.Color;
-                }
-            }
-
-            return Colors.White;
+            return (foundBg ? bgColor : Colors.White, foundFg ? fgColor : Colors.Black);
         }
 
         private static StringBuilder GetOrCreateStringBuilder()
         {
-            if (_stringBuilderPool.TryDequeue(out StringBuilder sb))
-            {
-                return sb;
-            }
-            return new StringBuilder(2048);
+            return _stringBuilderPool.TryDequeue(out StringBuilder sb) ? sb : new StringBuilder(2048);
         }
 
         private static string EscapeForJavaScript(string input)
         {
-            if (string.IsNullOrEmpty(input)) return input;
-            return _escapeRegex.Replace(input, m => m.Value switch
+            return string.IsNullOrEmpty(input)
+                ? input
+                : _escapeRegex.Replace(input, m => m.Value switch
             {
                 "\\" => "\\\\",
                 "\r" => "\\r",
@@ -1065,15 +1695,29 @@ namespace MarkdownEditor2022
                     string defaultTemplatePath = Path.Combine(folder, "Margin", "md-template.html");
 
                     if (File.Exists(highlightLightPath))
-                        _cachedHighlightCssLight = _bgColorRegex.Replace(File.ReadAllText(highlightLightPath), "background-color:inherit");
+                    {
+                        _cachedHighlightCssLight = File.ReadAllText(highlightLightPath);
+                    }
+
                     if (File.Exists(highlightDarkPath))
-                        _cachedHighlightCssDark = _bgColorRegex.Replace(File.ReadAllText(highlightDarkPath), "background-color:inherit");
+                    {
+                        _cachedHighlightCssDark = File.ReadAllText(highlightDarkPath);
+                    }
+
                     if (File.Exists(prismLightPath))
-                        _cachedPrismCssLight = _bgColorRegex.Replace(File.ReadAllText(prismLightPath), "background-color:inherit");
+                    {
+                        _cachedPrismCssLight = File.ReadAllText(prismLightPath);
+                    }
+
                     if (File.Exists(prismDarkPath))
-                        _cachedPrismCssDark = _bgColorRegex.Replace(File.ReadAllText(prismDarkPath), "background-color:inherit");
+                    {
+                        _cachedPrismCssDark = File.ReadAllText(prismDarkPath);
+                    }
+
                     if (File.Exists(defaultTemplatePath))
+                    {
                         _cachedDefaultTemplate = File.ReadAllText(defaultTemplatePath);
+                    }
                 }
                 catch
                 {
@@ -1094,15 +1738,39 @@ namespace MarkdownEditor2022
 
         private static string FindFileRecursively(string folder, string fileName, string fallbackFileName)
         {
-            if (string.IsNullOrEmpty(folder)) return fallbackFileName;
+            if (string.IsNullOrEmpty(folder))
+            {
+                return fallbackFileName;
+            }
+
+            string cacheKey = string.Concat(folder, "|", fileName, "|", fallbackFileName ?? string.Empty);
+            DateTime nowUtc = DateTime.UtcNow;
+            if (_recursiveFileLookupCache.TryGetValue(cacheKey, out (string path, DateTime expiresUtc) cached) && cached.expiresUtc > nowUtc)
+            {
+                return cached.path;
+            }
+
             DirectoryInfo dir = new(folder);
+            string resolvedPath = fallbackFileName;
             do
             {
                 string candidate = Path.Combine(dir.FullName, fileName);
-                if (File.Exists(candidate)) return candidate;
+                if (File.Exists(candidate))
+                {
+                    resolvedPath = candidate;
+                    break;
+                }
+
                 dir = dir.Parent;
             } while (dir != null);
-            return fallbackFileName;
+
+            _recursiveFileLookupCache[cacheKey] = (resolvedPath, nowUtc.Add(_fileDiscoveryCacheDuration));
+            return resolvedPath;
+        }
+
+        private void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            _isTemplateLoaded = e.IsSuccess;
         }
 
         private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)

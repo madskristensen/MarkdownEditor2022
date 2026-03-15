@@ -64,6 +64,12 @@ namespace MarkdownEditor2022
         {
             Document document = doc.TextBuffer.GetDocument();
 
+            // Guard against null Markdown (document not yet parsed)
+            if (document?.Markdown == null)
+            {
+                return;
+            }
+
             foreach (SnapshotSpan span in doc.TextView.Selection.SelectedSpans.Reverse())
             {
                 MarkdownObject block = document.Markdown.Descendants().LastOrDefault(d => d.Span.Start <= span.Start.Position && d.Span.End >= span.Start.Position);

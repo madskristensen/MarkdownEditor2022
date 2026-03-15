@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text;
 
 namespace MarkdownEditor2022
 {
@@ -10,7 +10,7 @@ namespace MarkdownEditor2022
             Command.Supported = false;
             return base.InitializeCompletedAsync();
         }
-        
+
         protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
         {
             DocumentView docView = await VS.Documents.GetActiveDocumentViewAsync();

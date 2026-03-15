@@ -22,6 +22,7 @@ namespace MarkdownEditor2022
         public const string MarkdownQuote = "md_quote";
         public const string MarkdownHtml = "md_html";
         public const string MarkdownLink = "md_link";
+        public const string MarkdownTableHeader = "md_table_header";
         public const string MarkdownComment = PredefinedClassificationTypeNames.Comment;
 
         [Export, Name(MarkdownBold)]
@@ -75,6 +76,10 @@ namespace MarkdownEditor2022
         [Export, Name(MarkdownLink)]
         [BaseDefinition(PredefinedClassificationTypeNames.Text)]
         public static ClassificationTypeDefinition MarkdownClassificationLink { get; set; }
+
+        [Export, Name(MarkdownTableHeader)]
+        [BaseDefinition(PredefinedClassificationTypeNames.Text)]
+        public static ClassificationTypeDefinition MarkdownClassificationTableHeader { get; set; }
     }
 
     [Export(typeof(EditorFormatDefinition))]
@@ -246,6 +251,22 @@ namespace MarkdownEditor2022
                 new TextDecoration(){ Location = TextDecorationLocation.Underline, PenOffset = 2 }
             ];
             DisplayName = "Markdown Link";
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = ClassificationTypes.MarkdownTableHeader)]
+    [Name(ClassificationTypes.MarkdownTableHeader)]
+    [UserVisible(true)]
+    internal sealed class MarkdownTableHeaderFormatDefinition : ClassificationFormatDefinition
+    {
+        public MarkdownTableHeaderFormatDefinition()
+        {
+            TextDecorations =
+            [
+                new TextDecoration() { Location = TextDecorationLocation.Underline }
+            ];
+            DisplayName = "Markdown Table Header";
         }
     }
 }

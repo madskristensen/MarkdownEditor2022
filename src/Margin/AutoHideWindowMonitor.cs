@@ -53,6 +53,21 @@ namespace MarkdownEditor2022
         }
 
         /// <summary>
+        /// Disposes the singleton instance. Should be called during package shutdown.
+        /// </summary>
+        public static void DisposeInstance()
+        {
+            lock (_lock)
+            {
+                if (_instance != null)
+                {
+                    _instance.Dispose();
+                    _instance = null;
+                }
+            }
+        }
+
+        /// <summary>
         /// Initializes the monitor by subscribing to VS shell window frame events.
         /// Must be called on the UI thread.
         /// </summary>
@@ -257,6 +272,10 @@ namespace MarkdownEditor2022
                         return false; // Not a tool window
                     }
                 }
+                else
+                {
+                    return false; // Could not determine window type - assume not auto-hide tool window
+                }
 
                 // Check frame mode for auto-hide flag - this tells us if the window is 
                 // CONFIGURED for auto-hide behavior (value 4 means auto-hide)
@@ -311,11 +330,13 @@ namespace MarkdownEditor2022
 
         public void OnFrameIsVisibleChanged(IVsWindowFrame frame, bool newIsVisible)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             HandleFrameVisibilityChange(frame, newIsVisible);
         }
 
         public void OnFrameIsOnScreenChanged(IVsWindowFrame frame, bool newIsOnScreen)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             // Also handle on-screen changes - this is more reliable for auto-hide windows
             // that physically slide in/out of view
             HandleFrameVisibilityChange(frame, newIsOnScreen);
@@ -386,6 +407,7 @@ namespace MarkdownEditor2022
 
         public void Dispose()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             if (_isDisposed)
             {
                 return;

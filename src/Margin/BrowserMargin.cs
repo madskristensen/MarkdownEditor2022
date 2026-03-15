@@ -1,12 +1,15 @@
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.IO;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+
+#pragma warning disable VSTHRD001 // Avoid legacy thread switching APIs - Dispatcher.InvokeAsync is correct for WPF
+#pragma warning disable VSSDK007 // Use JoinableTaskFactory - fire-and-forget is intentional here
 
 namespace MarkdownEditor2022
 {
@@ -18,7 +21,7 @@ namespace MarkdownEditor2022
         private double _lastScrollPosition;
         private bool _isDisposed;
         private DateTime _lastEdit;
-        private static readonly Debouncer _debouncer = new(150); // Reduced debounce time for better responsiveness
+        private readonly Debouncer _debouncer = new(150); // Per-instance debouncer for correct behavior with multiple documents
         private bool _isPreviewHiddenByAutoHide;
         private bool _isRegisteredWithAutoHideMonitor;
 
@@ -45,6 +48,11 @@ namespace MarkdownEditor2022
 
         private async Task InitializeAutoHideMonitorAsync()
         {
+            if (_isRegisteredWithAutoHideMonitor)
+            {
+                return;
+            }
+
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             AutoHideWindowMonitor monitor = AutoHideWindowMonitor.GetInstance();
             monitor.Initialize();
@@ -145,7 +153,20 @@ namespace MarkdownEditor2022
                 InitializeAutoHideMonitorAsync().FireAndForget();
             }
 
-            //UpdateBrowser(_document);
+            // Browser performs its own initial render during WebView2 initialization.
+            // Trigger an extra startup render only for standalone mermaid files,
+            // which use a separate rendering path.
+            if (IsStandaloneMermaidFile(_textView.TextBuffer.GetFileName()))
+            {
+                _ = Browser.UpdateBrowserAsync();
+            }
+        }
+
+        private static bool IsStandaloneMermaidFile(string filePath)
+        {
+            string extension = Path.GetExtension(filePath);
+            return string.Equals(extension, ".mermaid", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".mmd", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -236,7 +257,7 @@ namespace MarkdownEditor2022
                     VerticalAlignment = VerticalAlignment.Stretch,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     Cursor = System.Windows.Input.Cursors.SizeWE,
-                    Style = CreateSplitterStyle()
+                    Style = ThemeHelper.CreateSplitterStyle()
                 };
                 splitter.DragStarted += (s, e) => isDragging = true;
                 splitter.DragCompleted += (s, e) =>
@@ -247,7 +268,7 @@ namespace MarkdownEditor2022
                         double totalWidth = _textView.ViewportWidth + Browser._browser.ActualWidth;
                         if (totalWidth > 0)
                         {
-                            double percentage = (Browser._browser.ActualWidth / totalWidth) * 100;
+                            double percentage = Browser._browser.ActualWidth / totalWidth * 100;
                             AdvancedOptions.Instance.PreviewWindowWidthPercentage = Math.Max(10, Math.Min(90, percentage));
                             AdvancedOptions.Instance.Save();
                         }
@@ -264,7 +285,9 @@ namespace MarkdownEditor2022
                 void UpdateWidthFromPercentage()
                 {
                     if (isUpdating || isDragging || _textView.ViewportWidth <= 0)
+                    {
                         return;
+                    }
 
                     isUpdating = true;
 
@@ -272,7 +295,9 @@ namespace MarkdownEditor2022
                     {
                         double currentPreviewWidth = grid.ColumnDefinitions[2].ActualWidth;
                         if (currentPreviewWidth <= 0)
+                        {
                             currentPreviewWidth = 400;
+                        }
 
                         double totalWidth = _textView.ViewportWidth + currentPreviewWidth;
                         double percentage = AdvancedOptions.Instance.PreviewWindowWidthPercentage / 100.0;
@@ -288,23 +313,31 @@ namespace MarkdownEditor2022
                     }
                 }
 
-                // Debounced resize handler
+                // Debounced resize handler — reuse a single timer to avoid leaking DispatcherTimer instances
                 void OnViewportWidthChanged(object s, EventArgs e)
                 {
                     if (isUpdating || isDragging)
-                        return;
-
-                    // Reset timer on each event
-                    resizeTimer?.Stop();
-                    resizeTimer = new System.Windows.Threading.DispatcherTimer
                     {
-                        Interval = TimeSpan.FromMilliseconds(50)
-                    };
-                    resizeTimer.Tick += (_, __) =>
+                        return;
+                    }
+
+                    if (resizeTimer == null)
+                    {
+                        resizeTimer = new System.Windows.Threading.DispatcherTimer
+                        {
+                            Interval = TimeSpan.FromMilliseconds(50)
+                        };
+                        resizeTimer.Tick += (_, __) =>
+                        {
+                            resizeTimer.Stop();
+                            UpdateWidthFromPercentage();
+                        };
+                    }
+                    else
                     {
                         resizeTimer.Stop();
-                        UpdateWidthFromPercentage();
-                    };
+                    }
+
                     resizeTimer.Start();
                 }
 
@@ -338,7 +371,7 @@ namespace MarkdownEditor2022
                     VerticalAlignment = VerticalAlignment.Stretch,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     Cursor = System.Windows.Input.Cursors.SizeNS,
-                    Style = CreateSplitterStyle()
+                    Style = ThemeHelper.CreateSplitterStyle()
                 };
                 splitter.DragCompleted += SplitterDragCompleted;
 
@@ -348,28 +381,9 @@ namespace MarkdownEditor2022
             }
         }
 
-        private static Style CreateSplitterStyle()
-        {
-            Style style = new(typeof(GridSplitter));
-
-            // Create a simple template that just uses a Border with the scrollbar background color
-            // This matches the editor margin/scrollbar track color
-            FrameworkElementFactory border = new(typeof(System.Windows.Controls.Border));
-            border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, EnvironmentColors.ScrollBarBackgroundBrushKey);
-
-            ControlTemplate template = new(typeof(GridSplitter))
-            {
-                VisualTree = border
-            };
-
-            style.Setters.Add(new Setter(Control.TemplateProperty, template));
-            style.Setters.Add(new Setter(Control.FocusVisualStyleProperty, null));
-
-            return style;
-        }
-
         private void AdvancedOptions_Saved(AdvancedOptions options)
         {
+            Browser.InvalidateThemeCache();
             RefreshAsync().FireAndForget();
         }
 
@@ -387,8 +401,12 @@ namespace MarkdownEditor2022
                 Visibility = Visibility.Visible;
                 await Browser.RefreshAsync();
 
-                int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
-                await Browser.UpdatePositionAsync(line, false);
+                // Only sync position on refresh if scroll sync is enabled
+                if (options.EnableScrollSync)
+                {
+                    int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
+                    await Browser.UpdatePositionAsync(line, false);
+                }
             }
             else
             {

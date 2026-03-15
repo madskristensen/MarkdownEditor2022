@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading.Tasks;
+using Markdig.Extensions.Tables;
 using Markdig.Extensions.Yaml;
 using Markdig.Helpers;
 using Markdig.Syntax;
@@ -40,25 +41,36 @@ namespace MarkdownEditor2022
 
         private void ReParse(Document document)
         {
-            System.Diagnostics.Debug.WriteLine($"ReParse triggered");
             _ = TokenizeAsync();
         }
 
         public override Task TokenizeAsync()
         {
-            System.Diagnostics.Debug.WriteLine($"TokenizeAsync called, IsParsing={_document.IsParsing}");
             ThreadHelper.ThrowIfOnUIThread();
 
-            List<ITagSpan<TokenTag>> list = [];
-            IEnumerable<MarkdownObject> descendants = _document.Markdown.Descendants();
+            // Guard against null Markdown (document not yet parsed or parsing failed)
+            if (_document.Markdown == null)
+            {
+                return Task.CompletedTask;
+            }
 
-            foreach (MarkdownObject item in descendants)
+            List<ITagSpan<TokenTag>> list = [];
+            bool enableTableSorting = AdvancedOptions.Instance.EnableTableSorting;
+            List<Table> tables = enableTableSorting ? [] : null;
+
+            foreach (MarkdownObject item in _document.Markdown.Descendants())
             {
                 if (_document.IsParsing)
                 {
                     return Task.CompletedTask;
                 }
                 AddTagToList(list, item);
+
+                // Collect tables during the same walk to avoid a second Descendants() call
+                if (enableTableSorting && item is Table table)
+                {
+                    tables.Add(table);
+                }
             }
 
             // Use analysis for headings to avoid duplicate descendant filtering
@@ -75,17 +87,61 @@ namespace MarkdownEditor2022
                 }
             }
 
+            // Add table header cell classifications (cells aren't included in Descendants())
+            if (tables != null)
+            {
+                foreach (Table table in tables)
+                {
+                    if (_document.IsParsing)
+                    {
+                        return Task.CompletedTask;
+                    }
+                    AddTableHeaderTags(list, table);
+                }
+            }
+
             OnTagsUpdated(list);
             return Task.CompletedTask;
+        }
+
+        private void AddTableHeaderTags(List<ITagSpan<TokenTag>> list, Table table)
+        {
+            foreach (TableRow row in table.OfType<TableRow>())
+            {
+                if (!row.IsHeader)
+                {
+                    continue;
+                }
+
+                foreach (TableCell cell in row.OfType<TableCell>())
+                {
+                    if (cell.Span.Length == 0 || cell.Span.Start >= Buffer.CurrentSnapshot.Length)
+                    {
+                        continue;
+                    }
+
+                    int start = cell.Span.Start;
+                    int length = Math.Min(cell.Span.Length, Buffer.CurrentSnapshot.Length - start);
+
+                    if (length <= 0)
+                    {
+                        continue;
+                    }
+
+                    SnapshotSpan span = new(Buffer.CurrentSnapshot, start, length);
+                    TokenTag tag = CreateToken(ClassificationTypes.MarkdownTableHeader, false, false, null);
+                    list.Add(new TagSpan<TokenTag>(span, tag));
+                }
+            }
         }
 
         private void AddTagToList(List<ITagSpan<TokenTag>> list, MarkdownObject item)
         {
             bool supportsOutlining = item is FencedCodeBlock;
-            IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
+            //IEnumerable<ErrorListItem> errors = item.GetErrors(_document.FileName);
 
             SnapshotSpan span = new(Buffer.CurrentSnapshot, GetApplicableSpan(item));
-            
+
             // Special handling for HeadingBlock to differentiate levels
             string tokenType = GetItemType(item);
             if (item is HeadingBlock headingBlock)
@@ -102,7 +158,7 @@ namespace MarkdownEditor2022
                 };
             }
 
-            TokenTag tag = CreateToken(tokenType, true, supportsOutlining, errors);
+            TokenTag tag = CreateToken(tokenType, true, supportsOutlining, []);
 
             if (tag.TokenType != null)
             {
@@ -149,12 +205,10 @@ namespace MarkdownEditor2022
                 int headingStart = heading.Span.Start;
                 int headingEnd = heading.Span.End;
 
-                System.Diagnostics.Debug.WriteLine($"AddHeaderOutlining: Level={heading.Level}, Start={headingStart}, End={headingEnd}, SnapshotLength={snapshotLength}");
 
                 // Need at least 2 characters after heading: newline + content
                 if (headingEnd + 2 > snapshotLength)
                 {
-                    System.Diagnostics.Debug.WriteLine($"  Skipped: headingEnd + 2 ({headingEnd + 2}) > snapshotLength ({snapshotLength})");
                     return;
                 }
 
@@ -174,7 +228,6 @@ namespace MarkdownEditor2022
 
                 if (index == -1)
                 {
-                    System.Diagnostics.Debug.WriteLine($"  Skipped: heading not found in list");
                     return;
                 }
 
@@ -189,7 +242,6 @@ namespace MarkdownEditor2022
                     }
                 }
 
-                System.Diagnostics.Debug.WriteLine($"  RegionEnd={regionEnd}, Check: regionEnd > headingEnd + 2 = {regionEnd} > {headingEnd + 2} = {regionEnd > headingEnd + 2}");
 
                 // Only create outlining if there's meaningful content after the heading line
                 if (regionEnd > headingEnd + 2)
@@ -200,18 +252,12 @@ namespace MarkdownEditor2022
 
                     TokenTag tag = CreateToken("outlining", false, true, null);
                     Span span = Span.FromBounds(spanStart, regionEnd);
-                    System.Diagnostics.Debug.WriteLine($"  Creating span: Start={spanStart}, End={regionEnd}, Length={span.Length}");
                     SnapshotSpan ss = new(Buffer.CurrentSnapshot, span);
                     list.Add(new TagSpan<TokenTag>(ss, tag));
                 }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"  Skipped: no meaningful content after heading");
-                }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddHeaderOutlining ERROR: {ex}");
                 ex.Log();
             }
         }
@@ -220,15 +266,12 @@ namespace MarkdownEditor2022
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"GetOutliningText called with text length: {text?.Length ?? -1}");
                 string firstLine = text.Split('\n').FirstOrDefault()?.Trim() ?? string.Empty;
-                System.Diagnostics.Debug.WriteLine($"  FirstLine: '{firstLine}'");
 
                 // Check if this is a markdown heading (starts with #)
                 if (firstLine.StartsWith("#"))
                 {
                     string result = $"{firstLine} ";
-                    System.Diagnostics.Debug.WriteLine($"  Returning heading: '{result}'");
                     return result;
                 }
 
@@ -239,12 +282,10 @@ namespace MarkdownEditor2022
                     language = " " + firstLine.Substring(3).Trim();
                 }
 
-                System.Diagnostics.Debug.WriteLine($"  Returning code block: '{language} '");
                 return $"{language} ";
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetOutliningText ERROR: {ex}");
                 ex.Log();
                 return "...";
             }
@@ -258,7 +299,7 @@ namespace MarkdownEditor2022
             // Error messages
             foreach (MarkdownObject item in items)
             {
-                IEnumerable<ErrorListItem> errors = item?.GetErrors(_document.FileName);
+                IEnumerable<ErrorListItem> errors = [];// item?.GetErrors(_document.FileName);
 
                 if (errors?.Any() == true)
                 {
@@ -310,9 +351,13 @@ namespace MarkdownEditor2022
                 CodeBlock or CodeInline => ClassificationTypes.MarkdownCode,
                 QuoteBlock => ClassificationTypes.MarkdownQuote,
                 LinkInline => ClassificationTypes.MarkdownLink,
-                EmphasisInline ei when ei.DelimiterCount == 2 && ei.DelimiterChar == '~' => ClassificationTypes.MarkdownStrikethrough,
-                EmphasisInline ei when ei.DelimiterCount == 1 => ClassificationTypes.MarkdownItalic,
-                EmphasisInline ei when ei.DelimiterCount == 2 => ClassificationTypes.MarkdownBold,
+                // Strikethrough: ~~text~~
+                EmphasisInline ei when ei.DelimiterChar == '~' && ei.DelimiterCount == 2 => ClassificationTypes.MarkdownStrikethrough,
+                // Italic: *text* or _text_ (only * and _ characters, not ~ or = or ^)
+                EmphasisInline ei when ei.DelimiterCount == 1 && (ei.DelimiterChar == '*' || ei.DelimiterChar == '_') => ClassificationTypes.MarkdownItalic,
+                // Bold: **text** or __text__ (only * and _ characters, not ~ or = or ^)
+                EmphasisInline ei when ei.DelimiterCount == 2 && (ei.DelimiterChar == '*' || ei.DelimiterChar == '_') => ClassificationTypes.MarkdownBold,
+                // Other emphasis types (==highlight==, ~subscript~, ^superscript^) - no special classification for now
                 HtmlBlock html when html.Type == HtmlBlockType.Comment => ClassificationTypes.MarkdownComment,
                 HtmlBlock or HtmlInline or HtmlEntityInline => ClassificationTypes.MarkdownHtml,
                 _ => null,

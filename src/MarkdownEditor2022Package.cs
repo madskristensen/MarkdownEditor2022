@@ -17,17 +17,31 @@ namespace MarkdownEditor2022
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.MarkdownEditor2022String)]
 
-    [ProvideLanguageService(typeof(MarkdownEditorV2), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, ShowCompletion = true, ShowDropDownOptions = true)]
+    [ProvideLanguageService(typeof(MarkdownEditorV2), Constants.LanguageName, 0, ShowHotURLs = false, DefaultToNonHotURLs = true, EnableLineNumbers = true, EnableAsyncCompletion = true, ShowCompletion = true, ShowDropDownOptions = true, MatchBraces = true)]
     [ProvideLanguageEditorOptionPage(typeof(OptionsProvider.AdvancedOptions), Constants.LanguageName, "", "Advanced", null, ["mark", "md", "mdown"])]
     [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMd)]
     [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionRmd)]
+    [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMermaid)]
+    [ProvideLanguageExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMmd)]
 
     [ProvideEditorFactory(typeof(MarkdownEditorV2), 0, false, CommonPhysicalViewAttributes = (int)__VSPHYSICALVIEWATTRIBUTES.PVA_SupportsPreview, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorLogicalView(typeof(MarkdownEditorV2), VSConstants.LOGVIEWID.TextView_string, IsTrusted = true)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMd, 1000)]
     [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionRmd, 1000)]
+    [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMermaid, 1000)]
+    [ProvideEditorExtension(typeof(MarkdownEditorV2), Constants.FileExtensionMmd, 1000)]
+    [ProvideEditorExtension(typeof(MarkdownEditorV2), ".*", 22)]
 
     [ProvideFileIcon(Constants.FileExtensionMd, "KnownMonikers.MarkdownFile")]
+    [ProvideFileIcon(Constants.FileExtensionRmd, "KnownMonikers.MarkdownFile")]
+    [ProvideFileIcon(Constants.FileExtensionMermaid, "KnownMonikers.SkinFile")]
+    [ProvideFileIcon(Constants.FileExtensionMmd, "KnownMonikers.SkinFile")]
+
+    [ProvideUIContextRule(PackageGuids.MarkdownFileSelectedString,
+    name: "Markdown selected",
+    expression: "markdown",
+    termNames: ["markdown"],
+    termValues: ["HierSingleSelectionName:.(md|rmd|mermaid|mmd)$"])]
     public sealed class MarkdownEditor2022Package : ToolkitPackage
     {
         private static DTE _dte;
@@ -50,10 +64,13 @@ namespace MarkdownEditor2022
 
         protected override void Dispose(bool disposing)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             if (disposing)
             {
-                // Dispose the auto-hide window monitor to stop event processing during shutdown
-                AutoHideWindowMonitor.GetInstance().Dispose();
+                // Dispose the auto-hide window monitor singleton to stop event processing during shutdown
+                // and clear the static instance to prevent memory leaks
+                AutoHideWindowMonitor.DisposeInstance();
             }
 
             base.Dispose(disposing);
@@ -63,7 +80,8 @@ namespace MarkdownEditor2022
         {
             string ext = Path.GetExtension(_dte?.ActiveDocument?.FullName ?? "").ToLowerInvariant();
 
-            return ext is Constants.FileExtensionMd or Constants.FileExtensionRmd;
+            return ext is Constants.FileExtensionMd or Constants.FileExtensionRmd
+                       or Constants.FileExtensionMermaid or Constants.FileExtensionMmd;
         }
     }
 }

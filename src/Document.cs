@@ -3,7 +3,10 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Markdig;
+using Markdig.Extensions.AutoIdentifiers;
+using Markdig.Extensions.Tables;
 using Markdig.Syntax;
+using MarkdownEditor2022.Extensions;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Threading;
 
@@ -21,8 +24,19 @@ namespace MarkdownEditor2022
         private int _lastParsedVersion;
 
         public static MarkdownPipeline Pipeline { get; } = new MarkdownPipelineBuilder()
+            .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)  // Must be BEFORE UseAdvancedExtensions to override default
             .UseAdvancedExtensions()
+            .UseTocToken()  // Support for [[_TOC_]] Azure DevOps wiki syntax
             .UsePragmaLines()
+            .UsePreciseSourceLocation()
+            .UseYamlFrontMatter()
+            .UseEmojiAndSmiley()
+            .Build();
+
+        public static MarkdownPipeline PipelineToGenerateHtml { get; } = new MarkdownPipelineBuilder()
+            .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)  // Must be BEFORE UseAdvancedExtensions to override default
+            .UseAdvancedExtensions()
+            .UseTocToken()  // Support for [[_TOC_]] Azure DevOps wiki syntax
             .UsePreciseSourceLocation()
             .UseYamlFrontMatter()
             .UseEmojiAndSmiley()
@@ -32,8 +46,8 @@ namespace MarkdownEditor2022
         // Converts Azure DevOps triple-colon syntax to standard fenced code blocks
         // Handles both ":::mermaid" and "::: mermaid" (with space) formats
         // Uses a MatchEvaluator to exclude markdown alerts like "::: note"
-        private static readonly Regex _colonFixRegex = new Regex(@"^(:::) ?(\w*)", RegexOptions.Multiline | RegexOptions.Compiled);
-        private static readonly HashSet<string> _alertKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Regex _colonFixRegex = new(@"^(:::) ?(\w*)", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly HashSet<string> _alertKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
             "note", "tip", "important", "caution", "warning"
         };
@@ -87,10 +101,16 @@ namespace MarkdownEditor2022
             _parseCts = new CancellationTokenSource();
             CancellationToken localToken = _parseCts.Token;
 
-            // Use semaphore to prevent multiple concurrent parsing operations
-            if (!await _parseSemaphore.WaitAsync(0, _disposalTokenSource.Token))
+            // Use semaphore to prevent multiple concurrent parsing operations.
+            // Always wait for the semaphore so parse requests are queued instead of dropped,
+            // which can otherwise leave initial parsing incomplete.
+            try
             {
-                return; // Another parse operation is already in progress (it will get cancelled if outdated)
+                await _parseSemaphore.WaitAsync(_disposalTokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
             }
 
             int snapshotVersion = _buffer.CurrentSnapshot.Version.VersionNumber;
@@ -171,6 +191,7 @@ namespace MarkdownEditor2022
         {
             List<HeadingBlock> headings = [];
             List<HtmlBlock> htmlComments = [];
+            List<Table> tables = [];
 
             foreach (MarkdownObject obj in md.Descendants())
             {
@@ -182,9 +203,13 @@ namespace MarkdownEditor2022
                 {
                     htmlComments.Add(hb2);
                 }
+                else if (obj is Table table)
+                {
+                    tables.Add(table);
+                }
             }
 
-            return new DocumentAnalysis(headings, htmlComments);
+            return new DocumentAnalysis(headings, htmlComments, tables);
         }
 
         /// <summary>
