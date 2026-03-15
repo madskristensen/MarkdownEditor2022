@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Community.VisualStudio.VSCT" Version="16.0.29.6" />
+    <PackageVersion Include="Community.VisualStudio.Toolkit.17" Version="17.0.549" />
+    <PackageVersion Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120" />
+    <PackageVersion Include="Markdig" Version="0.44.0" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3650.58" />
+    <PackageVersion Include="Microsoft.VisualStudio.Extensibility.Testing.SourceGenerator" Version="0.1.122-beta" />
+    <PackageVersion Include="Microsoft.VisualStudio.Extensibility.Testing.Xunit" Version="0.1.122-beta" />
+    <PackageVersion Include="Microsoft.Internal.VisualStudio.Interop" Version="17.0.31902.203" />
+    <PackageVersion Include="Microsoft.VisualStudio.SDK" Version="17.0.32112.339" />
+    <PackageVersion Include="Nullable" Version="1.3.0" />
+    <PackageVersion Include="xunit" Version="2.4.1" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.3" />
+    <PackageVersion Include="MSTest.TestAdapter" Version="4.0.2" />
+    <PackageVersion Include="MSTest.TestFramework" Version="4.0.2" />
+  </ItemGroup>
+</Project>
