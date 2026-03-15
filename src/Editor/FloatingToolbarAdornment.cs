@@ -37,7 +37,7 @@ namespace MarkdownEditor2022
         /// Optional JoinableTaskFactory (from the package). If none is provided we fall back to the ThreadHelper static
         /// JTF to remain safe.
         /// </param>
-        public FloatingToolbarAdornment(IWpfTextView view, JoinableTaskFactory joinableTaskFactory)
+        public FloatingToolbarAdornment(IWpfTextView view, JoinableTaskFactory joinableTaskFactory = null)
         {
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _layer = view.GetAdornmentLayer(AdornmentLayers.FloatingToolbar);
