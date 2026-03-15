@@ -57,6 +57,8 @@ namespace MarkdownEditor2022
         /// </summary>
         public static void DisposeInstance()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             lock (_lock)
             {
                 if (_instance != null)
@@ -277,7 +279,7 @@ namespace MarkdownEditor2022
                     return false; // Could not determine window type - assume not auto-hide tool window
                 }
 
-                // Check frame mode for auto-hide flag - this tells us if the window is 
+                // Check frame mode for auto-hide flag - this tells us if the window is
                 // CONFIGURED for auto-hide behavior (value 4 means auto-hide)
                 if (frame.GetProperty((int)__VSFPROPID.VSFPROPID_FrameMode, out object modeObj) == 0)
                 {
