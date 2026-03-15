@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
+using Microsoft.VisualStudio.Threading;
 
 namespace MarkdownEditor2022
 {
@@ -16,6 +17,7 @@ namespace MarkdownEditor2022
         private readonly IAdornmentLayer _layer;
         private readonly FloatingToolbar _toolbar;
         private readonly Debouncer _showDebouncer;
+        private readonly JoinableTaskFactory _joinableTaskFactory;
         private bool _isDisposed;
         private bool _isToolbarVisible;
 
@@ -27,11 +29,20 @@ namespace MarkdownEditor2022
         private const double _toolbarWidth = 390.0;
         private const double _toolbarHeight = 32.0;
 
-        public FloatingToolbarAdornment(IWpfTextView view)
+        /// <summary>
+        /// Creates a new instance of the floating toolbar adornment for the given text view.
+        /// </summary>
+        /// <param name="view">the text view to associate with the toolbar</param>
+        /// <param name="joinableTaskFactory">
+        /// Optional JoinableTaskFactory (from the package). If none is provided we fall back to the ThreadHelper static
+        /// JTF to remain safe.
+        /// </param>
+        public FloatingToolbarAdornment(IWpfTextView view, JoinableTaskFactory joinableTaskFactory)
         {
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _layer = view.GetAdornmentLayer(AdornmentLayers.FloatingToolbar);
-            _toolbar = new FloatingToolbar(view);
+            _joinableTaskFactory = joinableTaskFactory ?? MarkdownEditor2022Package.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
+            _toolbar = new FloatingToolbar(view, _joinableTaskFactory);
 
             // Small debounce to avoid flickering during rapid selection changes
             _showDebouncer = new Debouncer(150);
@@ -80,9 +91,9 @@ namespace MarkdownEditor2022
 
             _showDebouncer.Debounce(() =>
             {
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                _joinableTaskFactory.RunAsync(async () =>
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await _joinableTaskFactory.SwitchToMainThreadAsync();
                     if (!_isDisposed && !_view.Selection.IsEmpty)
                     {
                         ShowToolbar();

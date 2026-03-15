@@ -9,6 +9,7 @@ using System.Threading;
 using EnvDTE;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Threading;
 
 namespace MarkdownEditor2022
 {
@@ -46,8 +47,16 @@ namespace MarkdownEditor2022
     {
         private static DTE _dte;
 
+        /// <summary>
+        /// Public singleton instance so components can access the package instance (and its JoinableTaskFactory)
+        /// </summary>
+        public static MarkdownEditor2022Package Instance { get; private set; }
+
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
+            // Ensure we have the package instance set early so other components can use its JoinableTaskFactory
+            Instance = this;
+
             await JoinableTaskFactory.SwitchToMainThreadAsync();
 
             _dte = await VS.GetRequiredServiceAsync<DTE, DTE>();
@@ -71,6 +80,9 @@ namespace MarkdownEditor2022
                 // Dispose the auto-hide window monitor singleton to stop event processing during shutdown
                 // and clear the static instance to prevent memory leaks
                 AutoHideWindowMonitor.DisposeInstance();
+
+                // Clear the static instance when disposing
+                Instance = null;
             }
 
             base.Dispose(disposing);

@@ -1,5 +1,6 @@
 using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
@@ -21,7 +22,10 @@ namespace MarkdownEditor2022
         public void TextViewCreated(IWpfTextView textView)
         {
             // Create the adornment as a singleton property on the text view
-            textView.Properties.GetOrCreateSingletonProperty(() => new FloatingToolbarAdornment(textView));
+            textView.Properties.GetOrCreateSingletonProperty(() =>  {
+                JoinableTaskFactory joinableTaskFactory = MarkdownEditor2022Package.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
+                return new FloatingToolbarAdornment(textView, joinableTaskFactory);
+            });
         }
     }
 }

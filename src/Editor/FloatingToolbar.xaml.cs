@@ -9,6 +9,7 @@ using Markdig.Syntax.Inlines;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
+using Microsoft.VisualStudio.Threading;
 
 namespace MarkdownEditor2022
 {
@@ -19,10 +20,20 @@ namespace MarkdownEditor2022
     public partial class FloatingToolbar : UserControl
     {
         private readonly IWpfTextView _textView;
+        private readonly JoinableTaskFactory _joinableTaskFactory;
 
-        public FloatingToolbar(IWpfTextView textView)
+        /// <summary>
+        /// Creates a new instance of the floating toolbar for the given text view.
+        /// </summary>
+        /// <param name="textView">the text view to associate with the toolbar</param>
+        /// <param name="joinableTaskFactory">
+        /// Optional JoinableTaskFactory (from the package). If none is provided we fall back to the ThreadHelper static
+        /// JTF to remain safe.
+        /// </param>
+        public FloatingToolbar(IWpfTextView textView, JoinableTaskFactory joinableTaskFactory = null)
         {
             _textView = textView;
+            _joinableTaskFactory = joinableTaskFactory ?? MarkdownEditor2022Package.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
             InitializeComponent();
         }
 
@@ -67,7 +78,7 @@ namespace MarkdownEditor2022
         {
             if (sender is MenuItem menuItem && menuItem.Tag is string tagStr && int.TryParse(tagStr, out int level))
             {
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                _joinableTaskFactory.RunAsync(async () =>
                 {
                     await SetHeaderLevelAsync(level);
                     ActionExecuted?.Invoke(this, EventArgs.Empty);
@@ -78,7 +89,7 @@ namespace MarkdownEditor2022
         private void BoldButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = BoldButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -95,7 +106,7 @@ namespace MarkdownEditor2022
         private void ItalicButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = ItalicButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -112,7 +123,7 @@ namespace MarkdownEditor2022
         private void StrikethroughButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = StrikethroughButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -129,7 +140,7 @@ namespace MarkdownEditor2022
         private void HighlightButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = HighlightButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -146,7 +157,7 @@ namespace MarkdownEditor2022
         private void SubscriptButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = SubscriptButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -163,7 +174,7 @@ namespace MarkdownEditor2022
         private void SuperscriptButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = SuperscriptButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -180,7 +191,7 @@ namespace MarkdownEditor2022
         private void CodeButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = CodeButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -196,7 +207,7 @@ namespace MarkdownEditor2022
 
         private void LinkButton_Click(object sender, RoutedEventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 await InsertLinkAsync();
                 ActionExecuted?.Invoke(this, EventArgs.Empty);
@@ -206,7 +217,7 @@ namespace MarkdownEditor2022
         private void BulletListButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = BulletListButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -223,7 +234,7 @@ namespace MarkdownEditor2022
         private void NumberedListButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = NumberedListButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -240,7 +251,7 @@ namespace MarkdownEditor2022
         private void TaskListButton_Click(object sender, RoutedEventArgs e)
         {
             bool isActive = TaskListButton.Tag?.ToString() == "True";
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _joinableTaskFactory.RunAsync(async () =>
             {
                 if (isActive)
                 {
@@ -303,7 +314,7 @@ namespace MarkdownEditor2022
             }
 
             // Update header button text
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await _joinableTaskFactory.SwitchToMainThreadAsync();
             HeaderText.Text = level == 0 ? "Paragraph" : $"Heading {level}";
         }
 
