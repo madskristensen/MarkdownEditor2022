@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.1.32024.52
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240
 MinimumVisualStudioVersion = 17.0.31903.59
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownEditor2022", "src\MarkdownEditor2022.csproj", "{FEFC92E3-9CE6-4C8E-B308-2CD8E98F3DCE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownEditor2022.UnitTests", "test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj", "{F3039C96-4EDA-48E0-8B77-2CED114627FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownEditor2022.IntegrationTests", "test\MarkdownEditor2022.IntegrationTests\MarkdownEditor2022.IntegrationTests.csproj", "{700B8194-7A23-4815-2393-8FFDA9B0D43E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +33,12 @@ Global
 		{F3039C96-4EDA-48E0-8B77-2CED114627FA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F3039C96-4EDA-48E0-8B77-2CED114627FA}.Release|x86.ActiveCfg = Release|Any CPU
 		{F3039C96-4EDA-48E0-8B77-2CED114627FA}.Release|x86.Build.0 = Release|Any CPU
+		{700B8194-7A23-4815-2393-8FFDA9B0D43E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{700B8194-7A23-4815-2393-8FFDA9B0D43E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{700B8194-7A23-4815-2393-8FFDA9B0D43E}.Debug|x86.Build.0 = Debug|Any CPU
+		{700B8194-7A23-4815-2393-8FFDA9B0D43E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{700B8194-7A23-4815-2393-8FFDA9B0D43E}.Release|x86.ActiveCfg = Release|Any CPU
+		{700B8194-7A23-4815-2393-8FFDA9B0D43E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
