@@ -1,4 +1,4 @@
-# Managing Mermaid.js Dependencies with npm
+﻿# Managing Mermaid.js Dependencies with npm
 
 This document explains how to manage the `mermaid.min.js` file using npm.
 
@@ -133,18 +133,6 @@ All dependencies are listed in `package.json` and installed to `node_modules/`.
 3. **Run `npm install`** after pulling changes that might have updated versions
 4. **Update periodically** - Check for updates: `npm outdated`
 5. **Security** - Keep dependencies current: `npm audit` to check for vulnerabilities
-
-## Version Management
-
-The current version constraint in `package.json` is:
-```json
-"mermaid": "^10.6.1"
-```
-
-- **`^10.6.1`** means npm will install versions from 10.6.1 up to (but not including) 11.0.0
-- This allows patch and minor updates while preventing major breaking changes
-- To allow major version updates, change to `*` (not recommended without testing)
-- To pin to a specific version, change to `"10.6.1"` (no caret)
 
 ## Additional Resources
 

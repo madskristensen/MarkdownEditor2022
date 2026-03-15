@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "markdown-editor-2022",
   "version": "1.0.0",
   "description": "Visual Studio Markdown Editor extension",
@@ -11,7 +11,7 @@
     "update-mermaid": "npm update mermaid && npm run copy-mermaid"
   },
   "dependencies": {
-    "mermaid": "^10.6.1"
+    "mermaid": "11.13.0"
   },
   "devDependencies": {},
   "engines": {
