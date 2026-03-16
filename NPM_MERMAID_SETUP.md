@@ -88,12 +88,13 @@ The mermaid files in `src/Margin/` are part of your Visual Studio project and wi
 If the postinstall script doesn't run automatically, try:
 ```bash
 npm run copy-mermaid
-```
+The mermaid files in `src/Margin/` are part of your Visual Studio project and are the assets that actually ship in the built VSIX. The npm setup is separate from the C# build process and is only responsible for updating and copying these files into `src/Margin/`.
 
 ### Script errors on Windows
 
-If you encounter permission issues, try:
-```bash
+2. Verify files are copied to `src/Margin/` (e.g., `mermaid.min.js`, its `.map` file, and the license)
+3. When intentionally updating Mermaid, **commit the updated files in `src/Margin/`** so that CI/builds and the shipped VSIX use the new version
+4. Build the solution normally in Visual Studio
 npm install --no-scripts
 npm run copy-mermaid
 ```
@@ -125,3 +126,12 @@ All dependencies are listed in `package.json` and installed to `node_modules/`.
 - [Mermaid.js Documentation](https://mermaid.js.org/)
 - [npm Documentation](https://docs.npmjs.com/)
 - [Node.js Documentation](https://nodejs.org/docs/)
+
+
+
+
+
+
+4. **Commit updated Mermaid assets in `src/Margin/`** (e.g., `mermaid.min.js`, its `.map`, and license) whenever you intentionally bump Mermaid so that the VSIX contains the new version
+5. **Update periodically** - Check for updates: `npm outdated`
+6. **Security** - Keep dependencies current: `npm audit` to check for vulnerabilities
