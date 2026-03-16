@@ -1,4 +1,4 @@
-﻿# Managing Mermaid.js Dependencies with npm
+# Managing Mermaid.js Dependencies with npm
 
 This document explains how to manage the `mermaid.min.js` file using npm.
 
@@ -8,8 +8,8 @@ The Markdown Editor 2022 uses [Mermaid](https://mermaid.js.org/) for rendering d
 
 ## Prerequisites
 
-- **Node.js** 16.0.0 or later
-- **npm** 8.0.0 or later
+- **Node.js** 20.10.0 or later
+- **npm** 10.2.3 or later
 
 You can check your versions with:
 ```bash
@@ -53,20 +53,6 @@ If you need to copy the assets manually (after changing versions):
 ```bash
 npm run copy-mermaid
 ```
-
-## Verifying the Installation
-
-After running `npm install`, verify that the files are present in `src/Margin/`:
-
-```bash
-ls -la src/Margin/mermaid.min.js*
-```
-
-You should see:
-- `mermaid.min.js` (the main library file)
-- `mermaid.min.js.map` (source map for debugging)
-- `mermaid.min.js.LICENSE.txt` (license information)
-
 ## How It Works
 
 ### Package Configuration
