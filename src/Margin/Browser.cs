@@ -1356,6 +1356,7 @@ namespace MarkdownEditor2022
 
                 // Scrollbar styling for WebView2 (Chromium-based)
                 string scrollbarCss = $@"
+        html {{ scrollbar-color: {scrollbarColor} {themeBgColor}; }}
         ::-webkit-scrollbar {{ width: 14px; height: 14px; }}
         ::-webkit-scrollbar-track {{ background: {themeBgColor}; }}
         ::-webkit-scrollbar-thumb {{ background: {scrollbarColor}; border: 3px solid {themeBgColor}; border-radius: 7px; }}
@@ -1660,7 +1661,13 @@ namespace MarkdownEditor2022
                 }
 
                 string tempDir = Path.Combine(Path.GetTempPath(), Assembly.GetExecutingAssembly().GetName().Name);
-                _cachedEnvironmentTask = CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: null);
+                // Disable overlay scrollbars so ::-webkit-scrollbar CSS pseudo-elements work correctly
+                // in WebView2CompositionControl (overlay scrollbars ignore custom scrollbar styling)
+                CoreWebView2EnvironmentOptions options = new()
+                {
+                    AdditionalBrowserArguments = "--disable-features=OverlayScrollbar"
+                };
+                _cachedEnvironmentTask = CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: options);
                 return _cachedEnvironmentTask;
             }
         }
