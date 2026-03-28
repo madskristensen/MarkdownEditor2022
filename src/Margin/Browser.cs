@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -353,6 +354,33 @@ namespace MarkdownEditor2022
         // Cache WebView2 environment for faster initialization of subsequent instances
         private static Task<CoreWebView2Environment> _cachedEnvironmentTask;
         private static readonly object _environmentLock = new();
+        private static bool _nativeDllSearchPathConfigured;
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool SetDllDirectory(string lpPathName);
+
+        /// <summary>
+        /// Adds the architecture-specific runtimes directory to the DLL search path so that
+        /// WebView2Loader.dll can be found when packaged inside the VSIX under runtimes\win-{arch}\native\.
+        /// </summary>
+        private static void EnsureNativeDllSearchPath()
+        {
+            if (_nativeDllSearchPathConfigured)
+            {
+                return;
+            }
+
+            _nativeDllSearchPathConfigured = true;
+
+            string extensionDir = GetFolder();
+            string arch = Environment.Is64BitProcess ? "x64" : "x86";
+            string nativeDir = Path.Combine(extensionDir, "runtimes", $"win-{arch}", "native");
+
+            if (Directory.Exists(nativeDir))
+            {
+                SetDllDirectory(nativeDir);
+            }
+        }
 
         // Pending fragment navigations for cross-document links
         // When a markdown file is opened with a fragment (e.g., file.md#heading), store the fragment here
@@ -1667,6 +1695,7 @@ namespace MarkdownEditor2022
                 {
                     AdditionalBrowserArguments = "--disable-features=OverlayScrollbar"
                 };
+                EnsureNativeDllSearchPath();
                 _cachedEnvironmentTask = CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: options);
                 return _cachedEnvironmentTask;
             }
