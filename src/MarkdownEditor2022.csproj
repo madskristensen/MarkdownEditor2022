@@ -199,7 +199,7 @@
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120" PrivateAssets="all" />
-    <PackageReference Include="Markdig" Version="0.43.0" />
+    <PackageReference Include="Markdig" Version="1.1.2" IncludeAssets="all" />
     <PackageReference Include="Microsoft.Web.WebView2">
       <Version>1.0.3856.49</Version>
     </PackageReference>
@@ -214,6 +214,16 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
+    <!-- Include Markdig transitive dependencies (System.Memory, etc.) in the VSIX container -->
+  <Target Name="IncludeMarkdigDependencies" AfterTargets="GetVsixSourceItems">
+    <ItemGroup>
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)"
+                      Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Memory'
+                              or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Buffers'
+                              or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Numerics.Vectors'
+                              or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Runtime.CompilerServices.Unsafe'" />
+    </ItemGroup>
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

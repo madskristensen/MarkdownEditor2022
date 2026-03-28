@@ -73,12 +73,6 @@ The preview window is automatically scrolled to match the scroll position of the
 
 Live preview can be managed in the [settings](#settings).
 
-#### Auto-hide tool window support
-
-The preview window uses WebView2 which, due to its HWND-based rendering, can overlap Visual Studio's auto-hide tool windows (like Solution Explorer when pinned to auto-hide). To mitigate this, enable **Auto-hide for tool windows** in the settings.
-
-When enabled, the preview temporarily hides when you expand an auto-hide tool window, and automatically reappears when the tool window collapses back. This ensures you can always interact with your tool windows without the preview getting in the way.
-
 ### Syntax highlighting
 
 All fonts can be changed in **Tools -> Options -> Environment -> Fonts and Colors** dialog.
@@ -486,7 +480,6 @@ Control the settings for this extension under
 | Enable scroll sync          | Synchronizes scrolling between the editor and preview                                            |
 | Preview window position     | Choose between right-side or bottom placement                                                    |
 | Preview window width/height | Set the size of the preview pane                                                                 |
-| Auto-hide for tool windows  | Temporarily hides the preview when auto-hide tool windows expand, preventing overlap issues      |
 | Enable table sorting        | Allows double-clicking table headers to sort columns (underlines headers when enabled)           |
 | Optimize images on paste    | Automatically optimizes pasted images using Image Optimizer (requires Image Optimizer extension) |
 | Show trailing whitespace    | Displays dots for trailing double-spaces (soft line breaks) in the editor                        |
