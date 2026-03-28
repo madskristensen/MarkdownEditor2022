@@ -8,12 +8,11 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
-#pragma warning disable VSTHRD001 // Avoid legacy thread switching APIs - Dispatcher.InvokeAsync is correct for WPF
 #pragma warning disable VSSDK007 // Use JoinableTaskFactory - fire-and-forget is intentional here
 
 namespace MarkdownEditor2022
 {
-    public class BrowserMargin : DockPanel, IWpfTextViewMargin, AutoHideWindowMonitor.IAutoHideWindowListener
+    public class BrowserMargin : DockPanel, IWpfTextViewMargin
     {
         private readonly Document _document;
         private readonly ITextView _textView;
@@ -22,8 +21,6 @@ namespace MarkdownEditor2022
         private bool _isDisposed;
         private DateTime _lastEdit;
         private readonly Debouncer _debouncer = new(150); // Per-instance debouncer for correct behavior with multiple documents
-        private bool _isPreviewHiddenByAutoHide;
-        private bool _isRegisteredWithAutoHideMonitor;
 
         public FrameworkElement VisualElement => this;
         public double MarginSize => 400; // Initial size, actual size is calculated from percentage
@@ -46,20 +43,6 @@ namespace MarkdownEditor2022
         }
 
 
-        private async Task InitializeAutoHideMonitorAsync()
-        {
-            if (_isRegisteredWithAutoHideMonitor)
-            {
-                return;
-            }
-
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            AutoHideWindowMonitor monitor = AutoHideWindowMonitor.GetInstance();
-            monitor.Initialize();
-            monitor.AddListener(this);
-            _isRegisteredWithAutoHideMonitor = true;
-        }
-
         public void Dispose()
         {
             if (_isDisposed)
@@ -75,57 +58,10 @@ namespace MarkdownEditor2022
             VSColorTheme.ThemeChanged -= OnThemeChange;
             AdvancedOptions.Saved -= AdvancedOptions_Saved;
 
-            // Unsubscribe from auto-hide monitor only if we registered
-            if (_isRegisteredWithAutoHideMonitor)
-            {
-                AutoHideWindowMonitor.GetInstance().RemoveListener(this);
-                _isRegisteredWithAutoHideMonitor = false;
-            }
-
             Browser.Dispose();
             _debouncer?.Dispose();
 
             _isDisposed = true;
-        }
-
-        /// <summary>
-        /// Called when an auto-hide tool window's visibility changes.
-        /// Hides the WebView2 preview when auto-hide windows slide into view to prevent overlap.
-        /// </summary>
-        public void OnAutoHideWindowVisibilityChanged(bool anyAutoHideWindowVisible)
-        {
-            if (_isDisposed || !AdvancedOptions.Instance.AutoHideOnFocusLoss)
-            {
-                return;
-            }
-
-            // Must update UI on dispatcher thread
-            _ = Browser._browser.Dispatcher.InvokeAsync(() =>
-            {
-                if (_isDisposed)
-                {
-                    return;
-                }
-
-                if (anyAutoHideWindowVisible)
-                {
-                    // Auto-hide window is sliding in - hide preview to prevent overlap
-                    if (Browser._browser.Visibility == Visibility.Visible)
-                    {
-                        _isPreviewHiddenByAutoHide = true;
-                        Browser._browser.Visibility = Visibility.Hidden;
-                    }
-                }
-                else
-                {
-                    // All auto-hide windows are hidden - restore preview
-                    if (_isPreviewHiddenByAutoHide)
-                    {
-                        _isPreviewHiddenByAutoHide = false;
-                        Browser._browser.Visibility = Visibility.Visible;
-                    }
-                }
-            });
         }
 
         private void OnBrowserInitCompleted(object sender, CoreWebView2InitializationCompletedEventArgs e)
@@ -135,7 +71,7 @@ namespace MarkdownEditor2022
                 throw e.InitializationException;
             }
 
-            WebView2 view = sender as WebView2;
+            WebView2CompositionControl view = sender as WebView2CompositionControl;
 
             view.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
@@ -147,13 +83,7 @@ namespace MarkdownEditor2022
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             VSColorTheme.ThemeChanged += OnThemeChange;
 
-            // Initialize auto-hide monitor now that browser is ready (if enabled)
-            if (AdvancedOptions.Instance.AutoHideOnFocusLoss)
-            {
-                InitializeAutoHideMonitorAsync().FireAndForget();
-            }
-
-            // Browser performs its own initial render during WebView2 initialization.
+            // Browser performs its own initial render
             // Trigger an extra startup render only for standalone mermaid files,
             // which use a separate rendering path.
             if (IsStandaloneMermaidFile(_textView.TextBuffer.GetFileName()))
@@ -220,7 +150,7 @@ namespace MarkdownEditor2022
             }).FireAndForget();
         }
 
-        private void CreateMarginControls(WebView2 view)
+        private void CreateMarginControls(WebView2CompositionControl view)
         {
             if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical)
             {
@@ -231,7 +161,7 @@ namespace MarkdownEditor2022
                 CreateBottomMarginControls(view);
             }
 
-            void CreateRightMarginControls(WebView2 view)
+            void CreateRightMarginControls(WebView2CompositionControl view)
             {
                 Grid grid = new();
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(0, GridUnitType.Star) });
@@ -347,7 +277,7 @@ namespace MarkdownEditor2022
                 _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(UpdateWidthFromPercentage);
             }
 
-            void CreateBottomMarginControls(WebView2 view)
+            void CreateBottomMarginControls(WebView2CompositionControl view)
             {
                 int height = AdvancedOptions.Instance.PreviewWindowHeight;
 

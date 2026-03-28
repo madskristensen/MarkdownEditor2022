@@ -46,7 +46,7 @@ namespace MarkdownEditor2022
         private static readonly string[] _markdownExtensions = [".md", ".markdown", ".mdown", ".mkd"];
         private static readonly string[] _mermaidExtensions = [".mermaid", ".mmd"];
 
-        public readonly WebView2 _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
+        public readonly WebView2CompositionControl _browser = new() { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0), Visibility = Visibility.Hidden };
 
 
         /// <summary>
