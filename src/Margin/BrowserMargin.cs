@@ -314,7 +314,28 @@ namespace MarkdownEditor2022
         private void AdvancedOptions_Saved(AdvancedOptions options)
         {
             Browser.InvalidateThemeCache();
-            RefreshAsync().FireAndForget();
+            ForceRefreshAsync().FireAndForget();
+        }
+
+        private async Task ForceRefreshAsync()
+        {
+            AdvancedOptions opts = await AdvancedOptions.GetLiveInstanceAsync();
+
+            if (opts.EnablePreviewWindow)
+            {
+                Visibility = Visibility.Visible;
+                await Browser.ForceFullRefreshAsync();
+
+                if (opts.EnableScrollSync)
+                {
+                    int line = _textView.TextSnapshot.GetLineNumberFromPosition(_textView.TextViewLines.FirstVisibleLine.Start.Position);
+                    await Browser.UpdatePositionAsync(line, false);
+                }
+            }
+            else
+            {
+                Visibility = Visibility.Collapsed;
+            }
         }
 
         private void OnThemeChange(ThemeChangedEventArgs e)

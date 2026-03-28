@@ -464,7 +464,7 @@ namespace MarkdownEditor2022
         /// <summary>
         /// Forces a full HTML reload including CSS, used when theme changes.
         /// </summary>
-        private async Task ForceFullRefreshAsync()
+        public async Task ForceFullRefreshAsync()
         {
             try
             {
