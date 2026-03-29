@@ -372,6 +372,12 @@ namespace MarkdownEditor2022
                 return;
             }
 
+            // Suppress if the preview was recently scrolled programmatically to prevent a feedback loop
+            if (Browser.IsScrollSyncSuppressed)
+            {
+                return;
+            }
+
             // Only update if the view was actually scrolled and enough time has passed since last edit
             if (_lastEdit < DateTime.Now.AddMilliseconds(-500) && Math.Abs(_lastScrollPosition - e.NewViewState.ViewportTop) > 1.0)
             {

@@ -62,9 +62,29 @@ namespace MarkdownEditor2022
         private DateTime _lastClickNavigationTime = DateTime.MinValue;
 
         /// <summary>
+        /// Timestamp of the last programmatic scroll of the preview. Used to suppress the editor's
+        /// LayoutChanged handler from re-triggering scroll sync, which would create a feedback loop.
+        /// </summary>
+        private DateTime _lastPreviewScrollTime = DateTime.MinValue;
+
+        /// <summary>
         /// Duration to suppress scroll sync after a click navigation to prevent the preview from scrolling away.
         /// </summary>
         private static readonly TimeSpan _scrollSyncSuppressionDuration = TimeSpan.FromMilliseconds(1000);
+
+        /// <summary>
+        /// Duration to suppress editor-to-preview scroll sync after a programmatic preview scroll,
+        /// preventing the feedback loop where preview scroll → editor layout change → preview scroll.
+        /// </summary>
+        private static readonly TimeSpan _scrollLoopSuppressionDuration = TimeSpan.FromMilliseconds(500);
+
+        /// <summary>
+        /// Returns true if scroll sync from the editor to the preview should be suppressed
+        /// because the preview was recently scrolled programmatically.
+        /// </summary>
+        public bool IsScrollSyncSuppressed =>
+            DateTime.UtcNow - _lastPreviewScrollTime < _scrollLoopSuppressionDuration ||
+            DateTime.UtcNow - _lastClickNavigationTime < _scrollSyncSuppressionDuration;
 
         // Cache StringBuilder pool and Regex for better performance
         // Note: StringWriter is created per-render from pooled StringBuilder for thread-safety
@@ -952,9 +972,9 @@ namespace MarkdownEditor2022
 
         public Task UpdatePositionAsync(int line, bool isTyping)
         {
-            // Suppress scroll sync briefly after a click-to-navigate action
-            // to prevent the preview from scrolling away from where the user clicked
-            return DateTime.UtcNow - _lastClickNavigationTime < _scrollSyncSuppressionDuration
+            // Suppress scroll sync when the preview was recently scrolled programmatically
+            // (prevents feedback loop) or after a click-to-navigate action
+            return IsScrollSyncSuppressed
                 ? Task.CompletedTask
                 : _currentViewLine == line
                 ? Task.CompletedTask
@@ -973,6 +993,7 @@ namespace MarkdownEditor2022
                 {
                     // Forces the preview window to scroll to the top of the document
                     await _browser.ExecuteScriptAsync("document.documentElement.scrollTop=0;");
+                    _lastPreviewScrollTime = DateTime.UtcNow;
                 }
                 else
                 {
@@ -992,6 +1013,7 @@ namespace MarkdownEditor2022
                     else
                     {
                         await _browser.ExecuteScriptAsync($@"document.getElementById(""pragma-line-{_currentViewLine}"").scrollIntoView(true);");
+                        _lastPreviewScrollTime = DateTime.UtcNow;
                     }
                 }
             }
