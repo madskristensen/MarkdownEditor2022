@@ -53,13 +53,15 @@ namespace MarkdownEditor2022
     [ContentType(Constants.LanguageName)]
     internal sealed class Tooltips : TokenQuickInfoBase { }
 
-    [Export(typeof(IBraceCompletionContextProvider))]
+    [Export(typeof(IBraceCompletionDefaultProvider))]
     [BracePair('(', ')')]
     [BracePair('[', ']')]
     [BracePair('{', '}')]
     [BracePair('"', '"')]
+    [BracePair('\'', '\'')]
     [ContentType(Constants.LanguageName)]
-    internal sealed class BraceCompletion : BraceCompletionBase
+    [Name(nameof(MarkdownBraceCompletion))]
+    internal sealed class MarkdownBraceCompletion : IBraceCompletionDefaultProvider
     { }
 
     [Export(typeof(IAsyncCompletionCommitManagerProvider))]
@@ -100,6 +102,7 @@ namespace MarkdownEditor2022
 
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.GlyphMarginName, false);
             _docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.SelectionMarginName, true);
+            _docView.TextView.Options.SetOptionValue(DefaultTextViewOptions.BraceCompletionEnabledOptionId, true);
             ApplyMatchingTextHighlightSetting();
             //_docView.TextView.Options.SetOptionValue(DefaultTextViewHostOptions.ShowEnhancedScrollBarOptionName, false);
 
