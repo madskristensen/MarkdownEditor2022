@@ -11,7 +11,7 @@ namespace MarkdownEditor2022
     /// </summary>
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType(Constants.LanguageName)]
-    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     internal sealed class FloatingToolbarAdornmentProvider : IWpfTextViewCreationListener
     {
         /// <summary>
