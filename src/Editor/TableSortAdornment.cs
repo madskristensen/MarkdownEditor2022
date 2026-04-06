@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 
@@ -21,6 +22,11 @@ namespace MarkdownEditor2022
     {
         public void TextViewCreated(IWpfTextView textView)
         {
+            if (textView.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole))
+            {
+                return;
+            }
+
             textView.Properties.GetOrCreateSingletonProperty(() => new TableSortHandler(textView));
         }
     }

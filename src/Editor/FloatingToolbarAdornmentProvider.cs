@@ -1,4 +1,5 @@
 using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
@@ -21,6 +22,11 @@ namespace MarkdownEditor2022
         /// <param name="textView">The newly created text view.</param>
         public void TextViewCreated(IWpfTextView textView)
         {
+            if (textView.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole))
+            {
+                return;
+            }
+
             // Create the adornment as a singleton property on the text view
             textView.Properties.GetOrCreateSingletonProperty(() =>  {
                 JoinableTaskFactory joinableTaskFactory = MarkdownEditor2022Package.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
