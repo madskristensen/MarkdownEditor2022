@@ -4,8 +4,8 @@ using System.Runtime.InteropServices;
 using MarkdownEditor2022;
 
 // Binding redirects to ensure the newest WebView2 assemblies are loaded
-[assembly: ProvideBindingRedirection(AssemblyName = "Microsoft.Web.WebView2.Core", OldVersionLowerBound = "0.0.0.0", OldVersionUpperBound = "1.0.3856.49", NewVersion = "1.0.3856.49")]
-[assembly: ProvideBindingRedirection(AssemblyName = "Microsoft.Web.WebView2.Wpf", OldVersionLowerBound = "0.0.0.0", OldVersionUpperBound = "1.0.3856.49", NewVersion = "1.0.3856.49")]
+[assembly: ProvideBindingRedirection(AssemblyName = "Microsoft.Web.WebView2.Core", OldVersionLowerBound = "0.0.0.0", OldVersionUpperBound = "1.0.3485.44", NewVersion = "1.0.3485.44")]
+[assembly: ProvideBindingRedirection(AssemblyName = "Microsoft.Web.WebView2.Wpf", OldVersionLowerBound = "0.0.0.0", OldVersionUpperBound = "1.0.3485.44", NewVersion = "1.0.3485.44")]
 
 // Binding redirects for Markdig transitive dependencies (System.Memory and friends)
 [assembly: ProvideBindingRedirection(AssemblyName = "System.Memory", OldVersionLowerBound = "0.0.0.0", OldVersionUpperBound = "4.0.5.0", NewVersion = "4.0.5.0")]

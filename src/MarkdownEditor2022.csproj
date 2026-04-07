@@ -201,7 +201,7 @@
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120" PrivateAssets="all" />
     <PackageReference Include="Markdig" Version="1.1.2" IncludeAssets="all" />
     <PackageReference Include="Microsoft.Web.WebView2">
-      <Version>1.0.3856.49</Version>
+      <Version>1.0.3485.44</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
