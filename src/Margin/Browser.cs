@@ -95,15 +95,15 @@ namespace MarkdownEditor2022
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
 
         // Regex for resolving relative paths in HTML attributes to absolute file:// URLs
-        // Matches src="..." and href="..." attributes with relative paths (not starting with http, https, data, #, or /)
+        // Matches src="...", href="...", and data="..." attributes with relative paths (not starting with http, https, data:, #, or /)
         private static readonly Regex _relativePathRegex = new(
-            @"(?<attr>src|href)\s*=\s*""(?<path>(?!https?://|data:|#|/)[^""]+)""",
+            @"(?<attr>src|href|data)\s*=\s*""(?<path>(?!https?://|data:|#|/)[^""]+)""",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         // Regex for resolving root-relative paths (paths starting with /) in HTML attributes
-        // Matches src="..." and href="..." attributes with paths starting with / (but not //)
+        // Matches src="...", href="...", and data="..." attributes with paths starting with / (but not //)
         private static readonly Regex _rootRelativePathRegex = new(
-            @"(?<attr>src|href)\s*=\s*""(?<path>/(?!/)[^""]+)""",
+            @"(?<attr>src|href|data)\s*=\s*""(?<path>/(?!/)[^""]+)""",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         // PrismJS language alias mappings (based on components.json from PrismJS)
@@ -1195,9 +1195,10 @@ namespace MarkdownEditor2022
                 return html;
             }
 
-            // Early exit if no src= or href= attributes to process (avoids regex scan)
+            // Early exit if no src=, href=, or data= attributes to process (avoids regex scan)
             if (html.IndexOf("src=", StringComparison.OrdinalIgnoreCase) < 0 &&
-                html.IndexOf("href=", StringComparison.OrdinalIgnoreCase) < 0)
+                html.IndexOf("href=", StringComparison.OrdinalIgnoreCase) < 0 &&
+                html.IndexOf("data=", StringComparison.OrdinalIgnoreCase) < 0)
             {
                 return html;
             }
