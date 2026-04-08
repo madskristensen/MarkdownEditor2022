@@ -31,7 +31,6 @@ namespace MarkdownEditor2022
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             AddNestedHtmlFile(markdownFile, htmlFile);
-            await VS.Documents.OpenAsync(htmlFile);
         }
 
         public static void DisableHtmlGeneration(string markdownFile)
