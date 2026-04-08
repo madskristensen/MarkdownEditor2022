@@ -37,7 +37,6 @@ namespace MarkdownEditor2022
             .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)  // Must be BEFORE UseAdvancedExtensions to override default
             .UseAdvancedExtensions()
             .UseTocToken()  // Support for [[_TOC_]] Azure DevOps wiki syntax
-            .UsePreciseSourceLocation()
             .UseYamlFrontMatter()
             .UseEmojiAndSmiley(enableSmileys: false)
             .Build();

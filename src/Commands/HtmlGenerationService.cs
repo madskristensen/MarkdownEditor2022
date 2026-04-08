@@ -109,7 +109,7 @@ namespace MarkdownEditor2022
 
             string markdown = File.ReadAllText(markdownFile);
             MarkdownDocument document = Markdown.Parse(markdown, Document.PipelineToGenerateHtml);
-            string content = document.ToHtml().Replace("\n", Environment.NewLine);
+            string content = document.ToHtml(Document.PipelineToGenerateHtml).Replace("\n", Environment.NewLine);
             string title = GetTitle(markdownFile, document);
 
             return CreateFromHtmlTemplate(markdownFile, title, content);
