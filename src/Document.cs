@@ -39,7 +39,7 @@ namespace MarkdownEditor2022
             .UseTocToken()  // Support for [[_TOC_]] Azure DevOps wiki syntax
             .UsePreciseSourceLocation()
             .UseYamlFrontMatter()
-            .UseEmojiAndSmiley()
+            .UseEmojiAndSmiley(enableSmileys: false)
             .Build();
 
         // Compiled regex for better performance
