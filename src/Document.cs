@@ -30,7 +30,7 @@ namespace MarkdownEditor2022
             .UsePragmaLines()
             .UsePreciseSourceLocation()
             .UseYamlFrontMatter()
-            .UseEmojiAndSmiley()
+            .UseEmojiAndSmiley(enableSmileys: false)
             .Build();
 
         public static MarkdownPipeline PipelineToGenerateHtml { get; } = new MarkdownPipelineBuilder()
