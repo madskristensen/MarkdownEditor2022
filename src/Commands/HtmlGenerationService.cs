@@ -15,7 +15,35 @@ namespace MarkdownEditor2022
 
         public static bool HtmlGenerationEnabled(string markdownFile)
         {
-            return File.Exists(GetHtmlFileName(markdownFile));
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            string htmlFile = GetHtmlFileName(markdownFile);
+            if (!File.Exists(htmlFile))
+            {
+                return false;
+            }
+
+            // Only consider generation "enabled" if the HTML file is nested
+            // under the markdown item in the project (i.e., this extension
+            // created it). A pre-existing, unlinked HTML file on disk should
+            // not be treated as managed by this extension.
+            DTE dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+            ProjectItem htmlItem = dte?.Solution?.FindProjectItem(htmlFile);
+            if (htmlItem == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                string dependentUpon = htmlItem.Properties?.Item("DependentUpon")?.Value as string;
+                return string.Equals(dependentUpon, Path.GetFileName(markdownFile), StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                // Property may not exist in some project types.
+                return false;
+            }
         }
 
         public static async Task GenerateAndNestHtmlFileAsync(string markdownFile)
