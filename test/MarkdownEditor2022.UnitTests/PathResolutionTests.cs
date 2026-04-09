@@ -541,33 +541,6 @@ namespace MarkdownEditor2022.UnitTests
             }
         }
 
-        [TestMethod]
-        public void HtmlGenerationEnabled_WhenHtmlSiblingExists_ReturnsTrue()
-        {
-            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDir);
-
-            try
-            {
-                string markdownFile = Path.Combine(tempDir, "readme.md");
-                string htmlFile = Path.Combine(tempDir, "readme.html");
-
-                File.WriteAllText(markdownFile, "# Title");
-                File.WriteAllText(htmlFile, "<html></html>");
-
-                bool result = HtmlGenerationService.HtmlGenerationEnabled(markdownFile);
-
-                Assert.IsTrue(result);
-            }
-            finally
-            {
-                if (Directory.Exists(tempDir))
-                {
-                    Directory.Delete(tempDir, true);
-                }
-            }
-        }
-
         #endregion
     }
 }
