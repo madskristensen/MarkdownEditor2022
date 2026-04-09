@@ -106,6 +106,12 @@ namespace MarkdownEditor2022
             @"(?<attr>src|href|data)\s*=\s*""(?<path>/(?!/)[^""]+)""",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+        // Regex for resolving relative paths in CSS url() references
+        // Matches url("...") or url('...') or url(...) with relative paths (not starting with http, https, data:, or /)
+        private static readonly Regex _cssUrlRegex = new(
+            @"url\(\s*['""]?(?<path>(?!https?://|data:|/)[^'"")\s]+)['""]?\s*\)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
         // PrismJS language alias mappings (based on components.json from PrismJS)
         // Maps common aliases to their canonical PrismJS language identifiers
         private static readonly Dictionary<string, string> _languageAliasMap = new(StringComparer.OrdinalIgnoreCase)
@@ -1291,6 +1297,67 @@ namespace MarkdownEditor2022
             return html;
         }
 
+        /// <summary>
+        /// Resolves relative paths in CSS url() references to absolute virtual host URLs.
+        /// This allows custom stylesheets to reference local font files, images, etc.
+        /// </summary>
+        /// <param name="css">The CSS content with potentially relative url() paths.</param>
+        /// <param name="cssDirectory">The directory containing the CSS file.</param>
+        /// <returns>CSS with relative url() paths converted to absolute virtual host URLs.</returns>
+        private static string ResolveCssUrls(string css, string cssDirectory)
+        {
+            if (string.IsNullOrEmpty(css) || string.IsNullOrEmpty(cssDirectory))
+            {
+                return css;
+            }
+
+            // Early exit if no url() references to process
+            if (css.IndexOf("url(", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return css;
+            }
+
+            string driveRoot = Path.GetPathRoot(cssDirectory);
+
+            return _cssUrlRegex.Replace(css, match =>
+            {
+                string relativePath = match.Groups["path"].Value;
+
+                // Skip if empty
+                if (string.IsNullOrEmpty(relativePath))
+                {
+                    return match.Value;
+                }
+
+                try
+                {
+                    // Decode URL-encoded characters if present
+                    string decodedPath = relativePath.IndexOf('%') >= 0
+                        ? WebUtility.UrlDecode(relativePath)
+                        : relativePath;
+
+                    // Normalize path separators for Path.Combine
+                    string normalizedPath = decodedPath.Replace('/', Path.DirectorySeparatorChar);
+
+                    // Resolve relative path against CSS directory
+                    string fullPath = Path.GetFullPath(Path.Combine(cssDirectory, normalizedPath));
+
+                    // Get path relative to drive root for virtual host mapping
+                    string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                        ? fullPath.Substring(driveRoot.Length)
+                        : fullPath;
+
+                    string absoluteUrl = _virtualHostUrlPrefix + relativeToDrive.Replace(Path.DirectorySeparatorChar, '/');
+                    return string.Concat("url(\"", absoluteUrl, "\")");
+                }
+                catch
+                {
+                    // If path resolution fails, keep the original
+                    return match.Value;
+                }
+            });
+        }
+
         private async Task UpdateContentAsync(string html)
         {
             bool isInit = await IsHtmlTemplateLoadedAsync();
@@ -1401,6 +1468,13 @@ namespace MarkdownEditor2022
                 // Use pre-warmed resources when available, fall back to file I/O
                 string templateRaw = GetTemplateContent(templateFileName);
                 string cssHighlight = GetHighlightCss(useLightTheme, usingCustomHighlight, highlightSourcePath);
+
+                // Resolve relative url() paths in custom CSS files (e.g., font-face references)
+                if (usingCustomHighlight)
+                {
+                    cssHighlight = ResolveCssUrls(cssHighlight, Path.GetDirectoryName(highlightSourcePath));
+                }
+
                 string cssPrism = GetPrismCss(useLightTheme, prismSourcePath);
 
                 string css = cssHighlight + cssPrism;
