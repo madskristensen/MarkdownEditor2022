@@ -792,7 +792,7 @@ namespace MarkdownEditor2022
                 // Store pending fragment navigation before opening the file
                 if (hasFragment)
                 {
-                    _pendingFragmentNavigations[filePath] = fragment;
+                    _pendingFragmentNavigations[Path.GetFullPath(filePath)] = fragment;
                 }
                 VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
                 return;
@@ -809,7 +809,7 @@ namespace MarkdownEditor2022
                         // Store pending fragment navigation before opening the file
                         if (hasFragment)
                         {
-                            _pendingFragmentNavigations[withExt] = fragment;
+                            _pendingFragmentNavigations[Path.GetFullPath(withExt)] = fragment;
                         }
                         VS.Documents.OpenInPreviewTabAsync(withExt).FireAndForget();
                         return;
@@ -1078,7 +1078,7 @@ namespace MarkdownEditor2022
                 await UpdateContentAsync(html);
 
                 // Check for pending cross-document fragment navigation
-                if (!string.IsNullOrWhiteSpace(_file) && _pendingFragmentNavigations.TryRemove(_file, out string pendingFragment))
+                if (!string.IsNullOrWhiteSpace(_file) && _pendingFragmentNavigations.TryRemove(Path.GetFullPath(_file), out string pendingFragment))
                 {
                     // Small delay to ensure content is fully rendered before scrolling
                     await Task.Delay(100);

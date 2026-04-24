@@ -314,6 +314,53 @@ namespace MarkdownEditor2022.UnitTests
 
         #endregion
 
+        #region Pending Fragment Path Normalization Tests
+
+        /// <summary>
+        /// Simulates the store/lookup pattern used by _pendingFragmentNavigations
+        /// with Path.GetFullPath normalization to ensure cross-file fragment navigation works.
+        /// </summary>
+        private static bool TryMatchPendingFragment(string storedPath, string lookupPath)
+        {
+            var dict = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            dict[Path.GetFullPath(storedPath)] = "heading";
+            return dict.TryRemove(Path.GetFullPath(lookupPath), out _);
+        }
+
+        [TestMethod]
+        public void PendingFragment_IdenticalPaths_Matches()
+        {
+            Assert.IsTrue(TryMatchPendingFragment(
+                @"C:\Projects\Docs\readme.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void PendingFragment_DifferentCasing_Matches()
+        {
+            Assert.IsTrue(TryMatchPendingFragment(
+                @"C:\Projects\Docs\README.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void PendingFragment_UnnormalizedWithDotDot_Matches()
+        {
+            Assert.IsTrue(TryMatchPendingFragment(
+                @"C:\Projects\Docs\..\Docs\readme.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void PendingFragment_DifferentFiles_DoesNotMatch()
+        {
+            Assert.IsFalse(TryMatchPendingFragment(
+                @"C:\Projects\Docs\other.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        #endregion
+
         #region Fragment Extraction Tests
 
         /// <summary>
