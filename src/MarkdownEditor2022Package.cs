@@ -64,10 +64,26 @@ namespace MarkdownEditor2022
             RegisterEditorFactory(language);
             ((IServiceContainer)this).AddService(typeof(MarkdownEditorV2), language, true);
 
-            await this.RegisterCommandsAsync();
+            await RegisterCommandsAsync();
             await Commenting.InitializeAsync();
             await ToggleTaskCommand.InitializeAsync();
             await FormatTableCommand.InitializeAsync();
+        }
+
+        private async Task RegisterCommandsAsync()
+        {
+            await MakeBoldCommand.InitializeAsync(this);
+            await MakeItalicCommand.InitializeAsync(this);
+            await EnablePreviewSyncCommand.InitializeAsync(this);
+            await GenerateHtmlCommand.InitializeAsync(this);
+            await GenerateTocCommand.InitializeAsync(this);
+            await InsertLinkCommand.InitializeAsync(this);
+            await OpenSettingsCommand.InitializeAsync(this);
+            await RefreshCommand.InitializeAsync(this);
+            await ShowKeybingingsCommand.InitializeAsync(this);
+            await ShowMarkdownReferenceCommand.InitializeAsync(this);
+            await TogglePreviewCommand.InitializeAsync(this);
+            await ToggleSpellCheckCommand.InitializeAsync(this);
         }
 
         protected override void Dispose(bool disposing)
