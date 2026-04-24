@@ -88,7 +88,7 @@ jobs:
 
       - name: Publish extension to Marketplace
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]') }}
-        uses: cezarypiatek/VsixPublisherAction@1.0
+        uses: cezarypiatek/VsixPublisherAction@1.2
         with:
           extension-file: '${{ github.event.repository.name }}.vsix'
           publish-manifest-file: 'vs-publish.json'
@@ -97,7 +97,7 @@ jobs:
       - name: Tag and Release
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]') }}
         id: tag_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           body: Release ${{ needs.build.outputs.version }}
           generate_release_notes: true
