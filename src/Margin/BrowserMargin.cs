@@ -39,7 +39,30 @@ namespace MarkdownEditor2022
             Browser = new Browser(textview.TextBuffer.GetFileName(), _document, textview as IWpfTextView, formatMapService);
             Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
 
+            // Defer adding the WebView2CompositionControl to the visual tree until this margin
+            // is fully parented under a Window. WebView2CompositionControl.Loaded calls
+            // Window.GetWindow(this) which returns null if the control loads before the VS
+            // tool window is parented, causing a NullReferenceException.
             CreateMarginControls(Browser._browser);
+
+            if (System.Windows.Window.GetWindow(this) != null)
+            {
+                Browser._browser.Visibility = Browser._browser.Visibility; // already parented, no-op
+            }
+            else
+            {
+                // Hide until we have a window ancestor, then show
+                Browser._browser.Visibility = Visibility.Collapsed;
+                Loaded += OnMarginLoaded;
+            }
+        }
+
+        private void OnMarginLoaded(object sender, RoutedEventArgs e)
+        {
+            Loaded -= OnMarginLoaded;
+            // Now the margin is parented under a Window, safe to make the browser visible
+            // so its Loaded event will find a Window ancestor.
+            Browser._browser.Visibility = Visibility.Hidden;
         }
 
 
