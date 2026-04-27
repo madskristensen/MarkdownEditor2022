@@ -21,6 +21,11 @@ namespace MarkdownEditor2022
         private bool _isDisposed;
         private DateTime _lastEdit;
         private readonly Debouncer _debouncer = new(150); // Per-instance debouncer for correct behavior with multiple documents
+        private Grid _browserHost;
+        private int _browserHostColumn;
+        private int _browserHostRow;
+        private bool _browserAttached;
+        private bool _browserAttachQueued;
 
         public FrameworkElement VisualElement => this;
         public double MarginSize => 400; // Initial size, actual size is calculated from percentage
@@ -38,31 +43,101 @@ namespace MarkdownEditor2022
 
             Browser = new Browser(textview.TextBuffer.GetFileName(), _document, textview as IWpfTextView, formatMapService);
             Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
+            Dispatcher.UnhandledException += OnDispatcherUnhandledException;
 
             // Defer adding the WebView2CompositionControl to the visual tree until this margin
             // is fully parented under a Window. WebView2CompositionControl.Loaded calls
             // Window.GetWindow(this) which returns null if the control loads before the VS
             // tool window is parented, causing a NullReferenceException.
-            CreateMarginControls(Browser._browser);
-
-            if (System.Windows.Window.GetWindow(this) != null)
-            {
-                Browser._browser.Visibility = Browser._browser.Visibility; // already parented, no-op
-            }
-            else
-            {
-                // Hide until we have a window ancestor, then show
-                Browser._browser.Visibility = Visibility.Collapsed;
-                Loaded += OnMarginLoaded;
-            }
+            CreateMarginControls();
+            QueueBrowserAttach();
         }
 
         private void OnMarginLoaded(object sender, RoutedEventArgs e)
         {
+            TryAttachBrowser();
+        }
+
+        private void OnLayoutUpdatedUntilBrowserAttached(object sender, EventArgs e)
+        {
+            TryAttachBrowser();
+        }
+
+        private void QueueBrowserAttach()
+        {
+            if (_isDisposed || _browserAttached || _browserAttachQueued)
+            {
+                return;
+            }
+
+            _browserAttachQueued = true;
+            Loaded += OnMarginLoaded;
+            LayoutUpdated += OnLayoutUpdatedUntilBrowserAttached;
+            TryAttachBrowser();
+        }
+
+        private void TryAttachBrowser()
+        {
+            try
+            {
+                if (_isDisposed || _browserAttached || _browserHost == null || Window.GetWindow(this) == null)
+                {
+                    return;
+                }
+
+                Loaded -= OnMarginLoaded;
+                LayoutUpdated -= OnLayoutUpdatedUntilBrowserAttached;
+                _browserAttachQueued = false;
+
+                WebView2CompositionControl view = Browser._browser;
+
+                if (view.Parent is Panel parent)
+                {
+                    parent.Children.Remove(view);
+                }
+
+                Grid.SetColumn(view, _browserHostColumn);
+                Grid.SetRow(view, _browserHostRow);
+                _browserHost.Children.Add(view);
+                _browserAttached = true;
+            }
+            catch (Exception ex)
+            {
+                HandleBrowserFailure(ex);
+            }
+        }
+
+        private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            if (!IsWebView2LoadedNullReference(e.Exception))
+            {
+                return;
+            }
+
+            e.Handled = true;
+            HandleBrowserFailure(e.Exception);
+        }
+
+        private static bool IsWebView2LoadedNullReference(Exception exception)
+        {
+            return exception is NullReferenceException &&
+                   string.Equals(exception.Source, "Microsoft.Web.WebView2.Wpf", StringComparison.OrdinalIgnoreCase) &&
+                   exception.StackTrace?.IndexOf("WebView2CompositionControl_Loaded", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private void HandleBrowserFailure(Exception exception)
+        {
             Loaded -= OnMarginLoaded;
-            // Now the margin is parented under a Window, safe to make the browser visible
-            // so its Loaded event will find a Window ancestor.
-            Browser._browser.Visibility = Visibility.Hidden;
+            LayoutUpdated -= OnLayoutUpdatedUntilBrowserAttached;
+            _browserAttachQueued = false;
+
+            if (Browser?._browser?.Parent is Panel parent)
+            {
+                parent.Children.Remove(Browser._browser);
+            }
+
+            Visibility = Visibility.Collapsed;
+            exception?.LogAsync().FireAndForget();
         }
 
 
@@ -74,6 +149,9 @@ namespace MarkdownEditor2022
             }
 
             Browser._browser.CoreWebView2InitializationCompleted -= OnBrowserInitCompleted;
+            Dispatcher.UnhandledException -= OnDispatcherUnhandledException;
+            Loaded -= OnMarginLoaded;
+            LayoutUpdated -= OnLayoutUpdatedUntilBrowserAttached;
             Browser.LineNavigationRequested -= OnLineNavigationRequested;
             _document.Parsed -= UpdateBrowser;
             _textView.LayoutChanged -= UpdatePosition;
@@ -91,7 +169,8 @@ namespace MarkdownEditor2022
         {
             if (!e.IsSuccess)
             {
-                throw e.InitializationException;
+                HandleBrowserFailure(e.InitializationException ?? new InvalidOperationException("WebView2 initialization failed."));
+                return;
             }
 
             WebView2CompositionControl view = sender as WebView2CompositionControl;
@@ -173,18 +252,18 @@ namespace MarkdownEditor2022
             }).FireAndForget();
         }
 
-        private void CreateMarginControls(WebView2CompositionControl view)
+        private void CreateMarginControls()
         {
             if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical)
             {
-                CreateRightMarginControls(view);
+                CreateRightMarginControls();
             }
             else
             {
-                CreateBottomMarginControls(view);
+                CreateBottomMarginControls();
             }
 
-            void CreateRightMarginControls(WebView2CompositionControl view)
+            void CreateRightMarginControls()
             {
                 Grid grid = new();
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(0, GridUnitType.Star) });
@@ -195,9 +274,9 @@ namespace MarkdownEditor2022
 
                 Children.Add(grid);
 
-                grid.Children.Add(view);
-                Grid.SetColumn(view, 2);
-                Grid.SetRow(view, 0);
+                _browserHost = grid;
+                _browserHostColumn = 2;
+                _browserHostRow = 0;
 
                 bool isUpdating = false;
                 bool isDragging = false;
@@ -300,7 +379,7 @@ namespace MarkdownEditor2022
                 _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(UpdateWidthFromPercentage);
             }
 
-            void CreateBottomMarginControls(WebView2CompositionControl view)
+            void CreateBottomMarginControls()
             {
                 int height = AdvancedOptions.Instance.PreviewWindowHeight;
 
@@ -313,9 +392,9 @@ namespace MarkdownEditor2022
 
                 Children.Add(grid);
 
-                grid.Children.Add(view);
-                Grid.SetColumn(view, 0);
-                Grid.SetRow(view, 2);
+                _browserHost = grid;
+                _browserHostColumn = 0;
+                _browserHostRow = 2;
 
                 GridSplitter splitter = new()
                 {
