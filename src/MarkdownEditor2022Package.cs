@@ -76,6 +76,7 @@ namespace MarkdownEditor2022
             await MakeItalicCommand.InitializeAsync(this);
             await EnablePreviewSyncCommand.InitializeAsync(this);
             await GenerateHtmlCommand.InitializeAsync(this);
+            await ExportToPdfCommand.InitializeAsync(this);
             await GenerateTocCommand.InitializeAsync(this);
             await InsertLinkCommand.InitializeAsync(this);
             await OpenSettingsCommand.InitializeAsync(this);

@@ -83,6 +83,17 @@
         </Strings>
       </Button>
 
+      <Button guid="MarkdownEditor2022" id="ExportToPdf" priority="160" type="Button">
+        <Parent guid="MarkdownEditor2022" id="PreviewGroup" />
+        <Icon guid="ImageCatalogGuid" id="Print"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Export to PDF</ButtonText>
+          <LocCanonicalName>.Markdown.ExportToPdf</LocCanonicalName>
+        </Strings>
+      </Button>
+
       <Button guid="MarkdownEditor2022" id="InsertLink" priority="200" type="Button">
         <Parent guid="MarkdownEditor2022" id="EditorGroup" />
         <Icon guid="ImageCatalogGuid" id="AddLink"/>
@@ -165,6 +176,7 @@
     <VisibilityItem guid="MarkdownEditor2022" id="TogglePreview" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="ToggleSpellChecking" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="Refresh" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="ExportToPdf" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="ShowKeybindings" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="ShowMarkdownReference" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="OpenSettings" context="EditorFactory" />
@@ -204,6 +216,7 @@
       <IDSymbol name="TogglePreview" value="0x1090"/>
       <IDSymbol name="ToggleSpellChecking" value="0x1100"/>
       <IDSymbol name="GenerateHtml" value="0x1110"/>
+      <IDSymbol name="ExportToPdf" value="0x1120"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>
