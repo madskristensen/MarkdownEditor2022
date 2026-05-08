@@ -45,6 +45,7 @@ This extension delivers a full featured Markdown editor with live preview, synta
 - Jump between headings from the NavigationBar, Document Outline, or generated table of contents.
 - Document Outline tool window shows a persistent hierarchical view of all headings.
 - Collapse or expand fenced code and HTML blocks to stay focused.
+- Follow VS Code-style line links (`[link](./file.cs#L10)`) to open a file and jump to a specific line and column.
 
 ### Media workflows
 
@@ -341,6 +342,17 @@ The Document Outline tool window (**View -> Document Outline**) provides a persi
 The Document Outline complements the NavigationBar dropdown by providing an always-visible overview of your document structure.
 
 ![Document outline window](art/document-outline.png)
+
+### Line links to source files
+
+Links to local files in the preview can include a VS Code-style line fragment to jump straight to a specific location when the file is opened. This is especially useful when an AI assistant generates links into your codebase.
+
+**Syntax:**
+
+- `[link](./path/to/file.cs#L10)` &mdash; opens `file.cs` and places the caret on line 10.
+- `[link](./path/to/file.cs#L10,5)` &mdash; opens `file.cs` and places the caret on line 10, column 5. `#L10:5` is also accepted.
+
+Line and column numbers are 1-based and are clamped to the file's contents, so out-of-range values still open the file at the closest valid position. The targeted line is centered in the editor and focus is moved to the opened document.
 
 ### Drag 'n drop images
 

@@ -18,6 +18,7 @@ using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Web.WebView2.Core;
@@ -93,6 +94,11 @@ namespace MarkdownEditor2022
         private static readonly Regex _mermaidRegex = new("class=\"language-mermaid\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex _escapeRegex = new(@"[\\\r\n""]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly ConcurrentDictionary<string, string> _templateCache = new();
+
+        // Regex for VS Code-style line-link fragments: #L10 or #L10,5 (also accepts L10:5).
+        private static readonly Regex _lineLinkFragmentRegex = new(
+            @"^L(?<line>\d+)(?:[,:](?<col>\d+))?$",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         // Regex for resolving relative paths in HTML attributes to absolute file:// URLs
         // Matches src="...", href="...", and data="..." attributes with relative paths (not starting with http, https, data:, #, or /)
@@ -779,8 +785,13 @@ namespace MarkdownEditor2022
             fragment = fragment?.TrimStart('#');
             bool hasFragment = !string.IsNullOrEmpty(fragment);
 
+            // Check for VS Code-style line link (#L10 or #L10,5).
+            int targetLine = 0;
+            int targetColumn = 0;
+            bool isLineLink = hasFragment && TryParseLineFragment(fragment, out targetLine, out targetColumn);
+
             // Check if this is an internal anchor (same file with fragment)
-            if (hasFragment && filePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
+            if (hasFragment && !isLineLink && filePath.Equals(_file, StringComparison.OrdinalIgnoreCase))
             {
                 await NavigateToFragmentAsync(fragment);
                 return;
@@ -789,12 +800,19 @@ namespace MarkdownEditor2022
             // File exists - open it
             if (File.Exists(filePath))
             {
-                // Store pending fragment navigation before opening the file
-                if (hasFragment)
+                if (isLineLink)
                 {
-                    _pendingFragmentNavigations[Path.GetFullPath(filePath)] = fragment;
+                    await OpenAndGoToLineAsync(filePath, targetLine, targetColumn);
                 }
-                VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
+                else
+                {
+                    // Store pending fragment navigation before opening the file
+                    if (hasFragment)
+                    {
+                        _pendingFragmentNavigations[Path.GetFullPath(filePath)] = fragment;
+                    }
+                    VS.Documents.OpenInPreviewTabAsync(filePath).FireAndForget();
+                }
                 return;
             }
 
@@ -806,12 +824,19 @@ namespace MarkdownEditor2022
                     string withExt = filePath + ext;
                     if (File.Exists(withExt))
                     {
-                        // Store pending fragment navigation before opening the file
-                        if (hasFragment)
+                        if (isLineLink)
                         {
-                            _pendingFragmentNavigations[Path.GetFullPath(withExt)] = fragment;
+                            await OpenAndGoToLineAsync(withExt, targetLine, targetColumn);
                         }
-                        VS.Documents.OpenInPreviewTabAsync(withExt).FireAndForget();
+                        else
+                        {
+                            // Store pending fragment navigation before opening the file
+                            if (hasFragment)
+                            {
+                                _pendingFragmentNavigations[Path.GetFullPath(withExt)] = fragment;
+                            }
+                            VS.Documents.OpenInPreviewTabAsync(withExt).FireAndForget();
+                        }
                         return;
                     }
                 }
@@ -820,6 +845,69 @@ namespace MarkdownEditor2022
             // File doesn't exist - offer to create it if it's a markdown file
             string currentDir = Path.GetDirectoryName(_file);
             await HandleNonExistentMarkdownLinkAsync(filePath, currentDir);
+        }
+
+        /// <summary>
+        /// Parses a VS Code-style line-link fragment (e.g. "L10" or "L10,5" or "L10:5").
+        /// Returns true with 1-based <paramref name="line"/> and <paramref name="column"/> on success.
+        /// </summary>
+        private static bool TryParseLineFragment(string fragment, out int line, out int column)
+        {
+            line = 0;
+            column = 0;
+            if (string.IsNullOrEmpty(fragment))
+            {
+                return false;
+            }
+
+            Match m = _lineLinkFragmentRegex.Match(fragment);
+            if (!m.Success)
+            {
+                return false;
+            }
+
+            if (!int.TryParse(m.Groups["line"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out line) || line < 1)
+            {
+                line = 0;
+                return false;
+            }
+
+            if (m.Groups["col"].Success &&
+                int.TryParse(m.Groups["col"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedCol) &&
+                parsedCol >= 1)
+            {
+                column = parsedCol;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Opens the specified file in a preview tab and moves the caret to the given 1-based line/column.
+        /// </summary>
+        private static async Task OpenAndGoToLineAsync(string filePath, int line, int column)
+        {
+            DocumentView docView = await VS.Documents.OpenInPreviewTabAsync(filePath);
+            IWpfTextView textView = docView?.TextView;
+            if (textView == null)
+            {
+                return;
+            }
+
+            ITextSnapshot snapshot = textView.TextSnapshot;
+            if (snapshot.LineCount == 0)
+            {
+                return;
+            }
+
+            int lineIndex = Math.Min(Math.Max(line - 1, 0), snapshot.LineCount - 1);
+            ITextSnapshotLine snapLine = snapshot.GetLineFromLineNumber(lineIndex);
+            int columnOffset = column > 0 ? Math.Min(column - 1, snapLine.Length) : 0;
+            SnapshotPoint point = new(snapshot, snapLine.Start.Position + columnOffset);
+
+            textView.Caret.MoveTo(point);
+            textView.ViewScroller.EnsureSpanVisible(new SnapshotSpan(point, 0), EnsureSpanVisibleOptions.AlwaysCenter);
+            textView.VisualElement.Focus();
         }
 
         private async Task NavigateToFragmentAsync(string fragmentId)
