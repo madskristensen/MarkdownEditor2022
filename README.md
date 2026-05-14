@@ -5,6 +5,7 @@
 # Markdown Editor v2 for Visual Studio
 
 [![Build](https://github.com/madskristensen/MarkdownEditor2022/actions/workflows/build.yaml/badge.svg)](https://github.com/madskristensen/MarkdownEditor2022/actions/workflows/build.yaml)
+[![Install from VSIX Gallery](https://www.vsixgallery.com/badge/MarkdownEditor2022.2347dc70-1875-4775-bf48-f2b9fdfee8d4.svg)][vsixgallery]
 ![GitHub Sponsors](https://img.shields.io/github/sponsors/madskristensen)
 
 Download this extension from the [Visual Studio Marketplace][marketplace]
