@@ -67,7 +67,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: ${{ github.event.repository.name }}.vsix
-        path: src\bin\${{ env.Configuration }}\MarkdownEditor2022.vsix
+        path: src\bin\${{ env.Configuration }}\net48\MarkdownEditor2022.vsix
 
   publish:
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
