@@ -21,7 +21,7 @@ jobs:
       Configuration: Release
       DeployExtension: False
       Solution: MarkdownEditor2022.slnx
-      TestProject: test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj
+      TestAssembly: test\MarkdownEditor2022.UnitTests\bin\Release\MarkdownEditor2022.UnitTests.dll
       VsixManifestPath: src\source.extension.vsixmanifest
       VsixManifestSourcePath: src\source.extension.cs
 
@@ -53,7 +53,7 @@ jobs:
       run: msbuild ${{ env.Solution }} /v:m /m /p:Configuration=${{ env.Configuration }} /p:DeployExtension=${{ env.DeployExtension }}
 
     - name: Run tests
-      run: dotnet test ${{ env.TestProject }} --configuration ${{ env.Configuration }} --no-build --no-restore --verbosity normal --logger:"trx;LogFileName=test-results.trx"
+      run: dotnet vstest ${{ env.TestAssembly }} --logger:"trx;LogFileName=test-results.trx"
 
     - name: Report test results
       uses: dorny/test-reporter@v3
