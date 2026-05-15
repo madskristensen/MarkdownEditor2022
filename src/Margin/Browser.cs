@@ -395,7 +395,7 @@ namespace MarkdownEditor2022
         /// Adds the architecture-specific runtimes directory to the DLL search path so that
         /// WebView2Loader.dll can be found when packaged inside the VSIX under runtimes\win-{arch}\native\.
         /// </summary>
-        private static void EnsureNativeDllSearchPath()
+        internal static void EnsureNativeDllSearchPath()
         {
             if (_nativeDllSearchPathConfigured)
             {
@@ -1862,7 +1862,7 @@ namespace MarkdownEditor2022
         /// <summary>
         /// Gets or creates a cached WebView2 environment for faster initialization of subsequent browser instances.
         /// </summary>
-        private static Task<CoreWebView2Environment> GetOrCreateWebView2EnvironmentAsync()
+        internal static Task<CoreWebView2Environment> GetOrCreateWebView2EnvironmentAsync()
         {
             if (_cachedEnvironmentTask != null)
             {

@@ -48,12 +48,14 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Commands\CommentCommand.cs" />
+    <Compile Include="Commands\ExportToPdfCommand.cs" />
     <Compile Include="Commands\EmphasizeTextCommand.cs" />
     <Compile Include="Commands\EnablePreviewSyncCommand.cs" />
     <Compile Include="Commands\FormatTableCommand.cs" />
     <Compile Include="Commands\GenerateTocCommand.cs" />
     <Compile Include="Commands\GenerateHtmlCommand.cs" />
     <Compile Include="Commands\HtmlGenerationService.cs" />
+    <Compile Include="Services\PdfExportService.cs" />
     <Compile Include="Commands\IndentationCommand.cs" />
     <Compile Include="Commands\InsertLinkCommand.cs" />
     <Compile Include="Commands\OpenSettingsCommand.cs" />
