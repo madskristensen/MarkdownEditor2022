@@ -2,13 +2,12 @@
 name: "Build"
 permissions:
   actions: write
-  checks: write
   contents: write
 
 on:
   push:
     branches: [master]
-  pull_request_target:
+  pull_request:
     branches: [master]
   workflow_dispatch:
 
@@ -21,20 +20,19 @@ jobs:
     env:
       Configuration: Release
       DeployExtension: False
+      Solution: MarkdownEditor2022.slnx
+      TestProject: test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj
       VsixManifestPath: src\source.extension.vsixmanifest
       VsixManifestSourcePath: src\source.extension.cs
 
     steps:
-    - uses: actions/checkout@v5
-      with:
-        ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
-        persist-credentials: false
+    - uses: actions/checkout@v6
 
     - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+      uses: microsoft/setup-msbuild@v3
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.slnx', '**/*.sln', '**/*.csproj', '**/packages.config', '**/packages.lock.json', '**/nuget.config') }}
@@ -43,30 +41,33 @@ jobs:
 
     - name: Increment VSIX version
       id: vsix_version
-      uses: timheuer/vsix-version-stamp@v2
+      uses: madskristensen/vsix-version-stamp@v2
       with:
         manifest-file: ${{ env.VsixManifestPath }}
         vsix-token-source-file: ${{ env.VsixManifestSourcePath }}
 
+    - name: Restore NuGet packages
+      run: msbuild ${{ env.Solution }} /v:m -restore /t:Restore
+
     - name: Build
-      run: msbuild /v:m -restore /p:OutDir=\_built
+      run: msbuild ${{ env.Solution }} /v:m /m /p:Configuration=${{ env.Configuration }} /p:DeployExtension=${{ env.DeployExtension }}
 
     - name: Run tests
-      run: dotnet vstest /_built/MarkdownEditor2022.UnitTests.dll --logger "trx;LogFileName=test-results.trx"
+      run: dotnet test ${{ env.TestProject }} --configuration ${{ env.Configuration }} --no-build --no-restore --verbosity normal --logger:"trx;LogFileName=test-results.trx"
 
     - name: Report test results
-      uses: dorny/test-reporter@v2
-      if: ${{ always() && (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      uses: dorny/test-reporter@v3
+      if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
       with:
         name: Test Results
         path: '**/test-results.trx'
         reporter: dotnet-trx
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ github.event.repository.name }}.vsix
-        path: /_built/**/*.vsix
+        path: src\bin\${{ env.Configuration }}\net48\MarkdownEditor2022.vsix
 
   publish:
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
@@ -74,32 +75,34 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
 
       - name: Download Package artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: ${{ github.event.repository.name }}.vsix
 
       - name: Upload to Open VSIX
-        uses: timheuer/openvsixpublish@v1
+        uses: madskristensen/publish-vsixgallery@v1
         with:
           vsix-file: ${{ github.event.repository.name }}.vsix
 
       - name: Publish extension to Marketplace
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]') }}
-        uses: cezarypiatek/VsixPublisherAction@1.2
+        uses: madskristensen/publish-marketplace@v2
         with:
           extension-file: '${{ github.event.repository.name }}.vsix'
           publish-manifest-file: 'vs-publish.json'
           personal-access-code: ${{ secrets.VS_PUBLISHER_ACCESS_TOKEN }}
 
-      - name: Tag and Release
+      - name: Tag and release
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]') }}
         id: tag_release
         uses: softprops/action-gh-release@v3
         with:
-          body: Release ${{ needs.build.outputs.version }}
+          body: release ${{ needs.build.outputs.version }}
           generate_release_notes: true
           tag_name: ${{ needs.build.outputs.version }}
           files: |
