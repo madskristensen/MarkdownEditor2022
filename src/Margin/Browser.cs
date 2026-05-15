@@ -102,13 +102,13 @@ namespace MarkdownEditor2022
 
         // Regex for resolving relative paths in HTML attributes to absolute file:// URLs
         // Matches src="...", href="...", and data="..." attributes with relative paths (not starting with http, https, data:, #, or /)
-        private static readonly Regex _relativePathRegex = new(
+        internal static readonly Regex _relativePathRegex = new(
             @"(?<attr>src|href|data)\s*=\s*""(?<path>(?!https?://|data:|#|/)[^""]+)""",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         // Regex for resolving root-relative paths (paths starting with /) in HTML attributes
         // Matches src="...", href="...", and data="..." attributes with paths starting with / (but not //)
-        private static readonly Regex _rootRelativePathRegex = new(
+        internal static readonly Regex _rootRelativePathRegex = new(
             @"(?<attr>src|href|data)\s*=\s*""(?<path>/(?!/)[^""]+)""",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
@@ -1315,24 +1315,7 @@ namespace MarkdownEditor2022
 
                     try
                     {
-                        // Only decode if path contains encoded characters (avoid allocation otherwise)
-                        string decodedPath = relativePath.IndexOf('%') >= 0
-                            ? WebUtility.UrlDecode(relativePath)
-                            : relativePath;
-
-                        // Remove leading slash and normalize path separators
-                        string pathWithoutLeadingSlash = decodedPath.TrimStart('/');
-                        pathWithoutLeadingSlash = pathWithoutLeadingSlash.Replace('/', Path.DirectorySeparatorChar);
-
-                        // Resolve against the root path
-                        string fullPath = Path.GetFullPath(Path.Combine(rootPath, pathWithoutLeadingSlash));
-
-                        // Convert to virtual host URL relative to drive root
-                        string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
-                            ? fullPath.Substring(driveRoot.Length)
-                            : fullPath;
-
-                        return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
+                        return ResolveRootRelativePath(attr, relativePath, rootPath, driveRoot);
                     }
                     catch
                     {
@@ -1348,32 +1331,15 @@ namespace MarkdownEditor2022
                 string attr = match.Groups["attr"].Value;
                 string relativePath = match.Groups["path"].Value;
 
-                // Skip if it's an anchor-only link or already absolute
-                if (string.IsNullOrEmpty(relativePath) || relativePath.StartsWith("#"))
+                // Skip if it's an anchor-only link, already absolute, or a URI scheme (mailto:, tel:, mail:, etc.)
+                if (string.IsNullOrEmpty(relativePath) || relativePath.StartsWith("#") || relativePath.IndexOf(':') >= 0)
                 {
                     return match.Value;
                 }
 
                 try
                 {
-                    // Only decode if path contains encoded characters (avoid allocation otherwise)
-                    string decodedPath = relativePath.IndexOf('%') >= 0
-                        ? WebUtility.UrlDecode(relativePath)
-                        : relativePath;
-
-                    // Normalize path separators
-                    decodedPath = decodedPath.Replace('/', Path.DirectorySeparatorChar);
-
-                    // Resolve the full path using Path.GetFullPath which handles ../ correctly
-                    string fullPath = Path.GetFullPath(Path.Combine(baseDirectory, decodedPath));
-
-                    // Convert to virtual host URL relative to drive root
-                    // e.g., C:\Projects\images\foo.png -> http://browsing-file-host/Projects/images/foo.png
-                    string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
-                        ? fullPath.Substring(driveRoot.Length)
-                        : fullPath;
-
-                    return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
+                    return ResolveRelativePath(attr, relativePath, baseDirectory, driveRoot);
                 }
                 catch
                 {
@@ -1383,6 +1349,51 @@ namespace MarkdownEditor2022
             });
 
             return html;
+        }
+
+        /// <summary>Resolves a regular relative path to a virtual host URL attribute string.</summary>
+        internal static string ResolveRelativePath(string attr, string relativePath, string baseDirectory, string driveRoot)
+        {
+            string decodedPath = relativePath.IndexOf('%') >= 0
+                ? WebUtility.UrlDecode(relativePath)
+                : relativePath;
+
+            // Normalize path separators
+            decodedPath = decodedPath.Replace('/', Path.DirectorySeparatorChar);
+
+            // Resolve the full path using Path.GetFullPath which handles ../ correctly
+            string fullPath = Path.GetFullPath(Path.Combine(baseDirectory, decodedPath));
+
+            // Convert to virtual host URL relative to drive root
+            // e.g., C:\Projects\images\foo.png -> http://browsing-file-host/Projects/images/foo.png
+            string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                ? fullPath.Substring(driveRoot.Length)
+                : fullPath;
+
+            return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
+        }
+
+        /// <summary>Resolves a root-relative path (starting with /) to a virtual host URL attribute string.</summary>
+        internal static string ResolveRootRelativePath(string attr, string relativePath, string rootPath, string driveRoot)
+        {
+            // Only decode if path contains encoded characters (avoid allocation otherwise)
+            string decodedPath = relativePath.IndexOf('%') >= 0
+                ? WebUtility.UrlDecode(relativePath)
+                : relativePath;
+
+            // Remove leading slash and normalize path separators
+            string pathWithoutLeadingSlash = decodedPath.TrimStart('/');
+            pathWithoutLeadingSlash = pathWithoutLeadingSlash.Replace('/', Path.DirectorySeparatorChar);
+
+            // Resolve against the root path
+            string fullPath = Path.GetFullPath(Path.Combine(rootPath, pathWithoutLeadingSlash));
+
+            // Convert to virtual host URL relative to drive root
+            string relativeToDrive = fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                ? fullPath.Substring(driveRoot.Length)
+                : fullPath;
+
+            return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relativeToDrive.Replace(Path.DirectorySeparatorChar, '/'), "\"");
         }
 
         /// <summary>
