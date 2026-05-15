@@ -1475,8 +1475,9 @@ namespace MarkdownEditor2022
                 }
                 if (needsMath)
                 {
-                    // MathJax lazy load or re-typeset
-                    script.Append(@"if(!window.MathJax && !window.__mathjaxLoading){window.__mathjaxLoading=true;var sj=document.createElement('script');sj.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mathjax.js';sj.onload=function(){if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}};document.head.appendChild(sj);} else if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}");
+                    // MathJax lazy load or re-typeset. Configure tex/color extension before the bundle loads
+                    // so that \color, \textcolor, \colorbox and \fcolorbox work in math expressions (issue #219).
+                    script.Append(@"if(!window.MathJax && !window.__mathjaxLoading){window.__mathjaxLoading=true;window.MathJax={tex:{packages:{'[+]':['color']}},loader:{load:['[tex]/color'],paths:{tex:'http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin'}}};var sj=document.createElement('script');sj.src='http://").Append(_mappedMarkdownEditorVirtualHostName).Append(@"/margin/mathjax.js';sj.onload=function(){if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}};document.head.appendChild(sj);} else if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}");
                 }
 
                 // Inline anchor adjustment
@@ -1515,6 +1516,8 @@ namespace MarkdownEditor2022
             }
             if (math)
             {
+                // Configure tex/color extension before MathJax bundle initializes (issue #219).
+                sb.Append("<script>window.MathJax={tex:{packages:{'[+]':['color']}},loader:{load:['[tex]/color'],paths:{tex:'http://").Append(_mappedMarkdownEditorVirtualHostName).Append("/margin'}}};</script>");
                 sb.Append("<script src=\"http://").Append(_mappedMarkdownEditorVirtualHostName).Append("/margin/mathjax.js\" onload=\"if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise().catch(function(e){});}\"></script>");
             }
             return sb.ToString();
