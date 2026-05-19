@@ -1,152 +1,94 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+
+    <!-- Custom binding-redirection attributes live in Properties\AssemblyInfo.cs -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-  </PropertyGroup>
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectTypeGuids>{82b43b9b-a64c-4715-b499-d71e9ca2bd60};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <ProjectGuid>{FEFC92E3-9CE6-4C8E-B308-2CD8E98F3DCE}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MarkdownEditor2022</RootNamespace>
-    <AssemblyName>MarkdownEditor2022</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+
+    <!-- VSIX settings -->
+    <VSSDKBuildToolsAutoSetup>true</VSSDKBuildToolsAutoSetup>
+    <VsixDeployOnDebug>true</VsixDeployOnDebug>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <UseCodebase>true</UseCodebase>
-    <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
-    <IncludeDebugSymbolsInVSIXContainer>true</IncludeDebugSymbolsInVSIXContainer>
-    <IncludeDebugSymbolsInLocalVSIXDeployment>false</IncludeDebugSymbolsInLocalVSIXDeployment>
-    <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
-    <CopyOutputSymbolsToOutputDirectory>true</CopyOutputSymbolsToOutputDirectory>
-    <StartAction>Program</StartAction>
-    <StartProgram Condition="'$(DevEnvDir)' != ''">$(DevEnvDir)devenv.exe</StartProgram>
-    <StartArguments>/rootsuffix Exp</StartArguments>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Compile Include="Commands\CommentCommand.cs" />
-    <Compile Include="Commands\EmphasizeTextCommand.cs" />
-    <Compile Include="Commands\EnablePreviewSyncCommand.cs" />
-    <Compile Include="Commands\FormatTableCommand.cs" />
-    <Compile Include="Commands\GenerateTocCommand.cs" />
-    <Compile Include="Commands\GenerateHtmlCommand.cs" />
-    <Compile Include="Commands\HtmlGenerationService.cs" />
-    <Compile Include="Commands\IndentationCommand.cs" />
-    <Compile Include="Commands\InsertLinkCommand.cs" />
-    <Compile Include="Commands\OpenSettingsCommand.cs" />
-    <Compile Include="Commands\ToggleSpellCheckCommand.cs" />
-    <Compile Include="Commands\TogglePreviewCommand.cs" />
-    <Compile Include="Commands\RefreshCommand.cs" />
-    <Compile Include="Commands\ShowMarkdownReferenceCommand.cs" />
-    <Compile Include="Commands\ShowKeybindingsCommand.cs" />
-    <Compile Include="Commands\PasteImageCommand.cs" />
-    <Compile Include="Commands\ToggleTaskCommand.cs" />
-    <Compile Include="Commands\SmartIndentCommand.cs" />
-    <Compile Include="Constants.cs" />
-    <Compile Include="Document.cs" />
-    <Compile Include="DocumentAnalysis.cs" />
-    <Compile Include="DragDrop\MarkdownDropHandler.cs" />
-    <Compile Include="DragDrop\MarkdownDropHandlerProvider.cs" />
-    <Compile Include="Editor\AdornmentLayers.cs" />
-    <Compile Include="Editor\DocumentOutlineControl.xaml.cs">
-      <DependentUpon>DocumentOutlineControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Editor\FloatingToolbar.xaml.cs">
-      <DependentUpon>FloatingToolbar.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Editor\FloatingToolbarAdornment.cs" />
-    <Compile Include="Editor\FloatingToolbarAdornmentProvider.cs" />
-    <Compile Include="Editor\IntelliSense.cs" />
-    <Compile Include="Editor\MarkdownCodeWindowManager.cs" />
-    <Compile Include="Editor\MermaidClassifier.cs" />
-    <Compile Include="Editor\TableHeaderQuickInfo.cs" />
-    <Compile Include="Editor\TableSortAdornment.cs" />
-    <Compile Include="Editor\TrailingWhitespaceAdornment.cs" />
-    <Compile Include="Editor\TrailingWhitespaceAdornmentProvider.cs" />
-    <Compile Include="ExtensionMethods.cs" />
-    <Compile Include="Editor\EditorFeatures.cs" />
-    <Compile Include="Editor\LanguageFactory.cs" />
-    <Compile Include="Editor\ClassificationTypes.cs" />
-    <Compile Include="Editor\DropdownBars.cs" />
-    <Compile Include="Editor\TokenTagger.cs" />
-    <Compile Include="Extensions\TocTokenExtension.cs" />
-    <Compile Include="ImageOptimizerService.cs" />
-    <Compile Include="Margin\Browser.cs" />
-    <Compile Include="Margin\BrowserMargin.cs" />
-    <Compile Include="Margin\BrowserMarginProvider.cs" />
-    <Compile Include="Margin\Debouncer.cs" />
-    <Compile Include="Margin\ThemeHelper.cs" />
-    <Compile Include="Options\AdvancedOptions.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="MarkdownEditor2022Package.cs" />
-    <Compile Include="RootPathResolver.cs" />
-    <Compile Include="source.extension.cs">
+    <ProjectCapability Include="CreateVsixContainer" />
+  </ItemGroup>
+
+  <!-- Auto-generated files (use Update because SDK auto-includes *.cs) -->
+  <ItemGroup>
+    <Compile Update="source.extension.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>source.extension.vsixmanifest</DependentUpon>
     </Compile>
-    <Compile Include="SuggestedActions\Actions\BaseSuggestedAction.cs" />
-    <Compile Include="SuggestedActions\Actions\ConvertToCodeBlockAction.cs" />
-    <Compile Include="SuggestedActions\Actions\ConvertToImageAction.cs" />
-    <Compile Include="SuggestedActions\Actions\ConvertToLinkAction.cs" />
-    <Compile Include="SuggestedActions\Actions\ConvertToOrderedList.cs" />
-    <Compile Include="SuggestedActions\Actions\ConvertToQuoteAction.cs" />
-    <Compile Include="SuggestedActions\Actions\ConvertToTaskList.cs" />
-    <Compile Include="SuggestedActions\Actions\ConvertToUnorderedList.cs" />
-    <Compile Include="SuggestedActions\Actions\FormatTableAction.cs" />
-    <Compile Include="SuggestedActions\Actions\OptimizeImageLosslessAction.cs" />
-    <Compile Include="SuggestedActions\Actions\OptimizeImageLossyAction.cs" />
-    <Compile Include="SuggestedActions\SuggestedActionsSource.cs" />
-    <Compile Include="SuggestedActions\SuggestedActionsSourceProvider.cs" />
-    <Compile Include="VSCommandTable.cs">
+    <Compile Update="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>VSCommandTable.vsct</DependentUpon>
     </Compile>
+    <Compile Update="Editor\DocumentOutlineControl.xaml.cs">
+      <DependentUpon>DocumentOutlineControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Editor\FloatingToolbar.xaml.cs">
+      <DependentUpon>FloatingToolbar.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <!-- XAML pages (UseWPF auto-globs them; Update adds the generator) -->
+  <ItemGroup>
+    <Page Update="Editor\DocumentOutlineControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Editor\FloatingToolbar.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <!-- VSCT command table -->
+  <ItemGroup>
+    <AvailableItemName Include="VSCTCompile" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="VSCommandTable.vsct" />
+    <VSCTCompile Include="VSCommandTable.vsct">
+      <ResourceName>Menus.ctmenu</ResourceName>
+      <Generator>VsctGenerator</Generator>
+      <LastGenOutput>VSCommandTable.cs</LastGenOutput>
+    </VSCTCompile>
+  </ItemGroup>
+
+  <!-- VSIX manifest -->
+  <ItemGroup>
+    <None Update="source.extension.vsixmanifest">
+      <SubType>Designer</SubType>
+      <Generator>VsixManifestGenerator</Generator>
+      <LastGenOutput>source.extension.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <!-- Resources included in VSIX -->
+  <ItemGroup>
     <Content Include="Margin\highlight-dark.css">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="Margin\highlight.css">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="Margin\mathjax.js">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="Margin\color.js">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="Margin\md-template.html">
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
-    <Content Include="..\LICENSE">
-      <Link>Resources\LICENSE</Link>
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
-    <None Include="source.extension.vsixmanifest">
-      <SubType>Designer</SubType>
-      <Generator>VsixManifestGenerator</Generator>
-      <LastGenOutput>source.extension.cs</LastGenOutput>
-    </None>
-    <Content Include="Margin\highlight.css">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="Margin\mermaid.min.js">
@@ -169,62 +111,39 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="..\LICENSE">
+      <Link>Resources\LICENSE</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
   </ItemGroup>
-  <ItemGroup>
-    <VSCTCompile Include="VSCommandTable.vsct">
-      <ResourceName>Menus.ctmenu</ResourceName>
-      <Generator>VsctGenerator</Generator>
-      <LastGenOutput>VSCommandTable.cs</LastGenOutput>
-    </VSCTCompile>
-  </ItemGroup>
+
+  <!-- .NET Framework assemblies not covered by NuGet packages -->
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.mshtml, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Design" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="WindowsBase" />
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Community.VisualStudio.VSCT" Version="16.0.29.14" PrivateAssets="all" />
     <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.551" ExcludeAssets="Runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034" PrivateAssets="all" />
     <PackageReference Include="Markdig" Version="1.1.2" IncludeAssets="all" />
-    <PackageReference Include="Microsoft.Web.WebView2">
-      <Version>1.0.3485.44</Version>
-    </PackageReference>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3485.44" />
   </ItemGroup>
-  <ItemGroup>
-    <Page Include="Editor\DocumentOutlineControl.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Editor\FloatingToolbar.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
+
   <!-- Include Markdig transitive dependencies (System.Memory, etc.) in the VSIX container -->
   <Target Name="IncludeMarkdigDependencies" AfterTargets="GetVsixSourceItems">
     <ItemGroup>
-      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Memory'&#xD;&#xA;                              or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Buffers'&#xD;&#xA;                              or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Numerics.Vectors'&#xD;&#xA;                              or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Runtime.CompilerServices.Unsafe'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Memory'&#xD;&#xA;                                  or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Buffers'&#xD;&#xA;                                  or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Numerics.Vectors'&#xD;&#xA;                                  or '%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Runtime.CompilerServices.Unsafe'" />
     </ItemGroup>
   </Target>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>

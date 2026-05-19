@@ -45,5 +45,6 @@ namespace MarkdownEditor2022
         public const int TogglePreview = 0x1090;
         public const int ToggleSpellChecking = 0x1100;
         public const int GenerateHtml = 0x1110;
+        public const int ExportToPdf = 0x1120;
     }
 }
