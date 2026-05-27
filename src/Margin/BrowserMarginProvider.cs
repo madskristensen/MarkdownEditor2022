@@ -17,8 +17,6 @@ namespace MarkdownEditor2022
         [Import]
         internal IEditorFormatMapService FormatMapService { get; set; }
 
-        private BrowserMargin _browserMargin;
-
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
         {
             if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Horizontal || wpfTextViewHost.TextView.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole))
@@ -26,23 +24,29 @@ namespace MarkdownEditor2022
                 return null;
             }
 
-            AdvancedOptions.Saved += AdvancedOptions_Saved;
-            wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, FormatMapService, marginName: nameof(PreviewMarginVerticalProvider));
-
-            return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
+            // Only construct the margin (which spins up a WebView2 instance) when one isn't
+            // already cached on the text view. Re-entrant CreateMargin calls (e.g. switching
+            // editors via Open With) would otherwise leak WebView2 instances and event-handler
+            // subscriptions, eventually causing VS to hang/crash (issue #221).
+            return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(
+                () => CreateMarginCore(wpfTextViewHost, FormatMapService, nameof(PreviewMarginVerticalProvider)));
         }
 
-        private void OnWpfTextViewHostClosed(object sender, EventArgs e)
+        internal static BrowserMargin CreateMarginCore(IWpfTextViewHost host, IEditorFormatMapService formatMapService, string marginName)
         {
-            IWpfTextViewHost host = (IWpfTextViewHost)sender;
-            host.Closed -= OnWpfTextViewHostClosed;
-            AdvancedOptions.Saved -= AdvancedOptions_Saved;
-        }
+            BrowserMargin margin = new(host.TextView, formatMapService, marginName);
 
-        private void AdvancedOptions_Saved(AdvancedOptions options)
-        {
-            _browserMargin?.RefreshAsync().FireAndForget();
+            void OnSaved(AdvancedOptions options) => margin.RefreshAsync().FireAndForget();
+            AdvancedOptions.Saved += OnSaved;
+
+            void OnClosed(object sender, EventArgs e)
+            {
+                host.Closed -= OnClosed;
+                AdvancedOptions.Saved -= OnSaved;
+            }
+            host.Closed += OnClosed;
+
+            return margin;
         }
     }
 
@@ -57,8 +61,6 @@ namespace MarkdownEditor2022
         [Import]
         internal IEditorFormatMapService FormatMapService { get; set; }
 
-        private BrowserMargin _browserMargin;
-
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
         {
             if (AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Vertical || wpfTextViewHost.TextView.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole))
@@ -66,23 +68,12 @@ namespace MarkdownEditor2022
                 return null;
             }
 
-            AdvancedOptions.Saved += AdvancedOptions_Saved;
-            wpfTextViewHost.Closed += OnWpfTextViewHostClosed;
-            _browserMargin = new BrowserMargin(wpfTextViewHost.TextView, FormatMapService, marginName: nameof(PreviewMarginHorizontalProvider));
-
-            return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(() => _browserMargin);
-        }
-
-        private void OnWpfTextViewHostClosed(object sender, EventArgs e)
-        {
-            IWpfTextViewHost host = (IWpfTextViewHost)sender;
-            host.Closed -= OnWpfTextViewHostClosed;
-            AdvancedOptions.Saved -= AdvancedOptions_Saved;
-        }
-
-        private void AdvancedOptions_Saved(AdvancedOptions options)
-        {
-            _browserMargin?.RefreshAsync().FireAndForget();
+            // Only construct the margin (which spins up a WebView2 instance) when one isn't
+            // already cached on the text view. Re-entrant CreateMargin calls (e.g. switching
+            // editors via Open With) would otherwise leak WebView2 instances and event-handler
+            // subscriptions, eventually causing VS to hang/crash (issue #221).
+            return wpfTextViewHost.TextView.Properties.GetOrCreateSingletonProperty(
+                () => PreviewMarginVerticalProvider.CreateMarginCore(wpfTextViewHost, FormatMapService, nameof(PreviewMarginHorizontalProvider)));
         }
     }
 }
