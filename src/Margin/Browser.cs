@@ -1887,7 +1887,12 @@ namespace MarkdownEditor2022
                     return _cachedEnvironmentTask;
                 }
 
-                string tempDir = Path.Combine(Path.GetTempPath(), Assembly.GetExecutingAssembly().GetName().Name);
+                // Isolate the WebView2 user-data folder per Visual Studio version (major.minor).
+                // Different VS versions/channels (e.g. VS 2026 stable 18.5 vs VS 2026 Insiders 18.9)
+                // run concurrently with different Edge runtimes; sharing one user-data folder causes
+                // the second instance to fail initialization, leaving an empty/black preview that only
+                // a reboot clears (issue #218). A per-version subfolder avoids the collision.
+                string tempDir = Path.Combine(Path.GetTempPath(), Assembly.GetExecutingAssembly().GetName().Name, GetHostVersionFolderName());
                 // Disable overlay scrollbars so ::-webkit-scrollbar CSS pseudo-elements work correctly
                 // in WebView2CompositionControl (overlay scrollbars ignore custom scrollbar styling)
                 CoreWebView2EnvironmentOptions options = new()
@@ -1897,6 +1902,23 @@ namespace MarkdownEditor2022
                 EnsureNativeDllSearchPath();
                 _cachedEnvironmentTask = CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder: tempDir, options: options);
                 return _cachedEnvironmentTask;
+            }
+        }
+
+        /// <summary>
+        /// Returns a filesystem-safe folder name identifying the host Visual Studio version (major.minor),
+        /// used to isolate the WebView2 user-data folder between concurrently running VS versions/channels.
+        /// </summary>
+        private static string GetHostVersionFolderName()
+        {
+            try
+            {
+                FileVersionInfo versionInfo = Process.GetCurrentProcess().MainModule.FileVersionInfo;
+                return string.Format(CultureInfo.InvariantCulture, "{0}.{1}", versionInfo.FileMajorPart, versionInfo.FileMinorPart);
+            }
+            catch
+            {
+                return "shared";
             }
         }
 
