@@ -26,6 +26,7 @@ namespace MarkdownEditor2022
             _textView = textView.ToIWpfTextView();
             _document = _textView.TextBuffer.GetDocument();
             _document.Parsed += OnDocumentParsed;
+            _textView.Closed += TextViewClosed;
 
             InitializeAsync(textView).FireAndForget();
         }
@@ -35,7 +36,18 @@ namespace MarkdownEditor2022
         {
             return ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
+                if (IsUnavailable)
+                {
+                    return;
+                }
+
                 textView.SendExplicitFocus();
+
+                if (IsUnavailable)
+                {
+                    return;
+                }
+
                 _textView.Caret.MoveToNextCaretPosition();
                 _textView.Caret.PositionChanged += CaretPositionChanged;
                 _textView.Caret.MoveToPreviousCaretPosition();
@@ -43,27 +55,45 @@ namespace MarkdownEditor2022
         }
 
         private void CaretPositionChanged(object sender, CaretPositionChangedEventArgs e) => SynchronizeDropdowns();
+
+        private bool IsUnavailable => _disposed || _textView.IsClosed;
+
+        private void TextViewClosed(object sender, EventArgs e) => Dispose();
+
         private void OnDocumentParsed(Document document)
         {
+            if (IsUnavailable)
+            {
+                return;
+            }
+
             _hasBufferChanged = true;
             SynchronizeDropdowns();
         }
 
         private void SynchronizeDropdowns()
         {
-            if (_document.IsParsing)
+            if (IsUnavailable || _document.IsParsing)
             {
                 return;
             }
 
             _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
-                _languageService.SynchronizeDropdowns();
+                if (!IsUnavailable)
+                {
+                    _languageService.SynchronizeDropdowns();
+                }
             }, VsTaskRunContext.UIThreadIdlePriority);
         }
 
         public override bool OnSynchronizeDropdowns(LanguageService languageService, IVsTextView oldView, int line, int col, ArrayList dropDownTypes, ArrayList dropDownMembers, ref int selectedType, ref int selectedMember)
         {
+            if (IsUnavailable)
+            {
+                return false;
+            }
+
             if (_hasBufferChanged || dropDownMembers.Count == 0)
             {
                 dropDownMembers.Clear();
@@ -93,6 +123,24 @@ namespace MarkdownEditor2022
             _hasBufferChanged = false;
 
             return true;
+        }
+
+        public override int OnItemChosen(int combo, int entry)
+        {
+            return IsUnavailable
+                ? Microsoft.VisualStudio.VSConstants.S_FALSE
+                : base.OnItemChosen(combo, entry);
+        }
+
+        public override int SetDropdownBar(IVsDropdownBar bar)
+        {
+            int result = base.SetDropdownBar(bar);
+            if (bar == null)
+            {
+                Dispose();
+            }
+
+            return result;
         }
 
         private static DropDownMember CreateDropDownMember(HeadingBlock headingBlock, IVsTextView oldView, IWpfTextView textView)
@@ -150,6 +198,7 @@ namespace MarkdownEditor2022
 
             _disposed = true;
             _textView.Caret.PositionChanged -= CaretPositionChanged;
+            _textView.Closed -= TextViewClosed;
             _document.Parsed -= OnDocumentParsed;
         }
 

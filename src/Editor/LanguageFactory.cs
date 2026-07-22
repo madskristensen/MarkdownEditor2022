@@ -10,8 +10,6 @@ namespace MarkdownEditor2022
     [Guid(PackageGuids.EditorFactoryString)]
     internal sealed class MarkdownEditorV2(object site) : LanguageBase(site)
     {
-        private DropdownBars _dropdownBars;
-
         /// <summary>
         /// Creates a custom CodeWindowManager that implements IVsDocOutlineProvider
         /// to provide document outline support for the Document Outline tool window.
@@ -74,17 +72,7 @@ namespace MarkdownEditor2022
                 return null;
             }
 
-            _dropdownBars?.Dispose();
-            _dropdownBars = new DropdownBars(textView, this);
-
-            return _dropdownBars;
-        }
-
-        public override void Dispose()
-        {
-            _dropdownBars?.Dispose();
-            _dropdownBars = null;
-            base.Dispose();
+            return view.Properties.GetOrCreateSingletonProperty(() => new DropdownBars(textView, this));
         }
     }
 }
