@@ -136,7 +136,8 @@ namespace MarkdownEditor2022
             }
 
             string markdown = File.ReadAllText(markdownFile);
-            MarkdownDocument document = Markdown.Parse(markdown, Document.PipelineToGenerateHtml);
+            string normalizedMarkdown = Document.NormalizeMarkdownForParsing(markdown);
+            MarkdownDocument document = Markdown.Parse(normalizedMarkdown, Document.PipelineToGenerateHtml);
             string content = document.ToHtml(Document.PipelineToGenerateHtml).Replace("\n", Environment.NewLine);
             string title = GetTitle(markdownFile, document);
 

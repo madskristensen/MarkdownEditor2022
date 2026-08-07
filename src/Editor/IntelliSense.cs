@@ -423,7 +423,8 @@ namespace MarkdownEditor2022
                 result = await Task.Run(() =>
                 {
                     string text = File.ReadAllText(targetPath);
-                    return (Markdig.Markdown.Parse(text, Document.Pipeline), text);
+                    string normalizedText = Document.NormalizeMarkdownForParsing(text);
+                    return (Markdig.Markdown.Parse(normalizedText, Document.Pipeline), text);
                 });
             }
             catch

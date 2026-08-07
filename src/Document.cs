@@ -46,6 +46,9 @@ namespace MarkdownEditor2022
         // Handles both ":::mermaid" and "::: mermaid" (with space) formats
         // Uses a MatchEvaluator to exclude markdown alerts like "::: note"
         private static readonly Regex _colonFixRegex = new(@"^(:::) ?(\w*)", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly Regex _legacyPipeTableRegex = new(
+            @"(?m)^(?<indent>[ \t]*)\|[^\r\n]*\r?\n(?<second>\k<indent>\|[ \t]+)\r?\n\k<indent>\|[^\r\n]*",
+            RegexOptions.Compiled);
         private static readonly HashSet<string> _alertKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
             "note", "tip", "important", "caution", "warning"
@@ -138,9 +141,7 @@ namespace MarkdownEditor2022
                         return;
                     }
 
-                    // This fixes this bug: https://github.com/madskristensen/MarkdownEditor2022/issues/128
-                    // Also supports ::: mermaid syntax (with space): https://github.com/madskristensen/MarkdownEditor2022/issues/170
-                    text = _colonFixRegex.Replace(text, ColonFixEvaluator);
+                    text = NormalizeMarkdownForParsing(text);
 
                     MarkdownDocument md = Markdig.Markdown.Parse(text, Pipeline);
 
@@ -227,6 +228,60 @@ namespace MarkdownEditor2022
 
             // Convert ::: or ::: <keyword> to ``` or ```<keyword>
             return "```" + keyword;
+        }
+
+        internal static string NormalizeMarkdownForParsing(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            // This fixes this bug: https://github.com/madskristensen/MarkdownEditor2022/issues/128
+            // Also supports ::: mermaid syntax (with space): https://github.com/madskristensen/MarkdownEditor2022/issues/170
+            text = _colonFixRegex.Replace(text, ColonFixEvaluator);
+
+            // Compatibility for legacy markdown where pipe-table separator line is just "|   ".
+            // Keep text length unchanged so AST spans still map back to editor buffer positions.
+            // see: https://github.com/madskristensen/MarkdownEditor2022/issues/208
+            return _legacyPipeTableRegex.Replace(text, LegacyPipeTableEvaluator);
+        }
+
+        private static string LegacyPipeTableEvaluator(Match match)
+        {
+            Group secondGroup = match.Groups["second"];
+            string secondLine = secondGroup.Value;
+            int pipeIndex = secondLine.IndexOf('|');
+            if (pipeIndex < 0 || pipeIndex + 1 >= secondLine.Length)
+            {
+                return match.Value;
+            }
+
+            char[] chars = secondLine.ToCharArray();
+            int replaced = 0;
+            for (int i = pipeIndex + 1; i < chars.Length; i++)
+            {
+                if (chars[i] == ' ' || chars[i] == '\t')
+                {
+                    chars[i] = '-';
+                    replaced++;
+                    if (replaced == 3)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (replaced > 0)
+            {
+                string updatedSecondLine = new(chars);
+                int relativeStart = secondGroup.Index - match.Index;
+                return match.Value.Substring(0, relativeStart)
+                       + updatedSecondLine
+                       + match.Value.Substring(relativeStart + secondLine.Length);
+            }
+
+            return match.Value;
         }
 
         private void AdvancedOptionsSaved(AdvancedOptions obj)

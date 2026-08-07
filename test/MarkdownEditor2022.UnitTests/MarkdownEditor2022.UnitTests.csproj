@@ -48,6 +48,7 @@
     <Compile Include="FrontMatterTests.cs" />
     <Compile Include="JavaScriptEscapeTests.cs" />
     <Compile Include="LanguageAliasTests.cs" />
+    <Compile Include="LegacyTableCompatibilityTests.cs" />
     <Compile Include="MermaidClassConversionTests.cs" />
     <Compile Include="PasteImageCommandTests.cs" />
     <Compile Include="PathResolutionTests.cs" />
