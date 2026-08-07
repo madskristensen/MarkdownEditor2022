@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using MarkdownEditor2022;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace MarkdownEditor2022.UnitTests
 {
     /// <summary>
@@ -252,7 +247,7 @@ namespace MarkdownEditor2022.UnitTests
         /// Mirrors the ResolveRelativePathsToAbsoluteUrls method from Browser.cs for testing root-relative paths.
         /// This simplified version only tests the root-relative path resolution logic.
         /// </summary>
-        private static string ResolveRootRelativePath(string rootRelativePath, string rootPath, string driveRoot)
+        private static string? ResolveRootRelativePath(string rootRelativePath, string rootPath, string driveRoot)
         {
             try
             {
@@ -290,7 +285,7 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Projects\blog";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Projects/blog/images/test.png", result);
         }
@@ -302,7 +297,7 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Users\Dev\website";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Users/Dev/website/assets/img/photo.jpg", result);
         }
@@ -314,7 +309,7 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Projects";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Projects/readme.md", result);
         }
@@ -326,7 +321,7 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Projects\Site";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Projects/Site/my docs/test file.md", result);
         }
@@ -511,7 +506,7 @@ namespace MarkdownEditor2022.UnitTests
             string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string profileTemplate = Path.Combine(userProfile, "md-template.html");
             bool hadExistingProfileTemplate = File.Exists(profileTemplate);
-            string originalProfileTemplateContent = hadExistingProfileTemplate ? File.ReadAllText(profileTemplate) : null;
+            string? originalProfileTemplateContent = hadExistingProfileTemplate ? File.ReadAllText(profileTemplate) : null;
 
             try
             {
