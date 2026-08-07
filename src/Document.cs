@@ -258,8 +258,15 @@ namespace MarkdownEditor2022
             }
 
             char[] chars = secondLine.ToCharArray();
+            int start = pipeIndex + 1;
+            if (start >= chars.Length || (chars[start] != ' ' && chars[start] != '\t'))
+            {
+                return match.Value;
+            }
+
             int replaced = 0;
-            for (int i = pipeIndex + 1; i < chars.Length; i++)
+            int replaceFrom = (start + 1 < chars.Length) ? start + 1 : start;
+            for (int i = replaceFrom; i < chars.Length; i++)
             {
                 if (chars[i] == ' ' || chars[i] == '\t')
                 {
