@@ -178,6 +178,52 @@ namespace MarkdownEditor2022.UnitTests
             Assert.IsNull(result); // No fallback when extension already present
         }
 
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_FindsMdFile()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.html";
+            bool fileExists(string path) => path == @"C:\Projects\Docs\aboutpage.md";
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Docs\aboutpage.md", result);
+        }
+
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_PrioritizesMd()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.html";
+            bool fileExists(string path) =>
+                path == @"C:\Projects\Docs\aboutpage.md" ||
+                path == @"C:\Projects\Docs\aboutpage.markdown";
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Docs\aboutpage.md", result);
+        }
+
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_NoSibling_ReturnsNull()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.html";
+            bool fileExists(string path) => false;
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_NonHtmlInput_ReturnsNull()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.txt";
+            bool fileExists(string path) => true;
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.IsNull(result);
+        }
+
         #endregion
 
         #region Virtual Host Path Conversion Tests

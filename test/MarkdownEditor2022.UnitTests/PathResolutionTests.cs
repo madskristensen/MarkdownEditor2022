@@ -538,6 +538,60 @@ namespace MarkdownEditor2022.UnitTests
 
         #endregion
 
+        #region HTML Link Rewrite Tests
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_RelativeNoExtension_AddsHtml()
+        {
+            string html = "<p><a href=\"aboutpage\">About</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual("<p><a href=\"aboutpage.html\">About</a></p>", result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_RelativeNoExtensionWithFragment_PreservesFragment()
+        {
+            string html = "<p><a href=\"aboutpage#team\">Team</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual("<p><a href=\"aboutpage.html#team\">Team</a></p>", result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_RelativeNoExtensionWithQuery_PreservesQuery()
+        {
+            string html = "<p><a href=\"aboutpage?lang=en\">About</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual("<p><a href=\"aboutpage.html?lang=en\">About</a></p>", result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_AbsoluteOrRootOrScheme_Unchanged()
+        {
+            string html = "<p><a href=\"/aboutpage\">Root</a> <a href=\"https://example.com/about\">Web</a> <a href=\"#team\">Anchor</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual(html, result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_AlreadyHasExtension_Unchanged()
+        {
+            string html = "<p><a href=\"aboutpage.md\">MD</a> <a href=\"aboutpage.html\">HTML</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual(html, result);
+        }
+
+        #endregion
+
         #region URI Scheme Path Resolution Tests
 
         /// <summary>

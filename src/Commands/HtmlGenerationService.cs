@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using EnvDTE;
 using Markdig;
 using Markdig.Renderers;
@@ -12,6 +13,9 @@ namespace MarkdownEditor2022
     {
         private const string HtmlTemplateFileName = "md-template.html";
         private const string HtmlExtension = ".html";
+        private static readonly Regex _anchorHrefRegex = new(
+            @"(?<prefix><a\b[^>]*\bhref\s*=\s*"")(?<url>[^""]+)(?<suffix>"")",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         public static bool HtmlGenerationEnabled(string markdownFile)
         {
@@ -138,9 +142,55 @@ namespace MarkdownEditor2022
             string markdown = File.ReadAllText(markdownFile);
             MarkdownDocument document = Markdown.Parse(markdown, Document.PipelineToGenerateHtml);
             string content = document.ToHtml(Document.PipelineToGenerateHtml).Replace("\n", Environment.NewLine);
+            content = RewriteRelativeExtensionlessAnchorHrefs(content);
             string title = GetTitle(markdownFile, document);
 
             return CreateFromHtmlTemplate(markdownFile, title, content);
+        }
+
+        internal static string RewriteRelativeExtensionlessAnchorHrefs(string html)
+        {
+            if (string.IsNullOrEmpty(html))
+            {
+                return html;
+            }
+
+            return _anchorHrefRegex.Replace(html, match =>
+            {
+                string href = match.Groups["url"].Value;
+                string rewritten = RewriteHrefIfNeeded(href);
+                if (string.Equals(href, rewritten, StringComparison.Ordinal))
+                {
+                    return match.Value;
+                }
+
+                return string.Concat(match.Groups["prefix"].Value, rewritten, match.Groups["suffix"].Value);
+            });
+        }
+
+        private static string RewriteHrefIfNeeded(string href)
+        {
+            if (string.IsNullOrEmpty(href) ||
+                href.StartsWith("#", StringComparison.Ordinal) ||
+                href.StartsWith("/", StringComparison.Ordinal) ||
+                href.IndexOf(':') >= 0)
+            {
+                return href;
+            }
+
+            int splitIndex = href.IndexOfAny(new[] { '?', '#' });
+            string pathPart = splitIndex >= 0 ? href.Substring(0, splitIndex) : href;
+            string suffix = splitIndex >= 0 ? href.Substring(splitIndex) : string.Empty;
+
+            if (string.IsNullOrEmpty(pathPart) ||
+                pathPart.EndsWith("/", StringComparison.Ordinal) ||
+                pathPart.EndsWith("\\", StringComparison.Ordinal) ||
+                !string.IsNullOrEmpty(Path.GetExtension(pathPart)))
+            {
+                return href;
+            }
+
+            return pathPart + HtmlExtension + suffix;
         }
 
         internal static string CreateFromHtmlTemplate(string markdownFile, string title, string htmlContent)

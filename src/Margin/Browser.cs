@@ -841,10 +841,57 @@ namespace MarkdownEditor2022
                     }
                 }
             }
+            else
+            {
+                string markdownFallback = TryResolveMissingHtmlToMarkdownSibling(filePath);
+                if (!string.IsNullOrEmpty(markdownFallback))
+                {
+                    if (isLineLink)
+                    {
+                        await OpenAndGoToLineAsync(markdownFallback, targetLine, targetColumn);
+                    }
+                    else
+                    {
+                        if (hasFragment)
+                        {
+                            _pendingFragmentNavigations[Path.GetFullPath(markdownFallback)] = fragment;
+                        }
+
+                        VS.Documents.OpenInPreviewTabAsync(markdownFallback).FireAndForget();
+                    }
+
+                    return;
+                }
+            }
 
             // File doesn't exist - offer to create it if it's a markdown file
             string currentDir = Path.GetDirectoryName(_file);
             await HandleNonExistentMarkdownLinkAsync(filePath, currentDir);
+        }
+
+        internal static string TryResolveMissingHtmlToMarkdownSibling(string filePath, Func<string, bool> fileExists = null)
+        {
+            if (!Path.GetExtension(filePath).Equals(".html", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            fileExists ??= File.Exists;
+
+            string basePath = Path.Combine(
+                Path.GetDirectoryName(filePath) ?? string.Empty,
+                Path.GetFileNameWithoutExtension(filePath) ?? string.Empty);
+
+            foreach (string ext in _markdownExtensions)
+            {
+                string withExt = basePath + ext;
+                if (fileExists(withExt))
+                {
+                    return withExt;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
