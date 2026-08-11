@@ -2,13 +2,11 @@ using Markdig;
 using Markdig.Extensions.AutoIdentifiers;
 using Markdig.Renderers.Html;
 using Markdig.Syntax;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Linq;
 
 namespace MarkdownEditor2022.UnitTests
 {
     /// <summary>
-    /// Tests for Markdig's AutoIdentifier extension with GitHub option which is used for 
+    /// Tests for Markdig's AutoIdentifier extension with GitHub option which is used for
     /// heading ID generation. These tests verify the behavior matches GitHub's anchor link format.
     /// </summary>
     [TestClass]

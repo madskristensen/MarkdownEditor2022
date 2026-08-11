@@ -1,8 +1,6 @@
-using System.Linq;
 using Markdig;
 using Markdig.Extensions.Yaml;
 using Markdig.Syntax;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MarkdownEditor2022.UnitTests
 {
@@ -19,7 +17,7 @@ namespace MarkdownEditor2022.UnitTests
         /// <summary>
         /// Mirrors the GetRootPathFromFrontMatter method from Browser.cs for testing.
         /// </summary>
-        private static string GetRootPathFromFrontMatter(MarkdownDocument md)
+        private static string? GetRootPathFromFrontMatter(MarkdownDocument md)
         {
             if (md == null)
             {
@@ -78,7 +76,7 @@ title: My Blog Post
 # Hello World";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.AreEqual(@"C:\Projects\blog", result);
         }
@@ -92,7 +90,7 @@ root_path: /home/user/website
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.AreEqual(@"/home/user/website", result);
         }
@@ -106,7 +104,7 @@ root_path: ""C:\Projects\site""
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.AreEqual(@"C:\Projects\site", result);
         }
@@ -120,7 +118,7 @@ root_path: '/var/www/html'
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.AreEqual(@"/var/www/html", result);
         }
@@ -132,7 +130,7 @@ root_path: '/var/www/html'
 This is content without front matter.";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.IsNull(result);
         }
@@ -147,7 +145,7 @@ author: John Doe
 # Hello World";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.IsNull(result);
         }
@@ -161,7 +159,7 @@ ROOT_PATH: C:\Projects\blog
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.AreEqual(@"C:\Projects\blog", result);
         }
@@ -176,7 +174,7 @@ title: Test
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.IsNull(result);
         }
@@ -191,7 +189,7 @@ title: Test
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.IsNull(result);
         }
@@ -205,7 +203,7 @@ root_path: C:\My Projects\My Site
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.AreEqual(@"C:\My Projects\My Site", result);
         }
@@ -222,7 +220,7 @@ date: 2024-01-01
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             Assert.AreEqual(@"/home/user/blog", result);
         }
@@ -237,7 +235,7 @@ root_path: 'C:\Projects\blog""
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             // The mismatched quotes should remain in the value
             Assert.AreEqual(@"'C:\Projects\blog""", result);
@@ -253,7 +251,7 @@ root_path: 'C:\Projects\blog
 # Content";
 
             var doc = Markdig.Markdown.Parse(markdown, Pipeline);
-            string result = GetRootPathFromFrontMatter(doc);
+            string? result = GetRootPathFromFrontMatter(doc);
 
             // The unmatched quote should remain
             Assert.AreEqual(@"'C:\Projects\blog", result);
