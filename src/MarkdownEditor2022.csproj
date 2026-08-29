@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
@@ -16,6 +16,8 @@
     <VsixDeployOnDebug>true</VsixDeployOnDebug>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <UseCodebase>true</UseCodebase>
+    <!-- Ignoring CVST005 as it is not compatible with try/catch wrapping of RegisterCommandsAsync - see #227 -->
+    <NoWarn>$(NoWarn);CVST005</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
