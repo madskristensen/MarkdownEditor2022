@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Markdig.Syntax;
@@ -35,5 +37,45 @@ namespace MarkdownEditor2022
             await task; // Propagate exceptions
         }
 #pragma warning restore VSTHRD003
+
+        /// <summary>
+        /// Registers commands from a collection of loadable types, bypassing types that failed metadata loading.
+        /// </summary>
+        public static async Task RegisterCommandsFromTypesAsync(this ToolkitPackage package, IEnumerable<Type> types)
+        {
+            if (package == null)
+            {
+                throw new ArgumentNullException(nameof(package));
+            }
+
+            if (types == null)
+            {
+                return;
+            }
+
+            foreach (Type type in types)
+            {
+                if (type?.IsAbstract != false || !type.IsClass)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    MethodInfo method = type.GetMethod(
+                        nameof(BaseCommand<>.InitializeAsync),
+                        BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+
+                    if (method?.Invoke(null, [package]) is Task task)
+                    {
+                        await task;
+                    }
+                }
+                catch (Exception cmdEx)
+                {
+                    await cmdEx.LogAsync();
+                }
+            }
+        }
     }
 }

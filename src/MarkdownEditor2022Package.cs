@@ -4,6 +4,8 @@ global using Microsoft.VisualStudio.Shell;
 global using Task = System.Threading.Tasks.Task;
 using System.ComponentModel.Design;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using EnvDTE;
@@ -64,7 +66,19 @@ namespace MarkdownEditor2022
             RegisterEditorFactory(language);
             ((IServiceContainer)this).AddService(typeof(MarkdownEditorV2), language, true);
 
-            await this.RegisterCommandsAsync();
+            try
+            {
+                await this.RegisterCommandsAsync();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                await ex.LogAsync();
+                await this.RegisterCommandsFromTypesAsync(ex.Types.Where(t => t != null));
+            }
+            catch (Exception ex)
+            {
+                await ex.LogAsync();
+            }
             await Commenting.InitializeAsync();
             await ToggleTaskCommand.InitializeAsync();
             await FormatTableCommand.InitializeAsync();
