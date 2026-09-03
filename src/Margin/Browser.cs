@@ -1172,7 +1172,7 @@ namespace MarkdownEditor2022
 
         public Task RefreshAsync()
         {
-            return UpdateBrowserAsync();
+            return UpdateBrowserAsync(forceFullRefresh: true);
         }
 
         private async Task<bool> IsHtmlTemplateLoadedAsync()
@@ -1180,7 +1180,7 @@ namespace MarkdownEditor2022
             return _isTemplateLoaded;
         }
 
-        public async Task UpdateBrowserAsync()
+        public async Task UpdateBrowserAsync(bool forceFullRefresh = false)
         {
             try
             {
@@ -1210,7 +1210,7 @@ namespace MarkdownEditor2022
                     html = await RenderMarkdownToHtmlAsync(markdown);
                 }
 
-                await UpdateContentAsync(html);
+                await UpdateContentAsync(html, forceFullRefresh);
 
                 // Check for pending cross-document fragment navigation
                 if (!string.IsNullOrWhiteSpace(_file) && _pendingFragmentNavigations.TryRemove(Path.GetFullPath(_file), out string pendingFragment))
@@ -1220,7 +1220,7 @@ namespace MarkdownEditor2022
                     await NavigateToFragmentAsync(pendingFragment);
                 }
                 // Only sync navigation if scroll sync is enabled (not applicable for mermaid files)
-                else if (!IsMermaidFile && AdvancedOptions.Instance.EnableScrollSync)
+                else if (!forceFullRefresh && !IsMermaidFile && AdvancedOptions.Instance.EnableScrollSync)
                 {
                     await SyncNavigationAsync(isTyping: false);
                 }
@@ -1504,7 +1504,7 @@ namespace MarkdownEditor2022
             });
         }
 
-        private async Task UpdateContentAsync(string html)
+        private async Task UpdateContentAsync(string html, bool forceFullRefresh = false)
         {
             bool isInit = await IsHtmlTemplateLoadedAsync();
 
@@ -1513,7 +1513,7 @@ namespace MarkdownEditor2022
             bool needsMermaid = html.IndexOf("class=\"mermaid\"", StringComparison.OrdinalIgnoreCase) >= 0 || html.IndexOf("language-mermaid", StringComparison.OrdinalIgnoreCase) >= 0;
             bool needsMath = html.IndexOf("class=\"math\"", StringComparison.OrdinalIgnoreCase) >= 0;
 
-            if (isInit)
+            if (isInit && !forceFullRefresh)
             {
                 string escapedHtml = EscapeForJavaScript(html);
 
