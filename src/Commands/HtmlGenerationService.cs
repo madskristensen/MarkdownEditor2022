@@ -141,6 +141,7 @@ namespace MarkdownEditor2022
 
             string markdown = File.ReadAllText(markdownFile);
             MarkdownDocument document = Markdown.Parse(markdown, Document.PipelineToGenerateHtml);
+            Document.NormalizeHeadingIds(document);
             string content = document.ToHtml(Document.PipelineToGenerateHtml).Replace("\n", Environment.NewLine);
             content = RewriteRelativeExtensionlessAnchorHrefs(content);
             string title = GetTitle(markdownFile, document);

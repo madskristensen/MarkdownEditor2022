@@ -10,7 +10,7 @@
     <AssemblyName>MarkdownEditor2022.UnitTests</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MSTest" Version="4.3.3" />
+    <PackageReference Include="MSTest" Version="4.4.0" />
 
     <!--
       MarkdownEditor2022.csproj excludes the Visual Studio runtime assemblies because the IDE supplies them.
