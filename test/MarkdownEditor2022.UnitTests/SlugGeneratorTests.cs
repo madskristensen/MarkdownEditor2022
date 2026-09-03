@@ -12,12 +12,7 @@ namespace MarkdownEditor2022.UnitTests
     [TestClass]
     public class SlugGeneratorTests
     {
-        // Pipeline matching the app configuration in Document.cs
-        // UseAutoIdentifiers(GitHub) must come BEFORE UseAdvancedExtensions
-        private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
-            .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)
-            .UseAdvancedExtensions()
-            .Build();
+        private static readonly MarkdownPipeline _pipeline = Document.PipelineToGenerateHtml;
 
         /// <summary>
         /// Parses markdown and returns the generated heading ID.
@@ -129,6 +124,63 @@ namespace MarkdownEditor2022.UnitTests
             string result = GetHeadingId("## [HTML], [S5], or [RTF]?");
 
             Assert.AreEqual("html-s5-or-rtf", result);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_Issue205IconHeadings_DoNotEndWithHyphen()
+        {
+            string markdown = """
+                ### Flyout (<u>&#xF035C;</u>)
+
+                ### Use (<u>&#xF02FA;</u>)
+
+                ### Add (<u>&#xF0419;</u>)
+                """;
+
+            MarkdownDocument doc = Markdown.Parse(markdown, _pipeline);
+            Document.NormalizeHeadingIds(doc);
+            List<HeadingBlock> headings = doc.Descendants<HeadingBlock>().ToList();
+
+            Assert.AreEqual(
+                "flyout\nuse\nadd",
+                string.Join("\n", headings.Select(heading => heading.GetAttributes().Id)));
+        }
+
+        [TestMethod]
+        public void GetHeadingId_LiteralTrailingHyphen_IsPreserved()
+        {
+            MarkdownDocument doc = Markdown.Parse("### Release-", _pipeline);
+            Document.NormalizeHeadingIds(doc);
+            string result = doc.Descendants<HeadingBlock>().First().GetAttributes().Id ?? string.Empty;
+
+            Assert.AreEqual("release-", result);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_CustomTrailingHyphen_IsPreserved()
+        {
+            MarkdownDocument doc = Markdown.Parse("### Release {#release-}", _pipeline);
+            Document.NormalizeHeadingIds(doc);
+            string result = doc.Descendants<HeadingBlock>().First().GetAttributes().Id ?? string.Empty;
+
+            Assert.AreEqual("release-", result);
+        }
+
+        [TestMethod]
+        public void GetHeadingId_DuplicateIssue205IconHeadings_RemainUnique()
+        {
+            string markdown = """
+                ### Flyout (<u>&#xF035C;</u>)
+
+                ### Flyout (<u>&#xF035C;</u>)
+                """;
+
+            MarkdownDocument doc = Markdown.Parse(markdown, _pipeline);
+            Document.NormalizeHeadingIds(doc);
+            List<HeadingBlock> headings = doc.Descendants<HeadingBlock>().ToList();
+
+            Assert.AreEqual("flyout", headings[0].GetAttributes().Id);
+            Assert.AreEqual("flyout-1", headings[1].GetAttributes().Id);
         }
 
         [TestMethod]

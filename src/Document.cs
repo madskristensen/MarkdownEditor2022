@@ -1,11 +1,14 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Markdig;
 using Markdig.Extensions.AutoIdentifiers;
+using Markdig.Renderers.Html;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using MarkdownEditor2022.Extensions;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Threading;
@@ -143,6 +146,7 @@ namespace MarkdownEditor2022
                     text = _colonFixRegex.Replace(text, ColonFixEvaluator);
 
                     MarkdownDocument md = Markdig.Markdown.Parse(text, Pipeline);
+                    NormalizeHeadingIds(md);
 
                     if (localToken.IsCancellationRequested)
                     {
@@ -184,6 +188,48 @@ namespace MarkdownEditor2022
             {
                 _parseSemaphore.Release();
             }
+        }
+
+        internal static void NormalizeHeadingIds(MarkdownDocument document)
+        {
+            HashSet<string> identifiers = [.. document.Descendants<HeadingBlock>()
+                    .Select(heading => heading.GetAttributes().Id)
+                    .Where(id => id != null)];
+
+            foreach (HeadingBlock heading in document.Descendants<HeadingBlock>())
+            {
+                string id = heading.GetAttributes().Id;
+                if (id != null &&
+                    heading.Inline?.Descendants<HtmlInline>().Any() == true &&
+                    !heading.Lines.ToString().Contains("{#", StringComparison.Ordinal))
+                {
+                    string baseId = id.EndsWith("-", StringComparison.Ordinal)
+                        ? id.TrimEnd('-')
+                        : NormalizeDuplicateIdentifier(id);
+                    if (string.Equals(baseId, id, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    identifiers.Remove(id);
+                    string normalizedId = baseId;
+                    int suffix = 0;
+                    while (!identifiers.Add(normalizedId))
+                    {
+                        normalizedId = $"{baseId}-{++suffix}";
+                    }
+
+                    heading.GetAttributes().Id = normalizedId;
+                }
+            }
+        }
+
+        private static string NormalizeDuplicateIdentifier(string id)
+        {
+            int separator = id.LastIndexOf("--", StringComparison.Ordinal);
+            return separator >= 0 && int.TryParse(id.Substring(separator + 2), out _)
+                ? id.Remove(separator, 1)
+                : id;
         }
 
         private static DocumentAnalysis BuildAnalysis(MarkdownDocument md)
