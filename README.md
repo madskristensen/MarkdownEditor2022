@@ -45,6 +45,7 @@ This extension delivers a full featured Markdown editor with live preview, synta
 - Jump between headings from the NavigationBar, Document Outline, or generated table of contents.
 - Document Outline tool window shows a persistent hierarchical view of all headings.
 - Collapse or expand fenced code and HTML blocks to stay focused.
+- Press `F12` on a local link or image reference to open its source file and follow Markdown heading or line fragments.
 - Follow VS Code-style line links (`[link](./file.cs#L10)`) to open a file and jump to a specific line and column.
 
 ### Media workflows
@@ -340,6 +341,17 @@ incidental trailing-hyphen IDs should be updated; legacy aliases are not generat
 ```
 
 IntelliSense will parse the target markdown file and show all available headings.
+
+### Go to linked files
+
+Place the caret anywhere on a local Markdown link or image reference and press `F12`
+to open the referenced file. Inline and reference-style links are supported, along
+with relative paths, root-relative paths, local file URLs, generated `.html` links
+that map back to Markdown source files, and Jekyll collection paths.
+
+Markdown heading fragments navigate directly to the matching heading. VS Code-style
+line fragments such as `#L10`, `#L10,5`, and `#L10:5` navigate to the requested line
+and optional column. Remote URLs are left to Visual Studio's normal command handling.
 
 ### Heading-based navigation
 

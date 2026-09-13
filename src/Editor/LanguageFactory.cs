@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
@@ -39,6 +40,11 @@ namespace MarkdownEditor2022
         public override string[] FileExtensions { get; } =
             [Constants.FileExtensionMd, Constants.FileExtensionRmd, Constants.FileExtensionMermaid, Constants.FileExtensionMmd];
 
+        public override ViewFilter CreateViewFilter(CodeWindowManager manager, IVsTextView newView)
+        {
+            return new MarkdownViewFilter(manager, newView);
+        }
+
         public override void SetDefaultPreferences(LanguagePreferences preferences)
         {
             preferences.EnableCodeSense = false;
@@ -74,6 +80,35 @@ namespace MarkdownEditor2022
             }
 
             return view.Properties.GetOrCreateSingletonProperty(() => new DropdownBars(textView, this));
+        }
+    }
+
+    internal sealed class MarkdownViewFilter(CodeWindowManager manager, IVsTextView textView)
+        : ViewFilter(manager, textView)
+    {
+        protected override int QueryCommandStatus(ref Guid guidCmdGroup, uint commandId)
+        {
+            return IsGoToDefinition(guidCmdGroup, commandId)
+                ? VSConstants.E_FAIL
+                : base.QueryCommandStatus(ref guidCmdGroup, commandId);
+        }
+
+        public override bool HandlePreExec(
+            ref Guid guidCmdGroup,
+            uint commandId,
+            uint commandExecOptions,
+            IntPtr inputVariant,
+            IntPtr outputVariant)
+        {
+            return !IsGoToDefinition(guidCmdGroup, commandId) &&
+                   base.HandlePreExec(
+                       ref guidCmdGroup, commandId, commandExecOptions, inputVariant, outputVariant);
+        }
+
+        private static bool IsGoToDefinition(Guid commandGroup, uint commandId)
+        {
+            return commandGroup == VSConstants.GUID_VSStandardCommandSet97 &&
+                   commandId == (uint)VSConstants.VSStd97CmdID.GotoDefn;
         }
     }
 }

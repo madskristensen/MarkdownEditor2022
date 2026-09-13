@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace MarkdownEditor2022.UnitTests
 {
     /// <summary>
@@ -399,7 +401,7 @@ namespace MarkdownEditor2022.UnitTests
         /// </summary>
         private static bool TryMatchPendingFragment(string storedPath, string lookupPath)
         {
-            var dict = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            ConcurrentDictionary<string, string> dict = new(StringComparer.OrdinalIgnoreCase);
             dict[Path.GetFullPath(storedPath)] = "heading";
             return dict.TryRemove(Path.GetFullPath(lookupPath), out _);
         }

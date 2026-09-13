@@ -688,53 +688,23 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            // Try adding common markdown extensions if no extension was specified
-            if (string.IsNullOrEmpty(Path.GetExtension(filePath)))
+            if (LocalPathResolver.TryResolveExistingCandidate(filePath, _previewRoot, out string resolvedFile))
             {
-                foreach (string ext in _markdownExtensions)
+                if (isLineLink)
                 {
-                    string withExt = filePath + ext;
-                    if (File.Exists(withExt))
-                    {
-                        if (isLineLink)
-                        {
-                            await OpenAndGoToLineAsync(withExt, targetLine, targetColumn);
-                        }
-                        else
-                        {
-                            // Store pending fragment navigation before opening the file
-                            if (hasFragment)
-                            {
-                                _pendingFragmentNavigations[Path.GetFullPath(withExt)] = fragment;
-                            }
-                            VS.Documents.OpenInPreviewTabAsync(withExt).FireAndForget();
-                        }
-                        return;
-                    }
+                    await OpenAndGoToLineAsync(resolvedFile, targetLine, targetColumn);
                 }
-            }
-            else
-            {
-                string markdownFallback = TryResolveMissingHtmlToMarkdownSibling(filePath);
-                markdownFallback ??= TryResolveMissingHtmlToJekyllCollection(filePath, _previewRoot);
-                if (!string.IsNullOrEmpty(markdownFallback))
+                else
                 {
-                    if (isLineLink)
+                    if (hasFragment)
                     {
-                        await OpenAndGoToLineAsync(markdownFallback, targetLine, targetColumn);
-                    }
-                    else
-                    {
-                        if (hasFragment)
-                        {
-                            _pendingFragmentNavigations[Path.GetFullPath(markdownFallback)] = fragment;
-                        }
-
-                        VS.Documents.OpenInPreviewTabAsync(markdownFallback).FireAndForget();
+                        _pendingFragmentNavigations[Path.GetFullPath(resolvedFile)] = fragment;
                     }
 
-                    return;
+                    VS.Documents.OpenInPreviewTabAsync(resolvedFile).FireAndForget();
                 }
+
+                return;
             }
 
             // File doesn't exist - offer to create it if it's a markdown file
@@ -856,7 +826,7 @@ namespace MarkdownEditor2022
         /// Parses a VS Code-style line-link fragment (e.g. "L10" or "L10,5" or "L10:5").
         /// Returns true with 1-based <paramref name="line"/> and <paramref name="column"/> on success.
         /// </summary>
-        private static bool TryParseLineFragment(string fragment, out int line, out int column)
+        internal static bool TryParseLineFragment(string fragment, out int line, out int column)
         {
             line = 0;
             column = 0;
@@ -1402,7 +1372,7 @@ namespace MarkdownEditor2022
             return rootPath;
         }
 
-        private static string GetWorkspaceRoot(IVsSolution solution)
+        internal static string GetWorkspaceRoot(IVsSolution solution)
         {
             ErrorHandler.ThrowOnFailure(solution.GetProperty(
                 (int)__VSPROPID7.VSPROPID_IsInOpenFolderMode, out object openFolderMode));
@@ -1447,7 +1417,7 @@ namespace MarkdownEditor2022
             return documentFolder?.Parent?.FullName ?? documentDirectory;
         }
 
-        private static string ResolveConfiguredRootPath(string configuredRoot, string documentDirectory)
+        internal static string ResolveConfiguredRootPath(string configuredRoot, string documentDirectory)
         {
             if (string.IsNullOrWhiteSpace(configuredRoot))
             {
@@ -1503,34 +1473,16 @@ namespace MarkdownEditor2022
 
                 try
                 {
-                    string effectiveRoot = rootPath ?? FindRootPath(relativePath, baseDirectory, previewRoot);
-                    if (!string.IsNullOrEmpty(effectiveRoot))
+                    if (LocalPathResolver.TryResolveReference(
+                        relativePath,
+                        baseDirectory,
+                        rootPath,
+                        previewRoot,
+                        requireExistingFile: false,
+                        out string fullPath))
                     {
-                        if (RootRelativePathExists(relativePath, effectiveRoot, previewRoot))
-                        {
-                            return ResolveRootRelativePath(attr, relativePath, effectiveRoot, previewRoot);
-                        }
-
-                        if (TryFindMarkdownSourcePath(relativePath, effectiveRoot, previewRoot, out string markdownPath))
-                        {
-                            return ResolveRootRelativePath(attr, markdownPath, effectiveRoot, previewRoot);
-                        }
-
-                        return TryFindJekyllCollectionPath(relativePath, effectiveRoot, previewRoot, out string collectionPath)
-                            ? ResolveRootRelativePath(attr, collectionPath, effectiveRoot, previewRoot)
-                            : ResolveRootRelativePath(attr, relativePath, effectiveRoot, previewRoot);
-                    }
-
-                    if (TryFindMarkdownSourceRoot(
-                        relativePath, baseDirectory, previewRoot, out effectiveRoot, out string discoveredMarkdownPath))
-                    {
-                        return ResolveRootRelativePath(attr, discoveredMarkdownPath, effectiveRoot, previewRoot);
-                    }
-
-                    if (TryFindJekyllCollectionRoot(
-                        relativePath, baseDirectory, previewRoot, out effectiveRoot, out string discoveredCollectionPath))
-                    {
-                        return ResolveRootRelativePath(attr, discoveredCollectionPath, effectiveRoot, previewRoot);
+                        SplitUrlPathAndSuffix(relativePath, out _, out string suffix);
+                        return ToVirtualHostAttribute(attr, fullPath, previewRoot, suffix);
                     }
 
                     return match.Value;
@@ -1591,6 +1543,50 @@ namespace MarkdownEditor2022
             }
 
             return null;
+        }
+
+        internal static bool TryResolveExistingRootRelativePath(
+            string rootRelativePath,
+            string documentDirectory,
+            string configuredRoot,
+            string previewRoot,
+            out string filePath)
+        {
+            filePath = null;
+            string effectiveRoot = ResolveConfiguredRootPath(configuredRoot, documentDirectory) ??
+                                   FindRootPath(rootRelativePath, documentDirectory, previewRoot);
+            if (!string.IsNullOrEmpty(effectiveRoot))
+            {
+                SplitUrlPathAndSuffix(rootRelativePath, out string path, out _);
+                string candidate = ResolvePreviewPath(path, effectiveRoot, previewRoot);
+                if (File.Exists(candidate))
+                {
+                    filePath = candidate;
+                    return true;
+                }
+
+                if (TryFindMarkdownSourcePath(rootRelativePath, effectiveRoot, previewRoot, out string markdownPath) ||
+                    TryFindJekyllCollectionPath(rootRelativePath, effectiveRoot, previewRoot, out markdownPath))
+                {
+                    SplitUrlPathAndSuffix(markdownPath, out path, out _);
+                    filePath = ResolvePreviewPath(path, effectiveRoot, previewRoot);
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (TryFindMarkdownSourceRoot(
+                rootRelativePath, documentDirectory, previewRoot, out effectiveRoot, out string discoveredPath) ||
+                TryFindJekyllCollectionRoot(
+                rootRelativePath, documentDirectory, previewRoot, out effectiveRoot, out discoveredPath))
+            {
+                SplitUrlPathAndSuffix(discoveredPath, out string path, out _);
+                filePath = ResolvePreviewPath(path, effectiveRoot, previewRoot);
+                return true;
+            }
+
+            return false;
         }
 
         private static bool TryFindMarkdownSourceRoot(
@@ -1715,18 +1711,21 @@ namespace MarkdownEditor2022
             return false;
         }
 
-        private static bool RootRelativePathExists(string rootRelativePath, string rootPath, string previewRoot)
-        {
-            SplitUrlPathAndSuffix(rootRelativePath, out string path, out _);
-            string candidate = ResolvePreviewPath(path, rootPath, previewRoot);
-            return File.Exists(candidate) || Directory.Exists(candidate);
-        }
-
         /// <summary>Resolves a regular relative path to a virtual host URL attribute string.</summary>
         internal static string ResolveRelativePath(string attr, string relativePath, string baseDirectory, string previewRoot)
         {
-            SplitUrlPathAndSuffix(relativePath, out string path, out string suffix);
-            string fullPath = ResolvePreviewPath(path, baseDirectory, previewRoot);
+            SplitUrlPathAndSuffix(relativePath, out _, out string suffix);
+            if (!LocalPathResolver.TryResolveReference(
+                relativePath,
+                baseDirectory,
+                configuredRoot: null,
+                previewRoot,
+                requireExistingFile: false,
+                out string fullPath))
+            {
+                throw new InvalidOperationException("Preview path could not be resolved.");
+            }
+
             return ToVirtualHostAttribute(attr, fullPath, previewRoot, suffix);
         }
 
@@ -1738,7 +1737,7 @@ namespace MarkdownEditor2022
             return ToVirtualHostAttribute(attr, fullPath, previewRoot, suffix);
         }
 
-        private static void SplitUrlPathAndSuffix(string value, out string path, out string suffix)
+        internal static void SplitUrlPathAndSuffix(string value, out string path, out string suffix)
         {
             int queryIndex = value.IndexOf('?');
             int fragmentIndex = value.IndexOf('#');
@@ -1750,7 +1749,7 @@ namespace MarkdownEditor2022
             suffix = suffixIndex < 0 ? string.Empty : value.Substring(suffixIndex);
         }
 
-        private static string ResolvePreviewPath(string path, string baseDirectory, string previewRoot)
+        internal static string ResolvePreviewPath(string path, string baseDirectory, string previewRoot)
         {
             if (string.IsNullOrWhiteSpace(baseDirectory) || string.IsNullOrWhiteSpace(previewRoot))
             {
