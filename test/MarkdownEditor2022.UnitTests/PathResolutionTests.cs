@@ -445,6 +445,48 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
+        public void BrowserResolveRootRelativePath_WithQueryString_DiscoversRootAndPreservesQuery()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewQuery", Guid.NewGuid().ToString("N"));
+            string siteRoot = Path.Combine(workspaceRoot, "docs");
+            string documentDirectory = Path.Combine(siteRoot, "_articles");
+            string imageDirectory = Path.Combine(siteRoot, "assets", "img");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(imageDirectory);
+            File.WriteAllText(Path.Combine(imageDirectory, "comparison.svg"), "<svg />");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<img src=\"/assets/img/comparison.svg?whatever\">",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    siteRoot,
+                    Browser.FindRootPath("/assets/img/comparison.svg?whatever", documentDirectory, workspaceRoot));
+                Assert.AreEqual(
+                    "<img src=\"http://browsing-file-host/docs/assets/img/comparison.svg?whatever\">",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRelativePath_WithQueryAndFragment_PreservesUrlSuffix()
+        {
+            string result = Browser.ResolveRelativePath(
+                "src", "images/diagram.svg?theme=dark#icon", @"C:\Projects\Docs", @"C:\");
+
+            Assert.AreEqual(
+                "src=\"http://browsing-file-host/Projects/Docs/images/diagram.svg?theme=dark#icon\"",
+                result);
+        }
+
+        [TestMethod]
         public void BrowserTryResolveVirtualHostPath_RejectsTraversalOutsidePreviewRoot()
         {
             bool resolved = Browser.TryResolveVirtualHostPath(

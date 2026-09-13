@@ -1512,10 +1512,11 @@ namespace MarkdownEditor2022
                 return null;
             }
 
+            SplitUrlPathAndSuffix(rootRelativePath, out string path, out _);
             DirectoryInfo directory = new(Path.GetFullPath(documentDirectory));
             while (directory != null && IsPathWithinPreviewRoot(directory.FullName, previewRoot))
             {
-                string candidate = ResolvePreviewPath(rootRelativePath, directory.FullName, previewRoot);
+                string candidate = ResolvePreviewPath(path, directory.FullName, previewRoot);
                 if (File.Exists(candidate) || Directory.Exists(candidate))
                 {
                     return directory.FullName;
@@ -1530,15 +1531,29 @@ namespace MarkdownEditor2022
         /// <summary>Resolves a regular relative path to a virtual host URL attribute string.</summary>
         internal static string ResolveRelativePath(string attr, string relativePath, string baseDirectory, string previewRoot)
         {
-            string fullPath = ResolvePreviewPath(relativePath, baseDirectory, previewRoot);
-            return ToVirtualHostAttribute(attr, fullPath, previewRoot);
+            SplitUrlPathAndSuffix(relativePath, out string path, out string suffix);
+            string fullPath = ResolvePreviewPath(path, baseDirectory, previewRoot);
+            return ToVirtualHostAttribute(attr, fullPath, previewRoot, suffix);
         }
 
         /// <summary>Resolves a root-relative path (starting with /) to a virtual host URL attribute string.</summary>
         internal static string ResolveRootRelativePath(string attr, string relativePath, string rootPath, string previewRoot)
         {
-            string fullPath = ResolvePreviewPath(relativePath, rootPath, previewRoot);
-            return ToVirtualHostAttribute(attr, fullPath, previewRoot);
+            SplitUrlPathAndSuffix(relativePath, out string path, out string suffix);
+            string fullPath = ResolvePreviewPath(path, rootPath, previewRoot);
+            return ToVirtualHostAttribute(attr, fullPath, previewRoot, suffix);
+        }
+
+        private static void SplitUrlPathAndSuffix(string value, out string path, out string suffix)
+        {
+            int queryIndex = value.IndexOf('?');
+            int fragmentIndex = value.IndexOf('#');
+            int suffixIndex = queryIndex < 0
+                ? fragmentIndex
+                : fragmentIndex < 0 ? queryIndex : Math.Min(queryIndex, fragmentIndex);
+
+            path = suffixIndex < 0 ? value : value.Substring(0, suffixIndex);
+            suffix = suffixIndex < 0 ? string.Empty : value.Substring(suffixIndex);
         }
 
         private static string ResolvePreviewPath(string path, string baseDirectory, string previewRoot)
@@ -1560,11 +1575,11 @@ namespace MarkdownEditor2022
             return candidate;
         }
 
-        private static string ToVirtualHostAttribute(string attr, string fullPath, string previewRoot)
+        private static string ToVirtualHostAttribute(string attr, string fullPath, string previewRoot, string suffix = "")
         {
             string boundary = NormalizeBoundary(previewRoot);
             string relative = fullPath.Substring(boundary.Length).Replace(Path.DirectorySeparatorChar, '/');
-            return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relative, "\"");
+            return string.Concat(attr, "=\"", _virtualHostUrlPrefix, relative, suffix, "\"");
         }
 
         private static string NormalizeBoundary(string root)
