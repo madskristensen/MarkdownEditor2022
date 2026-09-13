@@ -716,6 +716,7 @@ namespace MarkdownEditor2022
             else
             {
                 string markdownFallback = TryResolveMissingHtmlToMarkdownSibling(filePath);
+                markdownFallback ??= TryResolveMissingHtmlToJekyllCollection(filePath, _previewRoot);
                 if (!string.IsNullOrEmpty(markdownFallback))
                 {
                     if (isLineLink)
@@ -808,6 +809,43 @@ namespace MarkdownEditor2022
                 if (fileExists(withExt))
                 {
                     return withExt;
+                }
+            }
+
+            return null;
+        }
+
+        internal static string TryResolveMissingHtmlToJekyllCollection(
+            string filePath,
+            string previewRoot,
+            Func<string, bool> fileExists = null)
+        {
+            if (!Path.GetExtension(filePath).Equals(".html", StringComparison.OrdinalIgnoreCase) ||
+                !IsPathWithinPreviewRoot(filePath, previewRoot))
+            {
+                return null;
+            }
+
+            fileExists ??= File.Exists;
+            string fullPath = Path.GetFullPath(filePath);
+            string root = Path.GetFullPath(previewRoot);
+            string relativePath = fullPath.Substring(NormalizeBoundary(root).Length);
+            string[] segments = relativePath.Split(Path.DirectorySeparatorChar);
+
+            for (int segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
+            {
+                if (segments[segmentIndex].StartsWith("_", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                string[] collectionSegments = (string[])segments.Clone();
+                collectionSegments[segmentIndex] = "_" + collectionSegments[segmentIndex];
+                string collectionHtmlPath = Path.Combine(root, Path.Combine(collectionSegments));
+                string markdownPath = TryResolveMissingHtmlToMarkdownSibling(collectionHtmlPath, fileExists);
+                if (!string.IsNullOrEmpty(markdownPath))
+                {
+                    return markdownPath;
                 }
             }
 
@@ -1466,9 +1504,36 @@ namespace MarkdownEditor2022
                 try
                 {
                     string effectiveRoot = rootPath ?? FindRootPath(relativePath, baseDirectory, previewRoot);
-                    return string.IsNullOrEmpty(effectiveRoot)
-                        ? match.Value
-                        : ResolveRootRelativePath(attr, relativePath, effectiveRoot, previewRoot);
+                    if (!string.IsNullOrEmpty(effectiveRoot))
+                    {
+                        if (RootRelativePathExists(relativePath, effectiveRoot, previewRoot))
+                        {
+                            return ResolveRootRelativePath(attr, relativePath, effectiveRoot, previewRoot);
+                        }
+
+                        if (TryFindMarkdownSourcePath(relativePath, effectiveRoot, previewRoot, out string markdownPath))
+                        {
+                            return ResolveRootRelativePath(attr, markdownPath, effectiveRoot, previewRoot);
+                        }
+
+                        return TryFindJekyllCollectionPath(relativePath, effectiveRoot, previewRoot, out string collectionPath)
+                            ? ResolveRootRelativePath(attr, collectionPath, effectiveRoot, previewRoot)
+                            : ResolveRootRelativePath(attr, relativePath, effectiveRoot, previewRoot);
+                    }
+
+                    if (TryFindMarkdownSourceRoot(
+                        relativePath, baseDirectory, previewRoot, out effectiveRoot, out string discoveredMarkdownPath))
+                    {
+                        return ResolveRootRelativePath(attr, discoveredMarkdownPath, effectiveRoot, previewRoot);
+                    }
+
+                    if (TryFindJekyllCollectionRoot(
+                        relativePath, baseDirectory, previewRoot, out effectiveRoot, out string discoveredCollectionPath))
+                    {
+                        return ResolveRootRelativePath(attr, discoveredCollectionPath, effectiveRoot, previewRoot);
+                    }
+
+                    return match.Value;
                 }
                 catch
                 {
@@ -1526,6 +1591,135 @@ namespace MarkdownEditor2022
             }
 
             return null;
+        }
+
+        private static bool TryFindMarkdownSourceRoot(
+            string rootRelativePath,
+            string documentDirectory,
+            string previewRoot,
+            out string rootPath,
+            out string markdownPath)
+        {
+            rootPath = null;
+            markdownPath = null;
+            if (string.IsNullOrWhiteSpace(documentDirectory) || string.IsNullOrWhiteSpace(previewRoot))
+            {
+                return false;
+            }
+
+            DirectoryInfo directory = new(Path.GetFullPath(documentDirectory));
+            while (directory != null && IsPathWithinPreviewRoot(directory.FullName, previewRoot))
+            {
+                if (TryFindMarkdownSourcePath(rootRelativePath, directory.FullName, previewRoot, out markdownPath))
+                {
+                    rootPath = directory.FullName;
+                    return true;
+                }
+
+                directory = directory.Parent;
+            }
+
+            return false;
+        }
+
+        private static bool TryFindMarkdownSourcePath(
+            string rootRelativePath,
+            string rootPath,
+            string previewRoot,
+            out string markdownPath)
+        {
+            markdownPath = null;
+            SplitUrlPathAndSuffix(rootRelativePath, out string path, out string suffix);
+            if (!Path.GetExtension(path).Equals(".html", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            foreach (string extension in _markdownExtensions)
+            {
+                string candidatePath = Path.ChangeExtension(path, extension);
+                string candidate = ResolvePreviewPath(candidatePath, rootPath, previewRoot);
+                if (File.Exists(candidate))
+                {
+                    markdownPath = candidatePath + suffix;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryFindJekyllCollectionRoot(
+            string rootRelativePath,
+            string documentDirectory,
+            string previewRoot,
+            out string rootPath,
+            out string collectionPath)
+        {
+            rootPath = null;
+            collectionPath = null;
+            if (string.IsNullOrWhiteSpace(documentDirectory) || string.IsNullOrWhiteSpace(previewRoot))
+            {
+                return false;
+            }
+
+            DirectoryInfo directory = new(Path.GetFullPath(documentDirectory));
+            while (directory != null && IsPathWithinPreviewRoot(directory.FullName, previewRoot))
+            {
+                if (TryFindJekyllCollectionPath(rootRelativePath, directory.FullName, previewRoot, out collectionPath))
+                {
+                    rootPath = directory.FullName;
+                    return true;
+                }
+
+                directory = directory.Parent;
+            }
+
+            return false;
+        }
+
+        private static bool TryFindJekyllCollectionPath(
+            string rootRelativePath,
+            string rootPath,
+            string previewRoot,
+            out string collectionPath)
+        {
+            collectionPath = null;
+            SplitUrlPathAndSuffix(rootRelativePath, out string path, out string suffix);
+            string trimmedPath = path.TrimStart('/');
+            int separatorIndex = trimmedPath.IndexOf('/');
+            string firstSegment = separatorIndex < 0 ? trimmedPath : trimmedPath.Substring(0, separatorIndex);
+            if (string.IsNullOrEmpty(firstSegment) || firstSegment.StartsWith("_", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string remainder = separatorIndex < 0 ? string.Empty : trimmedPath.Substring(separatorIndex);
+            string collectionHtmlPath = "/_" + firstSegment + remainder;
+            if (!Path.GetExtension(collectionHtmlPath).Equals(".html", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            foreach (string extension in _markdownExtensions)
+            {
+                string candidatePath = Path.ChangeExtension(collectionHtmlPath, extension);
+                string candidate = ResolvePreviewPath(candidatePath, rootPath, previewRoot);
+                if (File.Exists(candidate))
+                {
+                    collectionPath = candidatePath + suffix;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool RootRelativePathExists(string rootRelativePath, string rootPath, string previewRoot)
+        {
+            SplitUrlPathAndSuffix(rootRelativePath, out string path, out _);
+            string candidate = ResolvePreviewPath(path, rootPath, previewRoot);
+            return File.Exists(candidate) || Directory.Exists(candidate);
         }
 
         /// <summary>Resolves a regular relative path to a virtual host URL attribute string.</summary>

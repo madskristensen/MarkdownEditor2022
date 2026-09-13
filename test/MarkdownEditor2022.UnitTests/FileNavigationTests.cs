@@ -224,6 +224,41 @@ namespace MarkdownEditor2022.UnitTests
             Assert.IsNull(result);
         }
 
+        [TestMethod]
+        public void TryFindJekyllCollectionForMissingHtml_FindsMarkdownSource()
+        {
+            string filePath = @"C:\Projects\Site\articles\family-house.html";
+            bool fileExists(string path) => path == @"C:\Projects\Site\_articles\family-house.md";
+
+            string result = Browser.TryResolveMissingHtmlToJekyllCollection(
+                filePath, @"C:\Projects\Site", fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Site\_articles\family-house.md", result);
+        }
+
+        [TestMethod]
+        public void TryFindJekyllCollectionForMissingHtml_FindsCollectionUnderNestedSiteRoot()
+        {
+            string filePath = @"C:\Projects\Workspace\docs\articles\family-house.html";
+            bool fileExists(string path) => path == @"C:\Projects\Workspace\docs\_articles\family-house.markdown";
+
+            string result = Browser.TryResolveMissingHtmlToJekyllCollection(
+                filePath, @"C:\Projects\Workspace", fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Workspace\docs\_articles\family-house.markdown", result);
+        }
+
+        [TestMethod]
+        public void TryFindJekyllCollectionForMissingHtml_DoesNotEscapePreviewRoot()
+        {
+            string filePath = @"C:\Projects\Other\articles\family-house.html";
+
+            string result = Browser.TryResolveMissingHtmlToJekyllCollection(
+                filePath, @"C:\Projects\Site", _ => true);
+
+            Assert.IsNull(result);
+        }
+
         #endregion
 
         #region Virtual Host Path Conversion Tests

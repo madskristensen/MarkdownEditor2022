@@ -476,6 +476,90 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
+        public void BrowserResolveRootRelativePath_JekyllCollectionInOpenFolder_RewritesToMarkdownSource()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewJekyll", Guid.NewGuid().ToString("N"));
+            string documentDirectory = Path.Combine(workspaceRoot, "_posts");
+            string collectionDirectory = Path.Combine(workspaceRoot, "_articles");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(collectionDirectory);
+            File.WriteAllText(Path.Combine(collectionDirectory, "family-house.md"), "# Family house");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<a href=\"/articles/family-house.html?view=full#comparison\">Article</a>",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    "<a href=\"http://browsing-file-host/_articles/family-house.md?view=full#comparison\">Article</a>",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_MissingHtmlInOpenFolder_RewritesToMarkdownSibling()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewSibling", Guid.NewGuid().ToString("N"));
+            string documentDirectory = Path.Combine(workspaceRoot, "docs", "platforms");
+            string sourceDirectory = Path.Combine(workspaceRoot, "docs", "automation", "lighting");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(sourceDirectory);
+            File.WriteAllText(Path.Combine(sourceDirectory, "lights-on-motion.md"), "# Lights on motion");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<a href=\"/automation/lighting/lights-on-motion.html\">Motion-triggered lights</a>",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    "<a href=\"http://browsing-file-host/docs/automation/lighting/lights-on-motion.md\">Motion-triggered lights</a>",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_ExistingNormalPathTakesPrecedenceOverJekyllCollection()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewPrecedence", Guid.NewGuid().ToString("N"));
+            string documentDirectory = Path.Combine(workspaceRoot, "_posts");
+            string normalDirectory = Path.Combine(workspaceRoot, "articles");
+            string collectionDirectory = Path.Combine(workspaceRoot, "_articles");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(normalDirectory);
+            Directory.CreateDirectory(collectionDirectory);
+            File.WriteAllText(Path.Combine(normalDirectory, "family-house.html"), "Generated");
+            File.WriteAllText(Path.Combine(collectionDirectory, "family-house.md"), "# Source");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<a href=\"/articles/family-house.html\">Article</a>",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    "<a href=\"http://browsing-file-host/articles/family-house.html\">Article</a>",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
         public void BrowserResolveRelativePath_WithQueryAndFragment_PreservesUrlSuffix()
         {
             string result = Browser.ResolveRelativePath(
