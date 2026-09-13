@@ -27,6 +27,18 @@ namespace MarkdownEditor2022.UnitTests
         public TestContext TestContext { get; set; } = null!;
 
         [TestMethod]
+        [DataRow(true, "light")]
+        [DataRow(false, "dark")]
+        [Timeout(90000)]
+        public Task PreferredColorScheme_FollowsPreviewTheme(bool useLightTheme, string expectedScheme) => RunAsync(async page =>
+        {
+            page.SetPreferredColorScheme(useLightTheme);
+            await page.NavigateAsync("<p>Theme probe</p>");
+            await page.AssertScriptAsync($"matchMedia('(prefers-color-scheme: {expectedScheme})').matches",
+                $"The preview must expose the configured {expectedScheme} theme to CSS.");
+        });
+
+        [TestMethod]
         [DataRow(1, "")]
         [DataRow(2, "this")]
         [DataRow(3, "Select this word in a paragraph.")]
@@ -484,6 +496,9 @@ namespace MarkdownEditor2022.UnitTests
 
             internal void MapDocumentRoot(string directory) =>
                 _view!.CoreWebView2.SetVirtualHostNameToFolderMapping("browsing-file-host", directory, CoreWebView2HostResourceAccessKind.Allow);
+
+            internal void SetPreferredColorScheme(bool useLightTheme) =>
+                Browser.SetPreferredColorScheme(_view!.CoreWebView2, useLightTheme);
 
             internal Task MouseWheelAsync() => WithinAsync(_view!.CoreWebView2.CallDevToolsProtocolMethodAsync(
                 "Input.dispatchMouseEvent", "{\"type\":\"mouseWheel\",\"x\":200,\"y\":200,\"deltaX\":0,\"deltaY\":500}"), "send browser mousewheel input");

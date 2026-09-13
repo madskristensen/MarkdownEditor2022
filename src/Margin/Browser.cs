@@ -525,8 +525,20 @@ namespace MarkdownEditor2022
         public async Task ForceFullRefreshAsync()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (_browser.CoreWebView2 != null)
+            {
+                SetPreferredColorScheme(_browser.CoreWebView2, GetThemeColors().useLightTheme);
+            }
+
             _fullRefreshRequested = true;
             await UpdateBrowserAsync();
+        }
+
+        internal static void SetPreferredColorScheme(CoreWebView2 coreWebView, bool useLightTheme)
+        {
+            coreWebView.Profile.PreferredColorScheme = useLightTheme
+                ? CoreWebView2PreferredColorScheme.Light
+                : CoreWebView2PreferredColorScheme.Dark;
         }
 
         private void BrowserInitialized(object sender, EventArgs e)
@@ -551,6 +563,7 @@ namespace MarkdownEditor2022
                     _browser.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
                     _browser.CoreWebView2.SetVirtualHostNameToFolderMapping(
                         _mappedMarkdownEditorVirtualHostName, GetFolder(), CoreWebView2HostResourceAccessKind.Allow);
+                    SetPreferredColorScheme(_browser.CoreWebView2, GetThemeColors().useLightTheme);
                     _browserReady = true;
                     _browser.Visibility = Visibility.Visible;
                     await UpdateBrowserAsync();
