@@ -20,7 +20,7 @@ This extension delivers a full featured Markdown editor with live preview, synta
 
 1. Install the extension from the [Visual Studio Marketplace][marketplace] or grab the latest [CI build][vsixgallery].
 2. Open any `.md` file in Visual Studio to enable the Markdown editor.
-3. Press `F7` to show or hide the synchronized preview window while you edit.
+3. Press `F7` to cycle through Source, Split, and Preview views. Press `Shift+F7` to cycle in reverse.
 4. Visit **Tools -> Options -> Text Editor -> Markdown** to tune fonts, preview behavior, and custom assets.
 
 ## Feature Highlights
@@ -36,6 +36,7 @@ This extension delivers a full featured Markdown editor with live preview, synta
 ### Live preview
 
 - Live preview window with scroll sync and dark theme support.
+- Source, Split, and read-only Preview views for editing or focused reading.
 - Switch between vertical and horizontal layouts depending on the workspace.
 - Automatically updates on each keystroke and tracks the editor caret.
 - Honors custom CSS and HTML templates so the preview matches your documentation brand.
@@ -63,7 +64,13 @@ The sections below dive deeper into each area and include screenshots for quick 
 
 ### Live Preview Window
 
-The preview window opens up on the right side of the document when it opens. Use `F7` to toggle the preview window on and off.
+Markdown documents can be viewed in three modes:
+
+- **Source** - Show only the Markdown editor.
+- **Split** - Show the Markdown editor and synchronized preview together.
+- **Preview** - Show only the rendered document for focused, read-only viewing.
+
+Use the document toolbar to select a mode directly. `F7` cycles from Source to Split to Preview, while `Shift+F7` cycles in reverse. Documents initially open in Source or Split mode according to the **Open documents with preview** setting.
 
 ![Preview window](art/preview-window.png)
 
@@ -526,7 +533,7 @@ Control the settings for this extension under
 
 | Setting                     | Description                                                                                      |
 | --------------------------- | ------------------------------------------------------------------------------------------------ |
-| Enable preview window       | Shows the live preview pane when opening markdown files                                          |
+| Open documents with preview | Opens Markdown documents in Split mode when enabled, or Source mode when disabled                 |
 | Enable scroll sync          | Synchronizes scrolling between the editor and preview                                            |
 | Preview window position     | Choose between right-side or bottom placement                                                    |
 | Preview window width/height | Set the size of the preview pane                                                                 |
