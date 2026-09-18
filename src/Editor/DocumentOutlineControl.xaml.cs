@@ -90,7 +90,11 @@ namespace MarkdownEditor2022
             EmptyMessage.Visibility = Visibility.Visible;
         }
 
-        private void OnTextViewClosed(object sender, EventArgs e) => Cleanup();
+        private void OnTextViewClosed(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Cleanup();
+        }
 
         private void OnDocumentParsed(Document document)
         {
@@ -101,6 +105,7 @@ namespace MarkdownEditor2022
 
             ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
+                ThreadHelper.ThrowIfNotOnUIThread();
                 if (_refresh.TryStart(generation) && ReferenceEquals(document, _document) && _textView?.IsClosed == false)
                 {
                     RefreshHeadings();

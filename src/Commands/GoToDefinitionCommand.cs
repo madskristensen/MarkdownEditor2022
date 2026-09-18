@@ -47,10 +47,13 @@ namespace MarkdownEditor2022
                 }
             }
 
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+#pragma warning disable VSSDK007 // The command handler is synchronous; FireAndForget logs navigation failures.
+            JoinableTask navigation = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await NavigateAsync(args.TextView, markdown, reference, executionContext.OperationContext.UserCancellationToken);
-            }).FireAndForget();
+            });
+#pragma warning restore VSSDK007
+            navigation.Task.FireAndForget();
 
             return true;
         }

@@ -215,7 +215,7 @@ namespace MarkdownEditor2022.UnitTests
                 """;
             MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
             string[] ids = Markdown.Parse(markdown, pipeline).Descendants<HeadingBlock>()
-                .Select(heading => heading.GetAttributes().Id).ToArray();
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
 
             CollectionAssert.AreEqual(
                 new[] { "flyout-", "flyout-2", "flyout-3", "flyout", "flyout-1", "flyout-4" },
@@ -241,7 +241,7 @@ namespace MarkdownEditor2022.UnitTests
             MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
             MarkdownDocument document = Markdown.Parse(markdown, pipeline);
             string[] ids = document.Descendants<HeadingBlock>()
-                .Select(heading => heading.GetAttributes().Id).ToArray();
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
 
             CollectionAssert.AreEqual(new[] { "flyout", "flyout-1", "use", "add" }, ids);
             string html = document.ToHtml(pipeline);
@@ -271,7 +271,7 @@ namespace MarkdownEditor2022.UnitTests
                 """;
             MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
             string[] ids = Markdown.Parse(markdown, pipeline).Descendants<HeadingBlock>()
-                .Select(heading => heading.GetAttributes().Id).ToArray();
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
 
             Assert.IsTrue(ids.All(id => !string.IsNullOrEmpty(id)));
             Assert.AreEqual(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
@@ -298,7 +298,7 @@ namespace MarkdownEditor2022.UnitTests
             const string markdown = "### <u>Release--</u>\n\n### <u>Release--</u>";
             MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
             string[] ids = Markdown.Parse(markdown, pipeline).Descendants<HeadingBlock>()
-                .Select(heading => heading.GetAttributes().Id).ToArray();
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
 
             CollectionAssert.AreEqual(new[] { "release--", "release---1" }, ids);
         }

@@ -78,7 +78,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         private static HeadingBlock[] CreateHeadings(int offset, params int[] levels)
-            => levels.Select((level, index) => new HeadingBlock(null)
+            => levels.Select((level, index) => new HeadingBlock(null!)
             {
                 Level = level,
                 Span = new SourceSpan(offset + index * 10, offset + index * 10 + 4)

@@ -377,7 +377,8 @@ namespace MarkdownEditor2022.UnitTests
             {
                 Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(dispatcher));
-                dispatcher.BeginInvoke(new Action(async () =>
+
+                async Task ExecuteTestAsync()
                 {
                     PreviewPage page = new(deadline.Token);
                     Exception? failure = null;
@@ -396,9 +397,15 @@ namespace MarkdownEditor2022.UnitTests
                         catch (Exception error) { failure = failure == null ? error : new AggregateException(failure, error); }
                         if (failure == null) finished.TrySetResult(true);
                         else finished.TrySetException(failure);
-                        dispatcher.BeginInvokeShutdown(DispatcherPriority.Send);
+                        dispatcher.InvokeShutdown();
                     }
-                }));
+                }
+
+                _ = Task.Factory.StartNew(
+                    ExecuteTestAsync,
+                    CancellationToken.None,
+                    TaskCreationOptions.None,
+                    TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
                 Dispatcher.Run();
             })
             {
@@ -593,6 +600,7 @@ namespace MarkdownEditor2022.UnitTests
                 Assert.IsFalse(_messages.Any(message => message.StartsWith("previewError:", StringComparison.Ordinal) ||
                     message.StartsWith("previewFailed:", StringComparison.Ordinal)), string.Join("; ", _messages));
 
+#pragma warning disable VSTHRD003 // WebView2 owns these tasks; explicit deadlines prevent indefinite waits.
             private async Task WithinAsync(Task operation, string description, int seconds = 20)
             {
                 if (await Task.WhenAny(operation, Task.Delay(TimeSpan.FromSeconds(seconds), _deadline)) != operation)
@@ -608,6 +616,7 @@ namespace MarkdownEditor2022.UnitTests
                 await WithinAsync((Task)operation, description, seconds);
                 return await operation;
             }
+#pragma warning restore VSTHRD003
 
             internal async Task CloseAsync()
             {

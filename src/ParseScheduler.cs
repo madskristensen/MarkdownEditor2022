@@ -27,7 +27,9 @@ namespace MarkdownEditor2022
             {
                 lock (_gate)
                 {
+#pragma warning disable VSTHRD003 // This scheduler intentionally exposes its independently running worker task.
                     return _worker;
+#pragma warning restore VSTHRD003
                 }
             }
         }

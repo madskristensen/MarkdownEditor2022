@@ -1387,6 +1387,7 @@ namespace MarkdownEditor2022
 
         internal static string GetWorkspaceRoot(IVsSolution solution)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             ErrorHandler.ThrowOnFailure(solution.GetProperty(
                 (int)__VSPROPID7.VSPROPID_IsInOpenFolderMode, out object openFolderMode));
             ErrorHandler.ThrowOnFailure(solution.GetProperty(
@@ -1942,7 +1943,9 @@ namespace MarkdownEditor2022
             using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
             try
             {
+#pragma warning disable VSTHRD003 // The completion task is owned by the WebView request and guarded by cancellation.
                 if (!await completion.WithCancellation(linked.Token))
+#pragma warning restore VSTHRD003
                 {
                     throw new InvalidOperationException($"Failed while {phase} the Markdown preview.");
                 }

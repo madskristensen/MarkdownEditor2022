@@ -150,7 +150,9 @@ namespace MarkdownEditor2022.Services
             {
                 try
                 {
+#pragma warning disable VSTHRD003 // WebView2 owns this operation; the cancellation wrapper supplies the timeout.
                     await task.WithCancellationAsync(cancellation.Token);
+#pragma warning restore VSTHRD003
                 }
                 catch (OperationCanceledException ex) when (cancellation.IsCancellationRequested)
                 {

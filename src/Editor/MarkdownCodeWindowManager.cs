@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
+using Microsoft.VisualStudio.Threading;
 
 namespace MarkdownEditor2022
 {
@@ -106,7 +107,10 @@ namespace MarkdownEditor2022
 
         private void OnViewModeChanged(object sender, EventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.RunAsync(UpdateDropdownBarAsync).FireAndForget();
+#pragma warning disable VSSDK007 // The event is synchronous; FireAndForget logs dropdown update failures.
+            JoinableTask update = ThreadHelper.JoinableTaskFactory.RunAsync(UpdateDropdownBarAsync);
+#pragma warning restore VSSDK007
+            update.Task.FireAndForget();
         }
 
         private async Task UpdateDropdownBarAsync()
@@ -142,6 +146,8 @@ namespace MarkdownEditor2022
         /// </summary>
         private void ReleaseOutlineInternal()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             if (_outlineControl != null)
             {
                 _outlineControl.Cleanup();
@@ -163,6 +169,7 @@ namespace MarkdownEditor2022
         /// </summary>
         public override int RemoveAdornments()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             _viewModeController.ModeChanged -= OnViewModeChanged;
             ReleaseOutlineInternal();
             return base.RemoveAdornments();

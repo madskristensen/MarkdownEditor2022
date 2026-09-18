@@ -58,7 +58,7 @@ namespace MarkdownEditor2022
                 : null;
         }
 
-        public void Dispose()
+        public new void Dispose()
         {
             if (_isDisposed)
             {
@@ -73,6 +73,7 @@ namespace MarkdownEditor2022
 
         private void OnViewModeChanged(object sender, EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             _toolbarHost.RefreshCommands();
         }
     }
@@ -111,6 +112,7 @@ namespace MarkdownEditor2022
 
         protected override void OnSizeChanged(EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             base.OnSizeChanged(e);
             if (_toolbarHost != null)
             {
@@ -120,12 +122,14 @@ namespace MarkdownEditor2022
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             CloseToolbar();
             base.OnHandleDestroyed(e);
         }
 
         protected override void Dispose(bool disposing)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             if (disposing)
             {
                 CloseToolbar();
@@ -136,6 +140,7 @@ namespace MarkdownEditor2022
 
         public void RefreshCommands()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             if (_toolbarHost != null)
             {
                 ErrorHandler.ThrowOnFailure(_toolbarHost.ForceUpdateUI());
@@ -144,6 +149,7 @@ namespace MarkdownEditor2022
 
         private void CloseToolbar()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             if (_toolbarHost != null)
             {
                 _toolbarHost.Close(0);
