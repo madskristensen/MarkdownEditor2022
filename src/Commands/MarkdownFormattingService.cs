@@ -67,13 +67,7 @@ namespace MarkdownEditor2022
                 for (int i = startLine.LineNumber; i <= endLine.LineNumber; i++)
                 {
                     ITextSnapshotLine line = snapshot.GetLineFromLineNumber(i);
-                    string text = Regex.Replace(line.GetText(), @"^#{1,6}\s*", "");
-                    if (level > 0)
-                    {
-                        text = new string('#', level) + " " + text;
-                    }
-
-                    edit.Replace(line.Start, line.Length, text);
+                    edit.Replace(line.Start, line.Length, ApplyHeadingLevel(line.GetText(), level));
                 }
 
                 edit.Apply();
@@ -213,23 +207,39 @@ namespace MarkdownEditor2022
                         continue;
                     }
 
-                    string text = _listRegex.Replace(lineText, "$1");
-                    if (!remove)
-                    {
-                        text = kind switch
-                        {
-                            MarkdownListKind.Numbered => $"{itemNumber++}. {text}",
-                            MarkdownListKind.Task => $"- [ ] {text}",
-                            _ => $"- {text}",
-                        };
-                    }
-
+                    string text = ApplyListStyle(lineText, kind, remove, itemNumber);
                     edit.Replace(line.Start, line.Length, text);
+                    if (!remove && kind == MarkdownListKind.Numbered)
+                    {
+                        itemNumber++;
+                    }
                 }
 
                 edit.Apply();
                 transaction.Complete();
             }
+        }
+
+        internal static string ApplyHeadingLevel(string text, int level)
+        {
+            string content = Regex.Replace(text, @"^#{1,6}\s*", "");
+            return level > 0 ? new string('#', level) + " " + content : content;
+        }
+
+        internal static string ApplyListStyle(string text, MarkdownListKind kind, bool remove, int itemNumber)
+        {
+            string content = _listRegex.Replace(text, "$1");
+            if (remove)
+            {
+                return content;
+            }
+
+            return kind switch
+            {
+                MarkdownListKind.Numbered => $"{itemNumber}. {content}",
+                MarkdownListKind.Task => $"- [ ] {content}",
+                _ => $"- {content}",
+            };
         }
 
         private static async Task RemoveEmphasisAsync(DocumentView view, string marker, string alternateMarker)
@@ -317,7 +327,7 @@ namespace MarkdownEditor2022
                    text.EndsWith(marker, StringComparison.Ordinal);
         }
 
-        private static string RemoveSurroundingMarker(string text, string marker)
+        internal static string RemoveSurroundingMarker(string text, string marker)
         {
             return HasSurroundingMarker(text, marker)
                 ? text.Substring(marker.Length, text.Length - marker.Length * 2)

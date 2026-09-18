@@ -39,17 +39,11 @@
     <Compile Update="Editor\DocumentOutlineControl.xaml.cs">
       <DependentUpon>DocumentOutlineControl.xaml</DependentUpon>
     </Compile>
-    <Compile Update="Editor\FloatingToolbar.xaml.cs">
-      <DependentUpon>FloatingToolbar.xaml</DependentUpon>
-    </Compile>
   </ItemGroup>
 
   <!-- XAML pages (UseWPF auto-globs them; Update adds the generator) -->
   <ItemGroup>
     <Page Update="Editor\DocumentOutlineControl.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Update="Editor\FloatingToolbar.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
