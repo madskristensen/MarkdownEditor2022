@@ -40,6 +40,7 @@ namespace MarkdownEditor2022
         private readonly Document _document;
         private readonly DispatcherTimer _refreshTimer;
         private readonly PendingUiRefresh _parsedRefresh = new();
+        private DateTime _lastTextChange;
         private bool _isDisposed;
 
         public MarkdownToolbarMargin(IWpfTextView textView)
@@ -50,12 +51,13 @@ namespace MarkdownEditor2022
             _toolbarHost = new VsctToolbarHost(PackageGuids.MarkdownEditor2022, PackageIds.MarkdownDocumentToolbar);
             _refreshTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
             {
-                Interval = TimeSpan.FromMilliseconds(150)
+                Interval = TimeSpan.FromMilliseconds(MarkdownToolbarRefreshPolicy.DelayMilliseconds)
             };
             _refreshTimer.Tick += OnRefreshTimerTick;
             _viewModeController.ModeChanged += OnViewModeChanged;
-            _textView.Caret.PositionChanged += OnEditorStateChanged;
-            _textView.Selection.SelectionChanged += OnEditorStateChanged;
+            _textView.Caret.PositionChanged += OnCaretPositionChanged;
+            _textView.Selection.SelectionChanged += OnSelectionChanged;
+            _textView.TextBuffer.Changed += OnTextBufferChanged;
             _document.Parsed += OnDocumentParsed;
             Child = _toolbarHost;
         }
@@ -85,8 +87,9 @@ namespace MarkdownEditor2022
             _refreshTimer.Stop();
             _refreshTimer.Tick -= OnRefreshTimerTick;
             _viewModeController.ModeChanged -= OnViewModeChanged;
-            _textView.Caret.PositionChanged -= OnEditorStateChanged;
-            _textView.Selection.SelectionChanged -= OnEditorStateChanged;
+            _textView.Caret.PositionChanged -= OnCaretPositionChanged;
+            _textView.Selection.SelectionChanged -= OnSelectionChanged;
+            _textView.TextBuffer.Changed -= OnTextBufferChanged;
             _document.Parsed -= OnDocumentParsed;
             Child = null;
             _toolbarHost.Dispose();
@@ -98,9 +101,29 @@ namespace MarkdownEditor2022
             _toolbarHost.RefreshCommands();
         }
 
-        private void OnEditorStateChanged(object sender, EventArgs e)
+        private void OnCaretPositionChanged(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            if (MarkdownToolbarRefreshPolicy.ShouldDebounceCaretRefresh(_lastTextChange, DateTime.UtcNow))
+            {
+                QueueCommandRefresh();
+            }
+            else
+            {
+                RefreshCommandsNow();
+            }
+        }
+
+        private void OnSelectionChanged(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            QueueCommandRefresh();
+        }
+
+        private void OnTextBufferChanged(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _lastTextChange = DateTime.UtcNow;
             QueueCommandRefresh();
         }
 
@@ -136,12 +159,19 @@ namespace MarkdownEditor2022
         private void OnRefreshTimerTick(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            RefreshCommandsNow();
+        }
+
+        private void RefreshCommandsNow()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
             _refreshTimer.Stop();
             if (!_isDisposed && Visibility == System.Windows.Visibility.Visible)
             {
                 _toolbarHost.RefreshCommands();
             }
         }
+
     }
 
     internal sealed class VsctToolbarHost : Panel, IVsToolWindowToolbar
@@ -210,6 +240,13 @@ namespace MarkdownEditor2022
             if (_toolbarHost != null)
             {
                 ErrorHandler.ThrowOnFailure(_toolbarHost.ForceUpdateUI());
+                IVsUIShell uiShell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+                if (uiShell == null)
+                {
+                    throw new InvalidOperationException("The Visual Studio UI shell is unavailable.");
+                }
+
+                ErrorHandler.ThrowOnFailure(uiShell.UpdateCommandUI(1));
             }
         }
 

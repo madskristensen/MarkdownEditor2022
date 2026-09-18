@@ -38,9 +38,7 @@ namespace MarkdownEditor2022
                 return 0;
             }
 
-            SnapshotPoint point = view.TextView.Selection.SelectedSpans.Count > 0
-                ? view.TextView.Selection.SelectedSpans[0].Start
-                : view.TextView.Caret.Position.BufferPosition;
+            SnapshotPoint point = GetSelectionOrCaretSpan(view).Start;
             string lineText = point.GetContainingLine().GetText();
             Match match = _headingRegex.Match(lineText);
             return match.Success ? match.Groups[1].Length : 0;
@@ -49,13 +47,13 @@ namespace MarkdownEditor2022
         public static async Task SetHeadingLevelAsync(int level)
         {
             DocumentView view = await VS.Documents.GetActiveDocumentViewAsync();
-            if (!CanEdit(view) || level < 0 || level > 6 || view.TextView.Selection.SelectedSpans.Count == 0)
+            if (!CanEdit(view) || level < 0 || level > 6)
             {
                 return;
             }
 
             ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
-            SnapshotSpan span = view.TextView.Selection.SelectedSpans[0];
+            SnapshotSpan span = GetSelectionOrCaretSpan(view);
             ITextSnapshotLine startLine = snapshot.GetLineFromPosition(span.Start);
             ITextSnapshotLine endLine = snapshot.GetLineFromPosition(span.End > span.Start ? span.End - 1 : span.End);
             ITextUndoHistoryRegistry history = await VS.GetMefServiceAsync<ITextUndoHistoryRegistry>();
@@ -77,12 +75,12 @@ namespace MarkdownEditor2022
 
         public static bool IsEmphasisActive(DocumentView view, string marker, string alternateMarker = null)
         {
-            if (view?.TextView == null || view.TextView.Selection.SelectedSpans.Count == 0)
+            if (view?.TextView == null)
             {
                 return false;
             }
 
-            SnapshotSpan selection = view.TextView.Selection.SelectedSpans[0];
+            SnapshotSpan selection = GetSelectionOrCaretSpan(view);
             string text = selection.GetText();
             if (HasSurroundingMarker(text, marker) || HasSurroundingMarker(text, alternateMarker))
             {
@@ -133,14 +131,14 @@ namespace MarkdownEditor2022
         public static async Task InsertLinkAsync()
         {
             DocumentView view = await VS.Documents.GetActiveDocumentViewAsync();
-            if (!CanEdit(view) || view.TextView.Selection.SelectedSpans.Count == 0)
+            if (!CanEdit(view))
             {
                 return;
             }
 
             ITextStructureNavigatorSelectorService service = await VS.GetMefServiceAsync<ITextStructureNavigatorSelectorService>();
             ITextStructureNavigator navigator = service.GetTextStructureNavigator(view.TextBuffer);
-            Span extent = view.TextView.Selection.SelectedSpans[0].Span;
+            Span extent = GetSelectionOrCaretSpan(view).Span;
             if (extent.IsEmpty)
             {
                 TextExtent word = navigator.GetExtentOfWord(view.TextView.Caret.Position.BufferPosition);
@@ -157,13 +155,13 @@ namespace MarkdownEditor2022
 
         public static bool IsListActive(DocumentView view, MarkdownListKind kind)
         {
-            if (view?.TextView == null || view.TextView.Selection.SelectedSpans.Count == 0)
+            if (view?.TextView == null)
             {
                 return false;
             }
 
             ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
-            SnapshotSpan span = view.TextView.Selection.SelectedSpans[0];
+            SnapshotSpan span = GetSelectionOrCaretSpan(view);
             ITextSnapshotLine startLine = snapshot.GetLineFromPosition(span.Start);
             ITextSnapshotLine endLine = snapshot.GetLineFromPosition(span.End > span.Start ? span.End - 1 : span.End);
             bool foundLine = false;
@@ -190,14 +188,14 @@ namespace MarkdownEditor2022
         public static async Task ToggleListAsync(MarkdownListKind kind)
         {
             DocumentView view = await VS.Documents.GetActiveDocumentViewAsync();
-            if (!CanEdit(view) || view.TextView.Selection.SelectedSpans.Count == 0)
+            if (!CanEdit(view))
             {
                 return;
             }
 
             bool remove = IsListActive(view, kind);
             ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
-            SnapshotSpan span = view.TextView.Selection.SelectedSpans[0];
+            SnapshotSpan span = GetSelectionOrCaretSpan(view);
             ITextSnapshotLine startLine = snapshot.GetLineFromPosition(span.Start);
             ITextSnapshotLine endLine = snapshot.GetLineFromPosition(span.End > span.Start ? span.End - 1 : span.End);
             ITextUndoHistoryRegistry history = await VS.GetMefServiceAsync<ITextUndoHistoryRegistry>();
@@ -353,6 +351,27 @@ namespace MarkdownEditor2022
             return HasSurroundingMarker(text, marker)
                 ? text.Substring(marker.Length, text.Length - marker.Length * 2)
                 : null;
+        }
+
+        private static SnapshotSpan GetSelectionOrCaretSpan(DocumentView view)
+        {
+            ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
+            if (view.TextView.Selection.SelectedSpans.Count > 0)
+            {
+                SnapshotSpan selection = view.TextView.Selection.SelectedSpans[0];
+                if (!selection.IsEmpty)
+                {
+                    return selection.TranslateTo(snapshot, SpanTrackingMode.EdgeInclusive);
+                }
+            }
+
+            SnapshotPoint caret = view.TextView.Caret.Position.BufferPosition;
+            if (caret.Snapshot != snapshot)
+            {
+                caret = caret.TranslateTo(snapshot, PointTrackingMode.Positive);
+            }
+
+            return new SnapshotSpan(caret, 0);
         }
     }
 }

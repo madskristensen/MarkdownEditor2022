@@ -86,5 +86,19 @@ namespace MarkdownEditor2022.UnitTests
 
             Assert.IsFalse(MarkdownFormattingService.IsEmphasisActive(markdown, 1, 1, "**"));
         }
+
+        [TestMethod]
+        public void ToolbarCaretRefresh_OnlyDebouncesImmediatelyAfterTyping()
+        {
+            DateTime now = DateTime.UtcNow;
+
+            Assert.IsTrue(MarkdownToolbarRefreshPolicy.ShouldDebounceCaretRefresh(
+                now.AddMilliseconds(-MarkdownToolbarRefreshPolicy.DelayMilliseconds + 1),
+                now));
+            Assert.IsFalse(MarkdownToolbarRefreshPolicy.ShouldDebounceCaretRefresh(
+                now.AddMilliseconds(-MarkdownToolbarRefreshPolicy.DelayMilliseconds),
+                now));
+            Assert.IsFalse(MarkdownToolbarRefreshPolicy.ShouldDebounceCaretRefresh(DateTime.MinValue, now));
+        }
     }
 }
