@@ -22,6 +22,7 @@ jobs:
       DeployExtension: False
       Solution: MarkdownEditor2022.slnx
       TestProject: test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj
+      TestResultsDirectory: ${{ github.workspace }}\TestResults
       VsixManifestPath: src\source.extension.vsixmanifest
       VsixManifestSourcePath: src\source.extension.cs
 
@@ -30,6 +31,11 @@ jobs:
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 9.0.x
 
     - name: Setup Node for preview tests
       uses: actions/setup-node@v7
@@ -79,15 +85,38 @@ jobs:
       run: msbuild ${{ env.Solution }} /v:m /m /p:Configuration=${{ env.Configuration }} /p:DeployExtension=${{ env.DeployExtension }}
 
     - name: Run tests
-      run: dotnet test ${{ env.TestProject }} -c ${{ env.Configuration }} --no-build --logger:"trx;LogFileName=test-results.trx"
+      run: >
+        dotnet test ${{ env.TestProject }}
+        --configuration ${{ env.Configuration }}
+        --no-build
+        --no-restore
+        --verbosity normal
+        --results-directory "${{ env.TestResultsDirectory }}"
+        --logger "trx;LogFileName=test-results.trx"
+        --collect "Code Coverage;Format=Cobertura"
 
     - name: Report test results
       uses: dorny/test-reporter@v3
-      if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
       with:
         name: Test Results
-        path: '**/test-results.trx'
+        path: TestResults/**/*.trx
         reporter: dotnet-trx
+        fail-on-error: true
+
+    - name: Add coverage summary
+      if: ${{ !cancelled() }}
+      shell: pwsh
+      run: |
+        $coverageFile = Get-ChildItem "${{ env.TestResultsDirectory }}" -Filter "*.cobertura.xml" -Recurse |
+          Select-Object -First 1
+        if (-not $coverageFile) {
+          throw "Cobertura coverage report was not produced."
+        }
+
+        [xml]$coverage = Get-Content $coverageFile.FullName
+        $lineCoverage = [double]$coverage.coverage.'line-rate'
+        "Code coverage: **$($lineCoverage.ToString('P2'))**" >> $env:GITHUB_STEP_SUMMARY
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
