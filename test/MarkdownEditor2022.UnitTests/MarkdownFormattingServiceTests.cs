@@ -57,5 +57,34 @@ namespace MarkdownEditor2022.UnitTests
         {
             Assert.AreEqual(expected, MarkdownFormattingService.RemoveSurroundingMarker(input, marker));
         }
+
+        [DataRow("plain **bold** text", "bold", "**")]
+        [DataRow("plain _italic_ text", "italic", "*")]
+        [DataRow("plain ~~strike~~ text", "strike", "~~")]
+        [DataRow("plain `code` text", "code", "`")]
+        [TestMethod]
+        public void IsEmphasisActive_CaretInsideFormattedText_ReturnsTrue(
+            string source,
+            string formattedText,
+            string marker)
+        {
+            Markdig.Syntax.MarkdownDocument markdown = Markdig.Markdown.Parse(source, Document.Pipeline);
+            int caretPosition = source.IndexOf(formattedText, StringComparison.Ordinal) + 1;
+
+            Assert.IsTrue(MarkdownFormattingService.IsEmphasisActive(
+                markdown,
+                caretPosition,
+                caretPosition,
+                marker));
+        }
+
+        [TestMethod]
+        public void IsEmphasisActive_CaretOutsideFormattedText_ReturnsFalse()
+        {
+            const string source = "plain **bold** text";
+            Markdig.Syntax.MarkdownDocument markdown = Markdig.Markdown.Parse(source, Document.Pipeline);
+
+            Assert.IsFalse(MarkdownFormattingService.IsEmphasisActive(markdown, 1, 1, "**"));
+        }
     }
 }

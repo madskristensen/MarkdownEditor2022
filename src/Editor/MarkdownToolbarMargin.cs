@@ -2,6 +2,7 @@ using System.ComponentModel.Composition;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
+using System.Windows.Threading;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -35,13 +36,27 @@ namespace MarkdownEditor2022
     {
         private readonly VsctToolbarHost _toolbarHost;
         private readonly MarkdownViewModeController _viewModeController;
+        private readonly IWpfTextView _textView;
+        private readonly Document _document;
+        private readonly DispatcherTimer _refreshTimer;
+        private readonly PendingUiRefresh _parsedRefresh = new();
         private bool _isDisposed;
 
         public MarkdownToolbarMargin(IWpfTextView textView)
         {
+            _textView = textView;
+            _document = textView.TextBuffer.GetDocument();
             _viewModeController = textView.GetMarkdownViewModeController();
             _toolbarHost = new VsctToolbarHost(PackageGuids.MarkdownEditor2022, PackageIds.MarkdownDocumentToolbar);
+            _refreshTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(150)
+            };
+            _refreshTimer.Tick += OnRefreshTimerTick;
             _viewModeController.ModeChanged += OnViewModeChanged;
+            _textView.Caret.PositionChanged += OnEditorStateChanged;
+            _textView.Selection.SelectionChanged += OnEditorStateChanged;
+            _document.Parsed += OnDocumentParsed;
             Child = _toolbarHost;
         }
 
@@ -66,7 +81,13 @@ namespace MarkdownEditor2022
             }
 
             _isDisposed = true;
+            _parsedRefresh.Reset();
+            _refreshTimer.Stop();
+            _refreshTimer.Tick -= OnRefreshTimerTick;
             _viewModeController.ModeChanged -= OnViewModeChanged;
+            _textView.Caret.PositionChanged -= OnEditorStateChanged;
+            _textView.Selection.SelectionChanged -= OnEditorStateChanged;
+            _document.Parsed -= OnDocumentParsed;
             Child = null;
             _toolbarHost.Dispose();
         }
@@ -75,6 +96,51 @@ namespace MarkdownEditor2022
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             _toolbarHost.RefreshCommands();
+        }
+
+        private void OnEditorStateChanged(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            QueueCommandRefresh();
+        }
+
+        private void OnDocumentParsed(Document document)
+        {
+            if (_isDisposed || !_parsedRefresh.TryQueue(out int generation))
+            {
+                return;
+            }
+
+            ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (_parsedRefresh.TryStart(generation) && !_isDisposed)
+                {
+                    QueueCommandRefresh();
+                }
+            }).Task.FireAndForget();
+        }
+
+        private void QueueCommandRefresh()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _refreshTimer.Stop();
+            _refreshTimer.Start();
+        }
+
+        private void OnRefreshTimerTick(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _refreshTimer.Stop();
+            if (!_isDisposed && Visibility == System.Windows.Visibility.Visible)
+            {
+                _toolbarHost.RefreshCommands();
+            }
         }
     }
 

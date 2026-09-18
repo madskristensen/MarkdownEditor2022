@@ -90,13 +90,22 @@ namespace MarkdownEditor2022
             }
 
             MarkdownDocument markdown = view.TextBuffer.GetDocument()?.Markdown;
+            int selectionStart = selection.Start.Position;
+            int selectionEnd = selection.End.Position;
+            return IsEmphasisActive(markdown, selectionStart, selectionEnd, marker);
+        }
+
+        internal static bool IsEmphasisActive(
+            MarkdownDocument markdown,
+            int selectionStart,
+            int selectionEnd,
+            string marker)
+        {
             if (markdown == null)
             {
                 return false;
             }
 
-            int selectionStart = selection.Start.Position;
-            int selectionEnd = selection.End.Position;
             return markdown.Descendants().Any(item =>
                 item.Span.Start <= selectionStart &&
                 item.Span.End >= selectionEnd &&
