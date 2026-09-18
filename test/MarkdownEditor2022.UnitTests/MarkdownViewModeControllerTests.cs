@@ -46,5 +46,17 @@ namespace MarkdownEditor2022.UnitTests
             Assert.AreEqual(1, changes);
             Assert.IsTrue(controller.ShowsPreview);
         }
+
+        [TestMethod]
+        public void PreviewMode_DisablesEditingCommands()
+        {
+            MarkdownViewModeController controller = new(MarkdownViewMode.Split);
+
+            Assert.IsTrue(controller.AllowsEditing);
+
+            controller.SetMode(MarkdownViewMode.Preview);
+
+            Assert.IsFalse(controller.AllowsEditing);
+        }
     }
 }

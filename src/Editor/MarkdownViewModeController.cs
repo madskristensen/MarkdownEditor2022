@@ -19,6 +19,7 @@ namespace MarkdownEditor2022
         public MarkdownViewMode Mode { get; private set; }
 
         public bool ShowsPreview => Mode != MarkdownViewMode.Source;
+        public bool AllowsEditing => Mode != MarkdownViewMode.Preview;
 
         public event EventHandler ModeChanged;
 

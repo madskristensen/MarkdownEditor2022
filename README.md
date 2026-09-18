@@ -450,11 +450,9 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 
 **Ctrl+PgDown** moves caret to next heading-->
 
-### Floating toolbar
+### Markdown document toolbar
 
-When you select text in the markdown editor, a floating toolbar appears near the selection with quick access to common formatting commands:
-
-![Floating toolbar](art/floating-toolbar.png)
+Markdown documents include a native Visual Studio toolbar above the editor. Use **Source**, **Split**, and **Preview** to switch directly between document views. **F7** cycles forward through the views and **Shift+F7** cycles backward.
 
 **Available actions:**
 
@@ -462,15 +460,16 @@ When you select text in the markdown editor, a floating toolbar appears near the
 - **Bold** - Wrap selection with `**`
 - **Italic** - Wrap selection with `_`
 - **Strikethrough** - Wrap selection with `~~`
+- **Highlight** - Wrap selection with `==`
+- **Subscript** - Wrap selection with `~`
+- **Superscript** - Wrap selection with `^`
 - **Inline code** - Wrap selection with backticks
 - **Link** - Convert selection to a markdown link
 - **Bullet list** - Convert selected lines to a bulleted list
 - **Numbered list** - Convert selected lines to a numbered list
 - **Task list** - Convert selected lines to a task/checkbox list
 
-The toolbar automatically positions itself above the selected text, or below if there isn't enough room above. It stays within the visible editor area and follows horizontal scrolling.
-
-Enable or disable this feature in **Tools -> Options -> Text Editor -> Markdown -> Advanced -> Enable floating toolbar**.
+Formatting commands are disabled in Preview mode because the Markdown source is hidden.
 
 ## Automation
 

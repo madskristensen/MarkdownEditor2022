@@ -24,6 +24,7 @@ namespace MarkdownEditor2022
         private DateTime _lastEdit;
         private readonly Debouncer _debouncer = new(150); // Per-instance debouncer for correct behavior with multiple documents
         private Grid _browserHost;
+        private MarkdownToolbarMargin _previewToolbar;
         private int _browserHostColumn;
         private int _browserHostRow;
         private bool _browserAttached;
@@ -196,6 +197,7 @@ namespace MarkdownEditor2022
 
             Browser.Dispose();
             _debouncer?.Dispose();
+            _previewToolbar?.Dispose();
 
         }
 
@@ -300,9 +302,11 @@ namespace MarkdownEditor2022
 
                 Children.Add(grid);
 
-                _browserHost = grid;
-                _browserHostColumn = 2;
-                _browserHostRow = 0;
+                Grid previewHost = CreatePreviewHost();
+                grid.Children.Add(previewHost);
+                Grid.SetColumn(previewHost, 2);
+                Grid.SetRow(previewHost, 0);
+
                 _splitterColumn = grid.ColumnDefinitions[1];
                 _previewColumn = grid.ColumnDefinitions[2];
 
@@ -425,9 +429,11 @@ namespace MarkdownEditor2022
 
                 Children.Add(grid);
 
-                _browserHost = grid;
-                _browserHostColumn = 0;
-                _browserHostRow = 2;
+                Grid previewHost = CreatePreviewHost();
+                grid.Children.Add(previewHost);
+                Grid.SetColumn(previewHost, 0);
+                Grid.SetRow(previewHost, 2);
+
                 _splitterRow = grid.RowDefinitions[1];
                 _previewRow = grid.RowDefinitions[2];
 
@@ -463,6 +469,25 @@ namespace MarkdownEditor2022
                 };
                 _textView.ViewportHeightChanged += _viewportHeightChanged;
             }
+        }
+
+        private Grid CreatePreviewHost()
+        {
+            Grid host = new();
+            host.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            host.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+            _previewToolbar = new MarkdownToolbarMargin(_textView)
+            {
+                Visibility = Visibility.Collapsed
+            };
+            host.Children.Add(_previewToolbar);
+            Grid.SetRow(_previewToolbar, 0);
+
+            _browserHost = host;
+            _browserHostColumn = 0;
+            _browserHostRow = 1;
+            return host;
         }
 
         private void OnViewModeChanged(object sender, EventArgs e)
@@ -503,6 +528,7 @@ namespace MarkdownEditor2022
 
             MarkdownViewMode mode = _viewModeController.Mode;
             SetPreviewChrome(mode == MarkdownViewMode.Preview);
+            _previewToolbar.Visibility = mode == MarkdownViewMode.Preview ? Visibility.Visible : Visibility.Collapsed;
             Visibility = mode == MarkdownViewMode.Source ? Visibility.Collapsed : Visibility.Visible;
             if (mode == MarkdownViewMode.Source)
             {

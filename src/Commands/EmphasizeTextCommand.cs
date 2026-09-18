@@ -6,27 +6,17 @@ using Microsoft.VisualStudio.Text.Operations;
 namespace MarkdownEditor2022
 {
     [Command(PackageIds.MakeBold)]
-    internal sealed class MakeBoldCommand : BaseCommand<MakeBoldCommand>
+    internal sealed class MakeBoldCommand : EmphasisCommand<MakeBoldCommand>
     {
-        protected override Task InitializeCompletedAsync()
-        {
-            Command.Supported = false; // Delegate to VisibilityConstraints defined in .vsct
-            return base.InitializeCompletedAsync();
-        }
-        
-        protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
-        {
-            await Emphasizer.EmphasizeTextAsync("**");
-        }
+        protected override string Marker => "**";
+        protected override string AlternateMarker => "__";
     }
 
     [Command(PackageIds.MakeItalic)]
-    internal sealed class MakeItalicCommand : BaseCommand<MakeItalicCommand>
+    internal sealed class MakeItalicCommand : EmphasisCommand<MakeItalicCommand>
     {
         protected override async Task InitializeCompletedAsync()
         {
-            Command.Supported = false; // Delegate to VisibilityConstraints defined in .vsct
-
             // Intercept the IncrementalSearch command (Ctrl+i) to hijack the keyboard shortcut
             await VS.Commands.InterceptAsync(Microsoft.VisualStudio.VSConstants.VSStd2KCmdID.ISEARCH, () =>
             {
@@ -43,10 +33,9 @@ namespace MarkdownEditor2022
                 });
             });
         }
-        protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
-        {
-            await Emphasizer.EmphasizeTextAsync("*");
-        }
+
+        protected override string Marker => "*";
+        protected override string AlternateMarker => "_";
     }
 
     public class Emphasizer

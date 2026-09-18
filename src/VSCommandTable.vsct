@@ -14,6 +14,24 @@
           <LocCanonicalName>.Markdown.ContextMenu</LocCanonicalName>
         </Strings>
       </Menu>
+      <Menu guid="MarkdownEditor2022" id="MarkdownDocumentToolbar" priority="100" type="Toolbar">
+        <CommandFlag>DefaultDocked</CommandFlag>
+        <Strings>
+          <ButtonText>Markdown Document</ButtonText>
+          <CommandName>Markdown Document</CommandName>
+        </Strings>
+      </Menu>
+      <Menu guid="MarkdownEditor2022" id="HeadingMenu" priority="100" type="MenuControllerLatched">
+        <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+        <CommandFlag>TextOnly</CommandFlag>
+        <CommandFlag>TextChanges</CommandFlag>
+        <CommandFlag>TextIsAnchorCommand</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings>
+          <ButtonText>Paragraph</ButtonText>
+          <CommandName>Heading level</CommandName>
+        </Strings>
+      </Menu>
     </Menus>
 
     <Groups>
@@ -28,6 +46,18 @@
       </Group>
       <Group guid="MarkdownEditor2022" id="SettingsGroup" priority="400">
         <Parent guid="MarkdownEditor2022" id="MarkdownMenu"/>
+      </Group>
+      <Group guid="MarkdownEditor2022" id="ToolbarViewGroup" priority="100">
+        <Parent guid="MarkdownEditor2022" id="MarkdownDocumentToolbar"/>
+      </Group>
+      <Group guid="MarkdownEditor2022" id="ToolbarFormattingGroup" priority="200">
+        <Parent guid="MarkdownEditor2022" id="MarkdownDocumentToolbar"/>
+      </Group>
+      <Group guid="MarkdownEditor2022" id="ToolbarListGroup" priority="300">
+        <Parent guid="MarkdownEditor2022" id="MarkdownDocumentToolbar"/>
+      </Group>
+      <Group guid="MarkdownEditor2022" id="HeadingMenuGroup" priority="100">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenu"/>
       </Group>
     </Groups>
 
@@ -49,6 +79,33 @@
         <Strings>
           <ButtonText>Cycle Markdown view backward</ButtonText>
           <LocCanonicalName>.Markdown.CycleViewBackward</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="ShowSource" priority="100" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarViewGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings>
+          <ButtonText>Source</ButtonText>
+          <LocCanonicalName>.Markdown.ShowSource</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="ShowSplit" priority="110" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarViewGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings>
+          <ButtonText>Split</ButtonText>
+          <LocCanonicalName>.Markdown.ShowSplit</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="ShowPreview" priority="120" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarViewGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings>
+          <ButtonText>Preview</ButtonText>
+          <LocCanonicalName>.Markdown.ShowPreview</LocCanonicalName>
         </Strings>
       </Button>
 
@@ -150,6 +207,114 @@
         </Strings>
       </Button>
 
+      <Button guid="MarkdownEditor2022" id="SetParagraph" priority="100" type="Button">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenuGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings>
+          <ButtonText>Paragraph</ButtonText>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="SetHeading1" priority="110" type="Button">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenuGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Heading 1</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="SetHeading2" priority="120" type="Button">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenuGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Heading 2</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="SetHeading3" priority="130" type="Button">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenuGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Heading 3</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="SetHeading4" priority="140" type="Button">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenuGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Heading 4</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="SetHeading5" priority="150" type="Button">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenuGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Heading 5</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="SetHeading6" priority="160" type="Button">
+        <Parent guid="MarkdownEditor2022" id="HeadingMenuGroup"/>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Heading 6</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeStrikethrough" priority="120" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+        <Icon guid="ImageCatalogGuid" id="StrikeThrough"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Strikethrough</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeHighlight" priority="130" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+        <Icon guid="ImageCatalogGuid" id="HighlightText"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Highlight</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeSubscript" priority="140" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Subscript"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Subscript</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeSuperscript" priority="150" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Superscript"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Superscript</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeInlineCode" priority="160" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Code"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Inline Code</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeBulletList" priority="100" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarListGroup"/>
+        <Icon guid="ImageCatalogGuid" id="BulletList"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Bullet List</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeNumberedList" priority="110" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarListGroup"/>
+        <Icon guid="ImageCatalogGuid" id="OrderedList"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Numbered List</ButtonText></Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="MakeTaskList" priority="120" type="Button">
+        <Parent guid="MarkdownEditor2022" id="ToolbarListGroup"/>
+        <Icon guid="ImageCatalogGuid" id="CheckBoxList"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
+        <Strings><ButtonText>Task List</ButtonText></Strings>
+      </Button>
+
       <Button guid="MarkdownEditor2022" id="ShowKeybindings" priority="300" type="Button">
         <Parent guid="MarkdownEditor2022" id="ReferenceGroup" />
         <CommandFlag>DynamicVisibility</CommandFlag>
@@ -180,6 +345,18 @@
       </Button>
     </Buttons>
   </Commands>
+
+  <CommandPlacements>
+    <CommandPlacement guid="MarkdownEditor2022" id="MakeBold" priority="100">
+      <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+    </CommandPlacement>
+    <CommandPlacement guid="MarkdownEditor2022" id="MakeItalic" priority="110">
+      <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+    </CommandPlacement>
+    <CommandPlacement guid="MarkdownEditor2022" id="InsertLink" priority="170">
+      <Parent guid="MarkdownEditor2022" id="ToolbarFormattingGroup"/>
+    </CommandPlacement>
+  </CommandPlacements>
 
   <VisibilityConstraints>
     <VisibilityItem guid="MarkdownEditor2022" id="ToggleSync" context="EditorFactory" />
@@ -212,10 +389,16 @@
     <GuidSymbol name="EditorFactory" value="{24510b54-a648-4d69-a6c5-f68cbdf07546}" />
     <GuidSymbol name="MarkdownEditor2022" value="{0b1dfe17-2eb2-4fcc-8054-b6ab002a579d}">
       <IDSymbol name="MarkdownMenu" value="0x0100"/>
+      <IDSymbol name="MarkdownDocumentToolbar" value="0x0200"/>
+      <IDSymbol name="HeadingMenu" value="0x0210"/>
       <IDSymbol name="EditorGroup" value="0x0001"/>
       <IDSymbol name="ReferenceGroup" value="0x0002"/>
       <IDSymbol name="SettingsGroup" value="0x0003"/>
       <IDSymbol name="PreviewGroup" value="0x0004"/>
+      <IDSymbol name="ToolbarViewGroup" value="0x0005"/>
+      <IDSymbol name="ToolbarFormattingGroup" value="0x0006"/>
+      <IDSymbol name="ToolbarListGroup" value="0x0007"/>
+      <IDSymbol name="HeadingMenuGroup" value="0x0008"/>
       <IDSymbol name="ToggleSync" value="0x1000"/>
       <IDSymbol name="MakeBold" value="0x1010"/>
       <IDSymbol name="MakeItalic" value="0x1020"/>
@@ -230,6 +413,24 @@
       <IDSymbol name="GenerateHtml" value="0x1110"/>
       <IDSymbol name="ExportToPdf" value="0x1120"/>
       <IDSymbol name="CyclePreviewBackward" value="0x1130"/>
+      <IDSymbol name="ShowSource" value="0x1140"/>
+      <IDSymbol name="ShowSplit" value="0x1150"/>
+      <IDSymbol name="ShowPreview" value="0x1160"/>
+      <IDSymbol name="SetParagraph" value="0x1170"/>
+      <IDSymbol name="SetHeading1" value="0x1180"/>
+      <IDSymbol name="SetHeading2" value="0x1190"/>
+      <IDSymbol name="SetHeading3" value="0x11A0"/>
+      <IDSymbol name="SetHeading4" value="0x11B0"/>
+      <IDSymbol name="SetHeading5" value="0x11C0"/>
+      <IDSymbol name="SetHeading6" value="0x11D0"/>
+      <IDSymbol name="MakeStrikethrough" value="0x11E0"/>
+      <IDSymbol name="MakeHighlight" value="0x11F0"/>
+      <IDSymbol name="MakeSubscript" value="0x1200"/>
+      <IDSymbol name="MakeSuperscript" value="0x1210"/>
+      <IDSymbol name="MakeInlineCode" value="0x1220"/>
+      <IDSymbol name="MakeBulletList" value="0x1230"/>
+      <IDSymbol name="MakeNumberedList" value="0x1240"/>
+      <IDSymbol name="MakeTaskList" value="0x1250"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>

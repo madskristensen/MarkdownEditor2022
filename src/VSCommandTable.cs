@@ -29,10 +29,16 @@ namespace MarkdownEditor2022
     internal sealed partial class PackageIds
     {
         public const int MarkdownMenu = 0x0100;
+        public const int MarkdownDocumentToolbar = 0x0200;
+        public const int HeadingMenu = 0x0210;
         public const int EditorGroup = 0x0001;
         public const int ReferenceGroup = 0x0002;
         public const int SettingsGroup = 0x0003;
         public const int PreviewGroup = 0x0004;
+        public const int ToolbarViewGroup = 0x0005;
+        public const int ToolbarFormattingGroup = 0x0006;
+        public const int ToolbarListGroup = 0x0007;
+        public const int HeadingMenuGroup = 0x0008;
         public const int ToggleSync = 0x1000;
         public const int MakeBold = 0x1010;
         public const int MakeItalic = 0x1020;
@@ -47,5 +53,23 @@ namespace MarkdownEditor2022
         public const int GenerateHtml = 0x1110;
         public const int ExportToPdf = 0x1120;
         public const int CyclePreviewBackward = 0x1130;
+        public const int ShowSource = 0x1140;
+        public const int ShowSplit = 0x1150;
+        public const int ShowPreview = 0x1160;
+        public const int SetParagraph = 0x1170;
+        public const int SetHeading1 = 0x1180;
+        public const int SetHeading2 = 0x1190;
+        public const int SetHeading3 = 0x11A0;
+        public const int SetHeading4 = 0x11B0;
+        public const int SetHeading5 = 0x11C0;
+        public const int SetHeading6 = 0x11D0;
+        public const int MakeStrikethrough = 0x11E0;
+        public const int MakeHighlight = 0x11F0;
+        public const int MakeSubscript = 0x1200;
+        public const int MakeSuperscript = 0x1210;
+        public const int MakeInlineCode = 0x1220;
+        public const int MakeBulletList = 0x1230;
+        public const int MakeNumberedList = 0x1240;
+        public const int MakeTaskList = 0x1250;
     }
 }
