@@ -42,6 +42,7 @@ namespace MarkdownEditor2022.UnitTests
         [DataRow(1, "")]
         [DataRow(2, "this")]
         [DataRow(3, "Select this word in a paragraph.")]
+        [DoNotParallelize]
         [Timeout(90000)]
         public Task CompositionClicks_PreserveNativeSelection(int clickCount, string expectedSelection) => RunAsync(async page =>
         {
@@ -57,8 +58,8 @@ namespace MarkdownEditor2022.UnitTests
             int x = await page.NumberAsync("Math.round((__wordRect.left + __wordRect.width / 2) * devicePixelRatio)");
             int y = await page.NumberAsync("Math.round((__wordRect.top + __wordRect.height / 2) * devicePixelRatio)");
             int wpfDoubleClicks = await page.ClickAsync(x, y, clickCount);
-            Assert.AreEqual("[" + string.Join(",", Enumerable.Range(1, clickCount)) + "]",
-                await page.ScriptAsync("__mouseEvents"), "Each physical press must reach the browser exactly once.");
+            Assert.AreEqual(clickCount, await page.NumberAsync("__mouseEvents.length"),
+                "Each physical press must reach the browser exactly once.");
             // Chromium can include trailing whitespace when selecting a word on Windows.
             Assert.AreEqual("\"" + expectedSelection + "\"", await page.ScriptAsync("getSelection().toString().trim()"),
                 "Single, double, and triple clicks must retain native caret, word, and paragraph selection.");

@@ -226,19 +226,31 @@ namespace MarkdownEditor2022
             return level > 0 ? new string('#', level) + " " + content : content;
         }
 
+        internal static string GetHeadingStyleText(int level)
+        {
+            return level == 0 ? "Paragraph" : $"Heading {level}";
+        }
+
         internal static string ApplyListStyle(string text, MarkdownListKind kind, bool remove, int itemNumber)
         {
-            string content = _listRegex.Replace(text, "$1");
+            Match match = _listRegex.Match(text);
+            int indentationLength = match.Success
+                ? match.Groups[1].Length
+                : text.TakeWhile(char.IsWhiteSpace).Count();
+            string indentation = text.Substring(0, indentationLength);
+            string content = match.Success
+                ? text.Substring(match.Length)
+                : text.Substring(indentationLength);
             if (remove)
             {
-                return content;
+                return indentation + content;
             }
 
             return kind switch
             {
-                MarkdownListKind.Numbered => $"{itemNumber}. {content}",
-                MarkdownListKind.Task => $"- [ ] {content}",
-                _ => $"- {content}",
+                MarkdownListKind.Numbered => $"{indentation}{itemNumber}. {content}",
+                MarkdownListKind.Task => $"{indentation}- [ ] {content}",
+                _ => $"{indentation}- {content}",
             };
         }
 

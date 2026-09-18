@@ -57,7 +57,8 @@ namespace MarkdownEditor2022
             _document = _textView.TextBuffer.GetDocument();
             _viewModeController = _textView.GetMarkdownViewModeController();
             _previewSettings = ReadPreviewSettings();
-            Visibility = _viewModeController.ShowsPreview ? Visibility.Visible : Visibility.Collapsed;
+            MarkdownViewLayout initialLayout = new(_viewModeController.Mode);
+            Visibility = initialLayout.ShowsPreviewMargin ? Visibility.Visible : Visibility.Collapsed;
 
             SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
@@ -526,34 +527,36 @@ namespace MarkdownEditor2022
                 return;
             }
 
-            MarkdownViewMode mode = _viewModeController.Mode;
-            SetPreviewChrome(mode == MarkdownViewMode.Preview);
-            _previewToolbar.Visibility = mode == MarkdownViewMode.Preview ? Visibility.Visible : Visibility.Collapsed;
-            Visibility = mode == MarkdownViewMode.Source ? Visibility.Collapsed : Visibility.Visible;
-            if (mode == MarkdownViewMode.Source)
+            MarkdownViewLayout layout = new(_viewModeController.Mode);
+            SetPreviewChrome(layout.HidesEditorChrome);
+            _previewToolbar.Visibility = layout.ShowsPreviewToolbar ? Visibility.Visible : Visibility.Collapsed;
+            Visibility = layout.ShowsPreviewMargin ? Visibility.Visible : Visibility.Collapsed;
+            if (!layout.ShowsPreviewMargin)
             {
                 return;
             }
 
-            _splitter.Visibility = mode == MarkdownViewMode.Split ? Visibility.Visible : Visibility.Collapsed;
+            _splitter.Visibility = layout.ShowsSplitter ? Visibility.Visible : Visibility.Collapsed;
             if (_splitterColumn != null)
             {
-                _splitterColumn.Width = new GridLength(mode == MarkdownViewMode.Split ? 5 : 0, GridUnitType.Pixel);
+                _splitterColumn.Width = new GridLength(layout.SplitterThickness, GridUnitType.Pixel);
             }
             if (_splitterRow != null)
             {
-                _splitterRow.Height = new GridLength(mode == MarkdownViewMode.Split ? 5 : 0, GridUnitType.Pixel);
+                _splitterRow.Height = new GridLength(layout.SplitterThickness, GridUnitType.Pixel);
             }
 
-            if (mode == MarkdownViewMode.Split)
+            if (layout.Mode == MarkdownViewMode.Split)
             {
-                if (_previewColumn != null && _splitPreviewWidth > 0)
+                double savedExtent = _previewColumn != null ? _splitPreviewWidth : _splitPreviewHeight;
+                double previewExtent = layout.GetPreviewExtent(savedExtent, 0, 0);
+                if (_previewColumn != null && previewExtent > 0)
                 {
-                    _previewColumn.Width = new GridLength(_splitPreviewWidth, GridUnitType.Pixel);
+                    _previewColumn.Width = new GridLength(previewExtent, GridUnitType.Pixel);
                 }
-                else if (_previewRow != null && _splitPreviewHeight > 0)
+                else if (_previewRow != null && previewExtent > 0)
                 {
-                    _previewRow.Height = new GridLength(_splitPreviewHeight, GridUnitType.Pixel);
+                    _previewRow.Height = new GridLength(previewExtent, GridUnitType.Pixel);
                 }
                 else
                 {
@@ -564,12 +567,12 @@ namespace MarkdownEditor2022
 
             if (_previewColumn != null)
             {
-                double width = Math.Max(150, _textView.ViewportWidth + ActualWidth);
+                double width = layout.GetPreviewExtent(_splitPreviewWidth, _textView.ViewportWidth, ActualWidth);
                 _previewColumn.Width = new GridLength(width, GridUnitType.Pixel);
             }
             else if (_previewRow != null)
             {
-                double height = Math.Max(150, _textView.ViewportHeight + ActualHeight);
+                double height = layout.GetPreviewExtent(_splitPreviewHeight, _textView.ViewportHeight, ActualHeight);
                 _previewRow.Height = new GridLength(height, GridUnitType.Pixel);
             }
         }
@@ -588,10 +591,10 @@ namespace MarkdownEditor2022
             }
 
             _previewChromeApplied = true;
-            HideHostMargin(PredefinedMarginNames.Left);
-            HideHostMargin(PredefinedMarginNames.VerticalScrollBar);
-            HideHostMargin(PredefinedMarginNames.HorizontalScrollBar);
-            HideHostMargin(PredefinedMarginNames.ZoomControl);
+            foreach (string marginName in MarkdownViewLayout.PreviewOnlyHiddenMargins)
+            {
+                HideHostMargin(marginName);
+            }
 
             _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(ApplyViewModeLayout);
         }

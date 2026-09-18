@@ -58,5 +58,17 @@ namespace MarkdownEditor2022.UnitTests
 
             Assert.IsFalse(controller.AllowsEditing);
         }
+
+        [TestMethod]
+        public void Controllers_MaintainIndependentDocumentModes()
+        {
+            MarkdownViewModeController first = new(MarkdownViewMode.Split);
+            MarkdownViewModeController second = new(MarkdownViewMode.Split);
+
+            first.SetMode(MarkdownViewMode.Preview);
+
+            Assert.AreEqual(MarkdownViewMode.Preview, first.Mode);
+            Assert.AreEqual(MarkdownViewMode.Split, second.Mode);
+        }
     }
 }

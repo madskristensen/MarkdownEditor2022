@@ -23,6 +23,7 @@ jobs:
       Solution: MarkdownEditor2022.slnx
       TestProject: test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj
       TestResultsDirectory: ${{ github.workspace }}\TestResults
+      CoverageSettings: test\coverage.runsettings
       VsixManifestPath: src\source.extension.vsixmanifest
       VsixManifestSourcePath: src\source.extension.cs
 
@@ -92,8 +93,9 @@ jobs:
         --no-restore
         --verbosity normal
         --results-directory "${{ env.TestResultsDirectory }}"
+        --settings "${{ env.CoverageSettings }}"
         --logger "trx;LogFileName=test-results.trx"
-        --collect "Code Coverage;Format=Cobertura"
+        --collect "Code Coverage"
 
     - name: Report test results
       uses: dorny/test-reporter@v3
@@ -115,8 +117,27 @@ jobs:
         }
 
         [xml]$coverage = Get-Content $coverageFile.FullName
-        $lineCoverage = [double]$coverage.coverage.'line-rate'
-        "Code coverage: **$($lineCoverage.ToString('P2'))**" >> $env:GITHUB_STEP_SUMMARY
+        $productionCoverage = $coverage.coverage.packages.package |
+          Where-Object name -EQ 'MarkdownEditor2022' |
+          Select-Object -First 1
+        if (-not $productionCoverage) {
+          throw "Coverage for the MarkdownEditor2022 production assembly was not found."
+        }
+
+        $lineCoverage = [double]$productionCoverage.'line-rate'
+        $minimumLineCoverage = 0.24
+        "Production code coverage: **$($lineCoverage.ToString('P2'))**" >> $env:GITHUB_STEP_SUMMARY
+        if ($lineCoverage -lt $minimumLineCoverage) {
+          throw "Production line coverage $($lineCoverage.ToString('P2')) is below the $($minimumLineCoverage.ToString('P0')) baseline."
+        }
+
+    - name: Upload coverage report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: code-coverage
+        path: TestResults/**/*.cobertura.xml
+        if-no-files-found: error
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7

@@ -9,7 +9,7 @@ namespace MarkdownEditor2022
             int level = MarkdownFormattingService.GetHeadingLevel(view);
             Command.Visible = view != null;
             Command.Enabled = MarkdownFormattingService.CanEdit(view);
-            Command.Text = level == 0 ? "Paragraph" : $"Heading {level}";
+            Command.Text = MarkdownFormattingService.GetHeadingStyleText(level);
         }
 
         protected override Task ExecuteAsync(OleMenuCmdEventArgs e)
