@@ -136,13 +136,7 @@ namespace MarkdownEditor2022
 
         public override int SetDropdownBar(IVsDropdownBar bar)
         {
-            int result = base.SetDropdownBar(bar);
-            if (bar == null)
-            {
-                Dispose();
-            }
-
-            return result;
+            return base.SetDropdownBar(bar);
         }
 
         private static DropDownMember CreateDropDownMember(HeadingBlock headingBlock, ITextSnapshot snapshot, ITextSnapshot currentSnapshot)

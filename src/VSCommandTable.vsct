@@ -37,8 +37,18 @@
         <CommandFlag>DynamicVisibility</CommandFlag>
         <CommandFlag>DontCache</CommandFlag>
         <Strings>
-          <ButtonText>Enable preview window</ButtonText>
-          <LocCanonicalName>.Markdown.EnablePreview</LocCanonicalName>
+          <ButtonText>Cycle Markdown view</ButtonText>
+          <LocCanonicalName>.Markdown.CycleView</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="MarkdownEditor2022" id="CyclePreviewBackward" priority="105" type="Button">
+        <Parent guid="MarkdownEditor2022" id="PreviewGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <CommandFlag>CommandWellOnly</CommandFlag>
+        <Strings>
+          <ButtonText>Cycle Markdown view backward</ButtonText>
+          <LocCanonicalName>.Markdown.CycleViewBackward</LocCanonicalName>
         </Strings>
       </Button>
 
@@ -174,6 +184,7 @@
   <VisibilityConstraints>
     <VisibilityItem guid="MarkdownEditor2022" id="ToggleSync" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="TogglePreview" context="EditorFactory" />
+    <VisibilityItem guid="MarkdownEditor2022" id="CyclePreviewBackward" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="ToggleSpellChecking" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="Refresh" context="EditorFactory" />
     <VisibilityItem guid="MarkdownEditor2022" id="ExportToPdf" context="EditorFactory" />
@@ -193,6 +204,7 @@
     <KeyBinding guid="MarkdownEditor2022" id="InsertLink" editor="EditorFactory" key1="K" mod1="Control Alt" />
     <KeyBinding guid="MarkdownEditor2022" id="Refresh" editor="EditorFactory" key1="R" mod1="Control Alt" />
     <KeyBinding guid="MarkdownEditor2022" id="TogglePreview" editor="EditorFactory" key1="VK_F7" mod1="" />
+    <KeyBinding guid="MarkdownEditor2022" id="CyclePreviewBackward" editor="EditorFactory" key1="VK_F7" mod1="Shift" />
   </KeyBindings>
 
   <Symbols>
@@ -217,6 +229,7 @@
       <IDSymbol name="ToggleSpellChecking" value="0x1100"/>
       <IDSymbol name="GenerateHtml" value="0x1110"/>
       <IDSymbol name="ExportToPdf" value="0x1120"/>
+      <IDSymbol name="CyclePreviewBackward" value="0x1130"/>
     </GuidSymbol>
   </Symbols>
 </CommandTable>

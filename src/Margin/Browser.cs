@@ -1054,7 +1054,7 @@ namespace MarkdownEditor2022
 
         public Task UpdatePositionAsync(int line, bool isTyping, bool fromEditor = false)
         {
-            if (_isDisposed || !AdvancedOptions.Instance.EnablePreviewWindow || IsScrollSyncSuppressed)
+            if (_isDisposed || !_textView.GetMarkdownViewModeController().ShowsPreview || IsScrollSyncSuppressed)
             {
                 return Task.CompletedTask;
             }
@@ -1063,7 +1063,7 @@ namespace MarkdownEditor2022
             return ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
             {
                 // Input and newer editor requests can arrive while this work waits for idle.
-                if (_isDisposed || !AdvancedOptions.Instance.EnablePreviewWindow || IsScrollSyncSuppressed || !_scrollSync.CanApply(version))
+                if (_isDisposed || !_textView.GetMarkdownViewModeController().ShowsPreview || IsScrollSyncSuppressed || !_scrollSync.CanApply(version))
                 {
                     return;
                 }
@@ -1164,7 +1164,7 @@ namespace MarkdownEditor2022
                 gateAcquired = true;
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(updateToken);
 
-                if (_isDisposed || !_browserReady || !AdvancedOptions.Instance.EnablePreviewWindow || updateToken.IsCancellationRequested)
+                if (_isDisposed || !_browserReady || !_textView.GetMarkdownViewModeController().ShowsPreview || updateToken.IsCancellationRequested)
                 {
                     return;
                 }

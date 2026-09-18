@@ -54,8 +54,8 @@ namespace MarkdownEditor2022
         public bool FormatPastedUrlsAsLinks { get; set; } = true;
 
         [Category("Preview Window")]
-        [DisplayName("Enable preview window")]
-        [Description("Determines if the preview window should be shown.")]
+        [DisplayName("Open documents with preview")]
+        [Description("Determines whether Markdown documents initially open in split view or source view. Use F7 to cycle the active document between source, split, and preview.")]
         [DefaultValue(true)]
         public bool EnablePreviewWindow { get; set; } = true;
 
