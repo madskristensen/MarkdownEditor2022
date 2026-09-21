@@ -39,7 +39,7 @@ namespace MarkdownEditor2022
         private ColumnDefinition _previewColumn;
         private RowDefinition _previewRow;
         private Action _applySplitSize;
-        private readonly Dictionary<IWpfTextViewMargin, Visibility> _hiddenHostMargins = new();
+        private readonly Dictionary<FrameworkElement, Visibility> _hiddenHostMargins = new();
         private bool _previewChromeApplied;
         private double _splitPreviewWidth;
         private double _splitPreviewHeight;
@@ -602,20 +602,33 @@ namespace MarkdownEditor2022
         private void HideHostMargin(string marginName)
         {
             IWpfTextViewMargin margin = _textViewHost.GetTextViewMargin(marginName);
-            if (margin?.VisualElement == null || ReferenceEquals(margin, this))
+            if (margin == null || ReferenceEquals(margin, this))
             {
                 return;
             }
 
-            _hiddenHostMargins[margin] = margin.VisualElement.Visibility;
-            margin.VisualElement.Visibility = Visibility.Collapsed;
+            try
+            {
+                FrameworkElement visualElement = margin.VisualElement;
+                if (visualElement == null)
+                {
+                    return;
+                }
+
+                _hiddenHostMargins[visualElement] = visualElement.Visibility;
+                visualElement.Visibility = Visibility.Collapsed;
+            }
+            catch (ObjectDisposedException)
+            {
+                // The text view can dispose host margins while an idle layout update is pending.
+            }
         }
 
         private void RestoreHostMargins()
         {
-            foreach (KeyValuePair<IWpfTextViewMargin, Visibility> entry in _hiddenHostMargins)
+            foreach (KeyValuePair<FrameworkElement, Visibility> entry in _hiddenHostMargins)
             {
-                entry.Key.VisualElement.Visibility = entry.Value;
+                entry.Key.Visibility = entry.Value;
             }
 
             _hiddenHostMargins.Clear();

@@ -336,6 +336,24 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
+        public void BrowserGetDocumentDirectory_ValidPath_ReturnsDirectory()
+        {
+            Assert.AreEqual(@"C:\Projects\Docs", Browser.GetDocumentDirectory(@"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void BrowserGetDocumentDirectory_EmptyPath_ReturnsNull()
+        {
+            Assert.IsNull(Browser.GetDocumentDirectory(string.Empty));
+        }
+
+        [TestMethod]
+        public void BrowserGetDocumentDirectory_InvalidPath_ReturnsNull()
+        {
+            Assert.IsNull(Browser.GetDocumentDirectory("invalid\0path.md"));
+        }
+
+        [TestMethod]
         public void BrowserGetPreviewRoot_OpenFolder_AllowsSiblingAssetDirectory()
         {
             string result = Browser.GetPreviewRoot(

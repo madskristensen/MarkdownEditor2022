@@ -721,7 +721,7 @@ namespace MarkdownEditor2022
             }
 
             // File doesn't exist - offer to create it if it's a markdown file
-            string currentDir = Path.GetDirectoryName(_file);
+            string currentDir = GetDocumentDirectory(_file);
             await HandleNonExistentMarkdownLinkAsync(filePath, currentDir);
         }
 
@@ -1327,7 +1327,7 @@ namespace MarkdownEditor2022
             }
 
             string rootPath = await EnsurePreviewRootAsync(markdown, cancellationToken);
-            string baseDirectory = Path.GetDirectoryName(_file);
+            string baseDirectory = GetDocumentDirectory(_file);
             string previewRoot = _previewRoot;
             return await Task.Run(() =>
             {
@@ -1354,7 +1354,7 @@ namespace MarkdownEditor2022
         private async Task<string> EnsurePreviewRootAsync(MarkdownDocument markdown, CancellationToken cancellationToken)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            string documentDirectory = Path.GetDirectoryName(_file);
+            string documentDirectory = GetDocumentDirectory(_file);
             IVsSolution solution = await VS.GetRequiredServiceAsync<SVsSolution, IVsSolution>();
             string workspaceRoot = GetWorkspaceRoot(solution);
             string editorConfigRoot = RootPathResolver.GetRootPathFromEditorConfig(_textView);
@@ -1400,6 +1400,31 @@ namespace MarkdownEditor2022
             ErrorHandler.ThrowOnFailure(solution.GetSolutionInfo(
                 out string solutionDirectory, out _, out _));
             return solutionDirectory;
+        }
+
+        internal static string GetDocumentDirectory(string file)
+        {
+            if (string.IsNullOrWhiteSpace(file))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Path.GetDirectoryName(file);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+            catch (NotSupportedException)
+            {
+                return null;
+            }
+            catch (PathTooLongException)
+            {
+                return null;
+            }
         }
 
         internal static string GetPreviewRoot(string documentDirectory, string configuredRoot, string workspaceRoot = null)
@@ -1984,7 +2009,7 @@ namespace MarkdownEditor2022
             PrewarmStaticResources();
             string templateFileName = GetHtmlTemplateFileNameFromResource();
 
-            string customHighlightCandidate = FindFileRecursively(Path.GetDirectoryName(_file), "md-styles.css", null);
+            string customHighlightCandidate = FindFileRecursively(GetDocumentDirectory(_file), "md-styles.css", null);
             bool usingCustomHighlight = customHighlightCandidate != null;
             string highlightSourcePath = customHighlightCandidate ?? Path.Combine(GetFolder(), "margin", useLightTheme ? "highlight.css" : "highlight-dark.css");
             string prismSourcePath = Path.Combine(GetFolder(), "margin", useLightTheme ? "prism.css" : "prism-dark.css");
@@ -2451,7 +2476,7 @@ namespace MarkdownEditor2022
         private string GetHtmlTemplateFileNameFromResource()
         {
             string defaultTemplate = Path.Combine(GetFolder(), "Margin\\md-template.html");
-            return FindFileRecursively(Path.GetDirectoryName(_file), "md-template.html", defaultTemplate);
+            return FindFileRecursively(GetDocumentDirectory(_file), "md-template.html", defaultTemplate);
         }
 
         private static string FindFileRecursively(string folder, string fileName, string fallbackFileName)
