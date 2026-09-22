@@ -129,6 +129,20 @@ test('original signatures preserve mutated nodes, duplicates, text, comments and
     assert.deepEqual(env.errors, []);
 });
 
+test('tables get stable horizontal scroll containers', async () => {
+    const env = environment('<p>before</p><table><tbody><tr><td>wide</td></tr></tbody></table><p>after</p>');
+    env.window.__initializeMarkdownPreview('dark');
+    await settle();
+    const wrapper = env.container.childNodes[1];
+    assert.equal(wrapper.attributes.class, 'markdown-table-wrapper');
+    assert.equal(wrapper.firstChild.tagName, 'TABLE');
+    env.update('<p>before</p><table><tbody><tr><td>wide</td></tr></tbody></table><p>after</p>');
+    await settle();
+    assert.equal(env.container.childNodes[1], wrapper);
+    assert.equal(wrapper.querySelectorAll('.markdown-table-wrapper').length, 0);
+    assert.deepEqual(env.errors, []);
+});
+
 test('only inserted roots are processed and removed MathJax state is cleared before removal', async () => {
     const highlighted = [], diagrams = [], typeset = [], cleared = [];
     const original = '<p class="math">old</p><pre><code class="language-js">old</code></pre><pre class="mermaid">old</pre>';

@@ -151,6 +151,16 @@
         return result;
     }
 
+    function wrapTables(root) {
+        Array.from(root.querySelectorAll('table')).forEach(function (table) {
+            if (table.parentNode && table.parentNode.matches('.markdown-table-wrapper')) return;
+            var wrapper = document.createElement('div');
+            wrapper.setAttribute('class', 'markdown-table-wrapper');
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        });
+    }
+
     function adjustAnchors(roots) {
         collect(roots, 'a[href], area[href]').forEach(function (anchor) {
             if (anchor.protocol !== 'file:') return;
@@ -175,6 +185,7 @@
         await waitForRendering();
         var template = document.createElement('template');
         template.innerHTML = request.html;
+        wrapTables(template.content);
         var desired = Array.from(template.content.childNodes, entry);
         var available = new Map();
         entries.forEach(function (item) {
