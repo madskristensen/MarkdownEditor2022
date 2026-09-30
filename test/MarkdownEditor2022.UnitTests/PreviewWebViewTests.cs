@@ -278,6 +278,48 @@ namespace MarkdownEditor2022.UnitTests
 
         [TestMethod]
         [Timeout(90000)]
+        public Task RootTableInDetachedTemplate_WrapsAndRetainsWrapperOnFollowUpUpdate() => RunAsync(async page =>
+        {
+            const string table = "<table id=\"root-table\"><tbody><tr><td>wide cell</td></tr></tbody></table>";
+            await page.NavigateAsync("");
+            await page.AssertScriptAsync(@"(() => {
+                const template = document.createElement('template');
+                template.innerHTML = '<table><tr><td>probe</td></tr></table>';
+                return template.content.nodeType === Node.DOCUMENT_FRAGMENT_NODE &&
+                    template.content.firstElementChild.parentNode === template.content &&
+                    template.content.firstElementChild.parentElement === null &&
+                    typeof template.content.matches === 'undefined';
+            })()", "The root-level table must start inside a detached DocumentFragment, not an Element parent.");
+
+            await page.UpdateAndCompleteAsync(table, 1);
+            await page.AssertScriptAsync($@"(() => {{
+                const children = {Container}.children;
+                const wrapper = children[0];
+                return children.length === 1 &&
+                    wrapper.className === 'markdown-table-wrapper' &&
+                    wrapper.parentElement === {Container} &&
+                    wrapper.children.length === 1 &&
+                    wrapper.firstElementChild.tagName === 'TABLE' &&
+                    wrapper.firstElementChild.id === 'root-table' &&
+                    wrapper.querySelector('td').textContent === 'wide cell';
+            }})()", "A completed preview update must contain one wrapper around the actual root table and its cell.");
+            await page.ScriptAsync($"window.__rootTableWrapper = {Container}.firstElementChild");
+
+            await page.UpdateAndCompleteAsync(table + "<p>follow-up</p>", 2);
+            await page.AssertScriptAsync($@"(() => {{
+                const children = {Container}.children;
+                return children.length === 2 &&
+                    children[0] === window.__rootTableWrapper &&
+                    children[0].querySelectorAll('.markdown-table-wrapper').length === 0 &&
+                    children[0].querySelector('table#root-table td').textContent === 'wide cell' &&
+                    children[1].tagName === 'P' &&
+                    children[1].textContent === 'follow-up';
+            }})()", "A subsequent update must reuse the same wrapper without nesting and still render new content.");
+            page.AssertNoErrors();
+        });
+
+        [TestMethod]
+        [Timeout(90000)]
         public Task RepeatedMathReplacementAndRemoval_KeepMathItemsBounded() => RunAsync(async page =>
         {
             const string plain = "<p id=\"stable\">Paragraph</p>";

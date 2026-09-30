@@ -32,8 +32,11 @@ class Node extends Events {
         this.nodeValue = text;
         this.childNodes = [];
         this.parentNode = null;
+        // DocumentFragment is a Node, not an Element; it cannot satisfy Element.matches.
+        if (this.nodeType === 11) this.matches = undefined;
     }
     get firstChild() { return this.childNodes[0] || null; }
+    get parentElement() { return this.parentNode?.nodeType === 1 ? this.parentNode : null; }
     get nextSibling() { return this.parentNode?.childNodes[this.parentNode.childNodes.indexOf(this) + 1] || null; }
     appendChild(node) { return this.insertBefore(node, null); }
     insertBefore(node, cursor) {
@@ -71,7 +74,7 @@ class Node extends Events {
         return this.tagName === selector.toUpperCase();
     }
     querySelectorAll(selector) {
-        return this.childNodes.flatMap(x => [...(x.matches(selector) ? [x] : []), ...x.querySelectorAll(selector)]);
+        return this.childNodes.flatMap(x => [...(x.nodeType === 1 && x.matches(selector) ? [x] : []), ...x.querySelectorAll(selector)]);
     }
     querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
     closest(selector) { return this.matches(selector) ? this : this.parentNode?.closest(selector); }
@@ -131,13 +134,22 @@ test('original signatures preserve mutated nodes, duplicates, text, comments and
 
 test('tables get stable horizontal scroll containers', async () => {
     const env = environment('<p>before</p><table><tbody><tr><td>wide</td></tr></tbody></table><p>after</p>');
-    env.window.__initializeMarkdownPreview('dark');
+    const template = env.document.createElement('template');
+    template.innerHTML = '<table><tbody><tr><td>wide</td></tr></tbody></table>';
+    assert.equal(template.content.nodeType, 11);
+    assert.equal(typeof template.content.matches, 'undefined');
+    assert.equal(template.content.firstChild.parentNode, template.content);
+    assert.equal(template.content.firstChild.parentElement, null);
+    assert.equal(env.update('<p>before</p><table><tbody><tr><td>wide</td></tr></tbody></table><p>after</p>', 'dark', 1), true);
     await settle();
+    assert.deepEqual(env.messages, ['previewComplete:1']);
     const wrapper = env.container.childNodes[1];
     assert.equal(wrapper.attributes.class, 'markdown-table-wrapper');
     assert.equal(wrapper.firstChild.tagName, 'TABLE');
-    env.update('<p>before</p><table><tbody><tr><td>wide</td></tr></tbody></table><p>after</p>');
+    assert.equal(wrapper.firstChild.querySelector('td').innerHTML, 'wide');
+    env.update('<p>before</p><table><tbody><tr><td>wide</td></tr></tbody></table><p>after</p>', 'dark', 2);
     await settle();
+    assert.deepEqual(env.messages, ['previewComplete:1', 'previewComplete:2']);
     assert.equal(env.container.childNodes[1], wrapper);
     assert.equal(wrapper.querySelectorAll('.markdown-table-wrapper').length, 0);
     assert.deepEqual(env.errors, []);

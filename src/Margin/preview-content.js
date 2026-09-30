@@ -153,7 +153,7 @@
 
     function wrapTables(root) {
         Array.from(root.querySelectorAll('table')).forEach(function (table) {
-            if (table.parentNode && table.parentNode.matches('.markdown-table-wrapper')) return;
+            if (table.parentElement && table.parentElement.matches('.markdown-table-wrapper')) return;
             var wrapper = document.createElement('div');
             wrapper.setAttribute('class', 'markdown-table-wrapper');
             table.parentNode.insertBefore(wrapper, table);
