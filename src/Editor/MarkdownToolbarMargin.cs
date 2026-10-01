@@ -32,9 +32,10 @@ namespace MarkdownEditor2022
         }
     }
 
-    internal sealed class MarkdownToolbarMargin : WindowsFormsHost, IWpfTextViewMargin
+    internal sealed class MarkdownToolbarMargin : System.Windows.Controls.DockPanel, IWpfTextViewMargin
     {
-        private readonly VsctToolbarHost _toolbarHost;
+        private VsctToolbarHost _toolbarHost;
+        private WindowsFormsHost _formsHost;
         private readonly MarkdownViewModeController _viewModeController;
         private readonly IWpfTextView _textView;
         private readonly Document _document;
@@ -42,13 +43,14 @@ namespace MarkdownEditor2022
         private readonly PendingUiRefresh _parsedRefresh = new();
         private DateTime _lastTextChange;
         private bool _isDisposed;
+        private bool _toolbarAttachQueued;
 
         public MarkdownToolbarMargin(IWpfTextView textView)
         {
             _textView = textView;
             _document = textView.TextBuffer.GetDocument();
             _viewModeController = textView.GetMarkdownViewModeController();
-            _toolbarHost = new VsctToolbarHost(PackageGuids.MarkdownEditor2022, PackageIds.MarkdownDocumentToolbar);
+            Height = 26;
             _refreshTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
             {
                 Interval = TimeSpan.FromMilliseconds(MarkdownToolbarRefreshPolicy.DelayMilliseconds)
@@ -59,7 +61,9 @@ namespace MarkdownEditor2022
             _textView.Selection.SelectionChanged += OnSelectionChanged;
             _textView.TextBuffer.Changed += OnTextBufferChanged;
             _document.Parsed += OnDocumentParsed;
-            Child = _toolbarHost;
+            Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
+            IsVisibleChanged += OnIsVisibleChanged;
         }
 
         public System.Windows.FrameworkElement VisualElement => this;
@@ -75,7 +79,7 @@ namespace MarkdownEditor2022
                 : null;
         }
 
-        public new void Dispose()
+        public void Dispose()
         {
             if (_isDisposed)
             {
@@ -91,14 +95,80 @@ namespace MarkdownEditor2022
             _textView.Selection.SelectionChanged -= OnSelectionChanged;
             _textView.TextBuffer.Changed -= OnTextBufferChanged;
             _document.Parsed -= OnDocumentParsed;
-            Child = null;
-            _toolbarHost.Dispose();
+            Loaded -= OnLoaded;
+            Unloaded -= OnUnloaded;
+            IsVisibleChanged -= OnIsVisibleChanged;
+            LayoutUpdated -= OnLayoutUpdatedUntilAttached;
+            DetachToolbar();
+        }
+
+        private void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
+        {
+            LayoutUpdated += OnLayoutUpdatedUntilAttached;
+            QueueToolbarAttach();
+        }
+
+        private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
+        {
+            LayoutUpdated -= OnLayoutUpdatedUntilAttached;
+            DetachToolbar();
+        }
+
+        private void OnIsVisibleChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
+        {
+            QueueToolbarAttach();
+        }
+
+        private void OnLayoutUpdatedUntilAttached(object sender, EventArgs e)
+        {
+            QueueToolbarAttach();
+        }
+
+        private void QueueToolbarAttach()
+        {
+            if (_isDisposed || _formsHost != null || _toolbarAttachQueued || !IsLoaded || !IsVisible ||
+                System.Windows.PresentationSource.FromVisual(this) is not System.Windows.Interop.HwndSource source ||
+                source.Handle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            _toolbarAttachQueued = true;
+            ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+            {
+                _toolbarAttachQueued = false;
+                if (_isDisposed || !IsLoaded || !IsVisible || _formsHost != null ||
+                    System.Windows.PresentationSource.FromVisual(this) is not System.Windows.Interop.HwndSource currentSource ||
+                    currentSource.Handle == IntPtr.Zero)
+                {
+                    return;
+                }
+
+                _toolbarHost = new VsctToolbarHost(PackageGuids.MarkdownEditor2022, PackageIds.MarkdownDocumentToolbar);
+                _formsHost = new WindowsFormsHost { Child = _toolbarHost };
+                Children.Add(_formsHost);
+                LayoutUpdated -= OnLayoutUpdatedUntilAttached;
+            }, VsTaskRunContext.UIThreadIdlePriority).Task.FireAndForget();
+        }
+
+        private void DetachToolbar()
+        {
+            if (_formsHost != null)
+            {
+                Children.Remove(_formsHost);
+                _formsHost.Child = null;
+                _formsHost.Dispose();
+                _formsHost = null;
+            }
+
+            _toolbarHost?.Dispose();
+            _toolbarHost = null;
         }
 
         private void OnViewModeChanged(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            _toolbarHost.RefreshCommands();
+            _toolbarHost?.RefreshCommands();
         }
 
         private void OnCaretPositionChanged(object sender, EventArgs e)
@@ -168,7 +238,7 @@ namespace MarkdownEditor2022
             _refreshTimer.Stop();
             if (!_isDisposed && Visibility == System.Windows.Visibility.Visible)
             {
-                _toolbarHost.RefreshCommands();
+                _toolbarHost?.RefreshCommands();
             }
         }
 
