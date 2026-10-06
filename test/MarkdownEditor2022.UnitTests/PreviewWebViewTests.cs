@@ -319,6 +319,105 @@ namespace MarkdownEditor2022.UnitTests
         });
 
         [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        [Timeout(90000)]
+        public Task PreviewTable_ShortContent_StaysNarrowerThanPreview(bool useLightTheme) => RunAsync(async page =>
+        {
+            await NavigateRenderedTableAsync(page, "| Name | Qty |\n| --- | --- |\n| Tea | 2 |", useLightTheme);
+            await page.AssertScriptAsync($@"(() => {{
+                const content = {Container}, wrapper = content.querySelector('.markdown-table-wrapper');
+                const table = wrapper.firstElementChild;
+                return table.querySelector('td').textContent === 'Tea' &&
+                    table.getBoundingClientRect().width > 50 &&
+                    table.getBoundingClientRect().width < content.clientWidth - 40 &&
+                    wrapper.scrollWidth <= wrapper.clientWidth + 1;
+            }})()", "A short rendered Markdown table should take its natural width, not fill the preview or scroll.");
+            await AssertTableWithinPreviewAsync(page);
+            page.AssertNoErrors();
+        });
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        [Timeout(90000)]
+        public Task PreviewTable_VerboseColumns_WrapWithoutHorizontalScroll(bool useLightTheme) => RunAsync(async page =>
+        {
+            string cell = "This cell contains enough ordinary words to wrap within the available preview width rather than forcing the table wider than the document";
+            string source = "| First | Second | Third | Fourth |\n| --- | --- | --- | --- |\n| " +
+                string.Join(" | ", Enumerable.Repeat(cell, 4)) + " |";
+            await NavigateRenderedTableAsync(page, source, useLightTheme);
+            await page.AssertScriptAsync($@"(() => {{
+                const wrapper = {Container}.querySelector('.markdown-table-wrapper');
+                const table = wrapper.firstElementChild;
+                const cells = Array.from(table.querySelectorAll('tbody td'));
+                const lines = document.createRange();
+                lines.selectNodeContents(cells[0]);
+                return cells.length === 4 && cells.every(cell => cell.textContent.includes('available preview width')) &&
+                    lines.getClientRects().length > 1 &&
+                    table.getBoundingClientRect().width <= wrapper.clientWidth + 1 &&
+                    wrapper.scrollWidth <= wrapper.clientWidth + 1;
+            }})()", "Verbose multi-column cells must actually wrap without overflowing the table wrapper.");
+            await AssertTableWithinPreviewAsync(page);
+            page.AssertNoErrors();
+        });
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        [Timeout(90000)]
+        public Task PreviewTable_UnbreakableInlineContent_DoesNotExpandDocument(bool useLightTheme) => RunAsync(async page =>
+        {
+            string token = new('W', 350);
+            await NavigateRenderedTableAsync(page,
+                "| Identifier | Details |\n| --- | --- |\n| `" + token + "` | item |", useLightTheme);
+            await page.AssertScriptAsync($@"(() => {{
+                const wrapper = {Container}.querySelector('.markdown-table-wrapper');
+                const code = wrapper.querySelector('tbody td code');
+                const range = document.createRange();
+                range.selectNodeContents(code);
+                return code.textContent.length === 350 && code.textContent.startsWith('WWW') &&
+                    (wrapper.scrollWidth > wrapper.clientWidth + 1 || range.getClientRects().length > 1);
+            }})()", "An unbreakable inline Markdown token must scroll inside the wrapper or wrap within its cell.");
+            await AssertTableWithinPreviewAsync(page);
+            page.AssertNoErrors();
+        });
+
+        private static async Task NavigateRenderedTableAsync(PreviewPage page, string source, bool useLightTheme)
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "MarkdownTableLayout", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string template;
+            try
+            {
+                using Browser browser = new(Path.Combine(directory, "test.md"), null!, null!, null!);
+                MethodInfo buildTemplate = typeof(Browser).GetMethod("BuildHtmlTemplate", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                template = (string)buildTemplate.Invoke(browser,
+                    [useLightTheme, useLightTheme ? "#ffffff" : "#0d1117", useLightTheme ? "#000000" : "#e6edf3", "#888888", false, false, directory])!;
+            }
+            finally { Directory.Delete(directory, recursive: true); }
+
+            string rendered = Browser.RenderHtmlDocument(Markdown.Parse(source, Document.Pipeline));
+            await page.NavigateAsync(template.Replace("[content]", rendered).Replace("[scripts]", string.Empty), fullPage: true);
+            await page.InitializeAsync(1);
+            await page.CompleteAsync(1);
+            await page.AssertScriptAsync($@"(() => {{
+                const content = {Container}, wrapper = content.querySelector('.markdown-table-wrapper');
+                return !!wrapper && wrapper.parentElement === content &&
+                    wrapper.firstElementChild?.tagName === 'TABLE' &&
+                    wrapper.querySelectorAll('thead th').length >= 2;
+            }})()", "The actual Markdown renderer and preview script must produce a wrapped table.");
+        }
+
+        private static Task AssertTableWithinPreviewAsync(PreviewPage page) => page.AssertScriptAsync($@"(() => {{
+            const content = {Container}, wrapper = content.querySelector('.markdown-table-wrapper');
+            const preview = content.getBoundingClientRect(), bounds = wrapper.getBoundingClientRect();
+            return bounds.width > 0 && bounds.left >= preview.left - 1 && bounds.right <= preview.right + 1 &&
+                document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1 &&
+                document.body.scrollWidth <= document.documentElement.clientWidth + 1;
+        }})()", "The rendered wrapper and document must fit the preview viewport without a page-level horizontal scrollbar.");
+
+        [TestMethod]
         [Timeout(90000)]
         public Task RepeatedMathReplacementAndRemoval_KeepMathItemsBounded() => RunAsync(async page =>
         {

@@ -2066,7 +2066,8 @@ namespace MarkdownEditor2022
         {css}
         {themeColorCss}
         .markdown-table-wrapper {{max-width: 100%; margin: 0 0 16px; overflow-x: auto;}}
-        .markdown-table-wrapper > table {{display: table; width: max-content; max-width: none; margin-bottom: 0; overflow: visible;}}
+        .markdown-table-wrapper > table {{display: table; width: fit-content; max-width: 100%; margin-bottom: 0; overflow: visible;}}
+        .markdown-table-wrapper > table th, .markdown-table-wrapper > table td {{overflow-wrap: anywhere;}}
         .markdown-body img {{background-color: transparent;}}
     </style>";
                 string defaultContent = @"
