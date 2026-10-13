@@ -1,6 +1,4 @@
-using System;
-using System.IO;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Concurrent;
 
 namespace MarkdownEditor2022.UnitTests
 {
@@ -19,7 +17,7 @@ namespace MarkdownEditor2022.UnitTests
         /// Determines if a navigation is to an internal anchor (same file with fragment).
         /// Mirrors logic from HandleFileNavigationAsync.
         /// </summary>
-        private static bool IsInternalAnchor(string filePath, string currentFile, string fragment)
+        private static bool IsInternalAnchor(string filePath, string currentFile, string? fragment)
         {
             bool hasFragment = !string.IsNullOrEmpty(fragment?.TrimStart('#'));
             return hasFragment && filePath.Equals(currentFile, StringComparison.OrdinalIgnoreCase);
@@ -66,7 +64,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string filePath = @"C:\Projects\Docs\readme.md";
             string currentFile = @"C:\Projects\Docs\readme.md";
-            string fragment = null;
+            string? fragment = null;
 
             bool result = IsInternalAnchor(filePath, currentFile, fragment);
 
@@ -105,7 +103,7 @@ namespace MarkdownEditor2022.UnitTests
         /// Tries to find a file by adding markdown extensions when no extension is specified.
         /// Mirrors logic from HandleFileNavigationAsync.
         /// </summary>
-        private static string TryFindWithMarkdownExtension(string filePath, Func<string, bool> fileExists)
+        private static string? TryFindWithMarkdownExtension(string filePath, Func<string, bool> fileExists)
         {
             if (!string.IsNullOrEmpty(Path.GetExtension(filePath)))
             {
@@ -130,7 +128,7 @@ namespace MarkdownEditor2022.UnitTests
             string filePath = @"C:\Projects\Docs\readme";
             bool fileExists(string path) => path == @"C:\Projects\Docs\readme.md";
 
-            string result = TryFindWithMarkdownExtension(filePath, fileExists);
+            string? result = TryFindWithMarkdownExtension(filePath, fileExists);
 
             Assert.AreEqual(@"C:\Projects\Docs\readme.md", result);
         }
@@ -141,7 +139,7 @@ namespace MarkdownEditor2022.UnitTests
             string filePath = @"C:\Projects\Docs\readme";
             bool fileExists(string path) => path == @"C:\Projects\Docs\readme.markdown";
 
-            string result = TryFindWithMarkdownExtension(filePath, fileExists);
+            string? result = TryFindWithMarkdownExtension(filePath, fileExists);
 
             Assert.AreEqual(@"C:\Projects\Docs\readme.markdown", result);
         }
@@ -155,7 +153,7 @@ namespace MarkdownEditor2022.UnitTests
                 path == @"C:\Projects\Docs\readme.md" ||
                 path == @"C:\Projects\Docs\readme.markdown";
 
-            string result = TryFindWithMarkdownExtension(filePath, fileExists);
+            string? result = TryFindWithMarkdownExtension(filePath, fileExists);
 
             Assert.AreEqual(@"C:\Projects\Docs\readme.md", result);
         }
@@ -166,7 +164,7 @@ namespace MarkdownEditor2022.UnitTests
             string filePath = @"C:\Projects\Docs\readme";
             bool fileExists(string path) => false;
 
-            string result = TryFindWithMarkdownExtension(filePath, fileExists);
+            string? result = TryFindWithMarkdownExtension(filePath, fileExists);
 
             Assert.IsNull(result);
         }
@@ -177,9 +175,90 @@ namespace MarkdownEditor2022.UnitTests
             string filePath = @"C:\Projects\Docs\readme.txt";
             bool fileExists(string path) => true;
 
-            string result = TryFindWithMarkdownExtension(filePath, fileExists);
+            string? result = TryFindWithMarkdownExtension(filePath, fileExists);
 
             Assert.IsNull(result); // No fallback when extension already present
+        }
+
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_FindsMdFile()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.html";
+            bool fileExists(string path) => path == @"C:\Projects\Docs\aboutpage.md";
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Docs\aboutpage.md", result);
+        }
+
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_PrioritizesMd()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.html";
+            bool fileExists(string path) =>
+                path == @"C:\Projects\Docs\aboutpage.md" ||
+                path == @"C:\Projects\Docs\aboutpage.markdown";
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Docs\aboutpage.md", result);
+        }
+
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_NoSibling_ReturnsNull()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.html";
+            bool fileExists(string path) => false;
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public void TryFindMarkdownSiblingForMissingHtml_NonHtmlInput_ReturnsNull()
+        {
+            string filePath = @"C:\Projects\Docs\aboutpage.txt";
+            bool fileExists(string path) => true;
+
+            string result = Browser.TryResolveMissingHtmlToMarkdownSibling(filePath, fileExists);
+
+            Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public void TryFindJekyllCollectionForMissingHtml_FindsMarkdownSource()
+        {
+            string filePath = @"C:\Projects\Site\articles\family-house.html";
+            bool fileExists(string path) => path == @"C:\Projects\Site\_articles\family-house.md";
+
+            string result = Browser.TryResolveMissingHtmlToJekyllCollection(
+                filePath, @"C:\Projects\Site", fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Site\_articles\family-house.md", result);
+        }
+
+        [TestMethod]
+        public void TryFindJekyllCollectionForMissingHtml_FindsCollectionUnderNestedSiteRoot()
+        {
+            string filePath = @"C:\Projects\Workspace\docs\articles\family-house.html";
+            bool fileExists(string path) => path == @"C:\Projects\Workspace\docs\_articles\family-house.markdown";
+
+            string result = Browser.TryResolveMissingHtmlToJekyllCollection(
+                filePath, @"C:\Projects\Workspace", fileExists);
+
+            Assert.AreEqual(@"C:\Projects\Workspace\docs\_articles\family-house.markdown", result);
+        }
+
+        [TestMethod]
+        public void TryFindJekyllCollectionForMissingHtml_DoesNotEscapePreviewRoot()
+        {
+            string filePath = @"C:\Projects\Other\articles\family-house.html";
+
+            string result = Browser.TryResolveMissingHtmlToJekyllCollection(
+                filePath, @"C:\Projects\Site", _ => true);
+
+            Assert.IsNull(result);
         }
 
         #endregion
@@ -314,12 +393,59 @@ namespace MarkdownEditor2022.UnitTests
 
         #endregion
 
+        #region Pending Fragment Path Normalization Tests
+
+        /// <summary>
+        /// Simulates the store/lookup pattern used by _pendingFragmentNavigations
+        /// with Path.GetFullPath normalization to ensure cross-file fragment navigation works.
+        /// </summary>
+        private static bool TryMatchPendingFragment(string storedPath, string lookupPath)
+        {
+            ConcurrentDictionary<string, string> dict = new(StringComparer.OrdinalIgnoreCase);
+            dict[Path.GetFullPath(storedPath)] = "heading";
+            return dict.TryRemove(Path.GetFullPath(lookupPath), out _);
+        }
+
+        [TestMethod]
+        public void PendingFragment_IdenticalPaths_Matches()
+        {
+            Assert.IsTrue(TryMatchPendingFragment(
+                @"C:\Projects\Docs\readme.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void PendingFragment_DifferentCasing_Matches()
+        {
+            Assert.IsTrue(TryMatchPendingFragment(
+                @"C:\Projects\Docs\README.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void PendingFragment_UnnormalizedWithDotDot_Matches()
+        {
+            Assert.IsTrue(TryMatchPendingFragment(
+                @"C:\Projects\Docs\..\Docs\readme.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void PendingFragment_DifferentFiles_DoesNotMatch()
+        {
+            Assert.IsFalse(TryMatchPendingFragment(
+                @"C:\Projects\Docs\other.md",
+                @"C:\Projects\Docs\readme.md"));
+        }
+
+        #endregion
+
         #region Fragment Extraction Tests
 
         /// <summary>
         /// Extracts and normalizes the fragment from a URI fragment string.
         /// </summary>
-        private static string ExtractFragment(string fragment)
+        private static string? ExtractFragment(string? fragment)
         {
             return fragment?.TrimStart('#');
         }
@@ -327,7 +453,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void ExtractFragment_WithHash_ReturnsContent()
         {
-            string result = ExtractFragment("#section-1");
+            string? result = ExtractFragment("#section-1");
 
             Assert.AreEqual("section-1", result);
         }
@@ -335,7 +461,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void ExtractFragment_WithoutHash_ReturnsUnchanged()
         {
-            string result = ExtractFragment("section-1");
+            string? result = ExtractFragment("section-1");
 
             Assert.AreEqual("section-1", result);
         }
@@ -343,7 +469,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void ExtractFragment_EmptyString_ReturnsEmpty()
         {
-            string result = ExtractFragment("");
+            string? result = ExtractFragment("");
 
             Assert.AreEqual("", result);
         }
@@ -351,7 +477,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void ExtractFragment_Null_ReturnsNull()
         {
-            string result = ExtractFragment(null);
+            string? result = ExtractFragment(null);
 
             Assert.IsNull(result);
         }
@@ -360,7 +486,7 @@ namespace MarkdownEditor2022.UnitTests
         public void ExtractFragment_MultipleHashes_RemovesAllLeading()
         {
             // TrimStart removes ALL leading occurrences, not just the first
-            string result = ExtractFragment("##heading");
+            string? result = ExtractFragment("##heading");
 
             Assert.AreEqual("heading", result);
         }

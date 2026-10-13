@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MarkdownEditor2022.UnitTests
 {
@@ -10,29 +7,29 @@ namespace MarkdownEditor2022.UnitTests
     {
         // Mirrors the regex and alias map from Browser.cs for testing
         private static readonly Regex LanguageRegex = new Regex("\"language-([^\"]+)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-        
+
         private static readonly Dictionary<string, string> LanguageAliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             // C# aliases
             ["c#"] = "csharp",
             ["cs"] = "csharp",
             ["dotnet"] = "csharp",
-            
+
             // CoffeeScript aliases
             ["coffee"] = "coffeescript",
-            
+
             // JavaScript aliases
             ["js"] = "javascript",
-            
+
             // TypeScript aliases
             ["ts"] = "typescript",
-            
+
             // Python aliases
             ["py"] = "python",
-            
+
             // Ruby aliases
             ["rb"] = "ruby",
-            
+
             // Bash/Shell aliases
             ["sh"] = "bash",
             ["shell"] = "bash",
@@ -43,12 +40,12 @@ namespace MarkdownEditor2022.UnitTests
             return LanguageRegex.Replace(html, match =>
             {
                 string lang = match.Groups[1].Value;
-                
+
                 if (LanguageAliasMap.TryGetValue(lang, out string canonicalLang))
                 {
                     return $"\"language-{canonicalLang}\"";
                 }
-                
+
                 return match.Value;
             });
         }

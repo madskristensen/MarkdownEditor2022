@@ -77,13 +77,14 @@ namespace MarkdownEditor2022
             IReadOnlyList<HeadingBlock> headings = _document.Analysis?.Headings;
             if (headings != null && headings.Count > 0)
             {
-                foreach (HeadingBlock heading in headings)
+                int[] regionEnds = HeadingOutlining.GetRegionEnds(headings, Buffer.CurrentSnapshot.Length);
+                for (int i = 0; i < headings.Count; i++)
                 {
                     if (_document.IsParsing)
                     {
                         return Task.CompletedTask;
                     }
-                    AddHeaderOutlining(list, heading, headings);
+                    AddHeaderOutlining(list, headings[i], regionEnds[i]);
                 }
             }
 
@@ -197,7 +198,7 @@ namespace MarkdownEditor2022
             }
         }
 
-        private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, IReadOnlyList<HeadingBlock> headings)
+        private void AddHeaderOutlining(List<ITagSpan<TokenTag>> list, HeadingBlock heading, int regionEnd)
         {
             try
             {
@@ -211,37 +212,6 @@ namespace MarkdownEditor2022
                 {
                     return;
                 }
-
-                // Determine where this heading's collapsible region should end
-                int regionEnd = snapshotLength;
-
-                // Find the index of the current heading
-                int index = -1;
-                for (int i = 0; i < headings.Count; i++)
-                {
-                    if (ReferenceEquals(headings[i], heading))
-                    {
-                        index = i;
-                        break;
-                    }
-                }
-
-                if (index == -1)
-                {
-                    return;
-                }
-
-                // Look for the next heading at the same or higher level (lower number)
-                for (int i = index + 1; i < headings.Count; i++)
-                {
-                    HeadingBlock next = headings[i];
-                    if (heading.Level >= next.Level)
-                    {
-                        regionEnd = next.Span.Start;
-                        break;
-                    }
-                }
-
 
                 // Only create outlining if there's meaningful content after the heading line
                 if (regionEnd > headingEnd + 2)

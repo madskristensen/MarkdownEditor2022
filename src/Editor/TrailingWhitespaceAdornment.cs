@@ -19,10 +19,12 @@ namespace MarkdownEditor2022
         private readonly IAdornmentLayer _layer;
         private readonly Brush _whitespaceBrush;
         private Typeface _typeface;
+        private double _fontSize;
+        private double _zoomLevel;
+        private bool _renderEnabled;
 
-        // Pool of reusable TextBlock elements to reduce GC pressure on redraw
-        private readonly List<TextBlock> _textBlockPool = [];
-        private int _poolIndex;
+        // Only removed adornments are available for reuse; visible lines retain their elements.
+        private readonly Stack<TextBlock> _textBlockPool = new();
 
         public TrailingWhitespaceAdornment(IWpfTextView view)
         {
@@ -35,8 +37,6 @@ namespace MarkdownEditor2022
                 Constants.WhitespaceGrayLevel));
             _whitespaceBrush.Freeze();
 
-            UpdateTypeface();
-
             _view.LayoutChanged += OnLayoutChanged;
             _view.Options.OptionChanged += OnOptionChanged;
             _view.Closed += OnViewClosed;
@@ -45,10 +45,16 @@ namespace MarkdownEditor2022
             RedrawAdornments();
         }
 
-        private void UpdateTypeface()
+        private bool UpdateTypography()
         {
             TextRunProperties textProperties = _view.FormattedLineSource?.DefaultTextProperties;
-            _typeface = textProperties?.Typeface ?? new Typeface("Consolas");
+            Typeface typeface = textProperties?.Typeface ?? _typeface ?? new Typeface("Consolas");
+            double fontSize = textProperties?.FontRenderingEmSize ?? 12;
+            bool changed = !Equals(_typeface, typeface) || _fontSize != fontSize || _zoomLevel != _view.ZoomLevel;
+            _typeface = typeface;
+            _fontSize = fontSize;
+            _zoomLevel = _view.ZoomLevel;
+            return changed;
         }
 
         private void OnOptionChanged(object sender, EditorOptionChangedEventArgs e)
@@ -65,40 +71,50 @@ namespace MarkdownEditor2022
             _view.LayoutChanged -= OnLayoutChanged;
             _view.Options.OptionChanged -= OnOptionChanged;
             _view.Closed -= OnViewClosed;
+            _layer.RemoveAllAdornments();
+            _textBlockPool.Clear();
         }
 
         private void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
         {
-            // Redraw when: text changed, viewport scrolled, or lines were reformatted.
-            // The reformatted-lines check is essential: when the user types the second
-            // trailing space, the first LayoutChanged fires with the new snapshot but
-            // line geometry may not be ready yet (GetMarkerGeometry returns null).
-            // The subsequent reformat pass provides valid geometry for the adornments.
-            if (e.NewSnapshot != e.OldSnapshot || e.VerticalTranslation || e.NewOrReformattedLines.Count > 0)
+            if (UpdateTypography() || _renderEnabled != ShouldRender)
             {
                 RedrawAdornments();
+                return;
+            }
+
+            if (!_renderEnabled)
+            {
+                return;
+            }
+
+            // Text-relative adornments move with translated lines. Only new/reformatted
+            // lines need geometry work, including a later pass after null marker geometry.
+            foreach (ITextViewLine line in e.NewOrReformattedLines)
+            {
+                _layer.RemoveAdornmentsByTag(line.IdentityTag);
+                DrawTrailingWhitespace(line);
             }
         }
 
+        private bool ShouldRender => AdvancedOptions.Instance.ShowTrailingWhitespace && !_view.Options.IsVisibleWhitespaceEnabled();
+
         private void RedrawAdornments()
         {
+            if (_view.IsClosed)
+            {
+                return;
+            }
+
             _layer.RemoveAllAdornments();
-            _poolIndex = 0;
+            _renderEnabled = ShouldRender;
 
-            // Don't show when the extension option is disabled
-            if (!AdvancedOptions.Instance.ShowTrailingWhitespace)
+            if (!_renderEnabled)
             {
                 return;
             }
 
-            // Don't show when VS's built-in "View White Space" is enabled
-            // (VS already shows spaces/tabs with its own visualization)
-            if (_view.Options.IsVisibleWhitespaceEnabled())
-            {
-                return;
-            }
-
-            UpdateTypeface();
+            UpdateTypography();
 
             foreach (ITextViewLine line in _view.TextViewLines)
             {
@@ -108,30 +124,35 @@ namespace MarkdownEditor2022
 
         private void DrawTrailingWhitespace(ITextViewLine line)
         {
-            SnapshotSpan extent = line.Extent;
-            string lineText = extent.GetText();
+            ITextSnapshotLine snapshotLine = line.End.GetContainingLine();
+            if (line.End != snapshotLine.End || snapshotLine.Length < 2)
+            {
+                return;
+            }
+
+            ITextSnapshot snapshot = snapshotLine.Snapshot;
+            int end = snapshotLine.End.Position;
+            int length = snapshotLine.Length;
 
             // Check for exactly 2 trailing spaces (not more, not less)
             // This is the Markdown syntax for a soft line break
-            if (lineText.Length >= 2 &&
-                lineText[lineText.Length - 1] == ' ' &&
-                lineText[lineText.Length - 2] == ' ' &&
-                (lineText.Length < 3 || lineText[lineText.Length - 3] != ' '))
+            if (HasExactlyTwoSpaces(length, snapshot[end - 1], snapshot[end - 2],
+                length > 2 ? snapshot[end - 3] : '\0'))
             {
                 // Get the position of the two trailing spaces
-                int firstSpacePosition = extent.Start.Position + lineText.Length - 2;
+                int firstSpacePosition = end - 2;
 
                 // Draw a dot for each of the two spaces
-                DrawSpaceDot(firstSpacePosition);
-                DrawSpaceDot(firstSpacePosition + 1);
+                DrawSpaceDot(firstSpacePosition, line.IdentityTag);
+                DrawSpaceDot(firstSpacePosition + 1, line.IdentityTag);
             }
         }
 
         private TextBlock GetOrCreateTextBlock()
         {
-            if (_poolIndex < _textBlockPool.Count)
+            if (_textBlockPool.Count > 0)
             {
-                return _textBlockPool[_poolIndex++];
+                return _textBlockPool.Pop();
             }
 
             TextBlock textBlock = new()
@@ -141,12 +162,13 @@ namespace MarkdownEditor2022
                 TextAlignment = System.Windows.TextAlignment.Center,
                 ToolTip = "Soft line break (2 trailing spaces)"
             };
-            _textBlockPool.Add(textBlock);
-            _poolIndex++;
             return textBlock;
         }
 
-        private void DrawSpaceDot(int position)
+        internal static bool HasExactlyTwoSpaces(int length, char last, char secondLast, char thirdLast)
+            => length >= 2 && last == ' ' && secondLast == ' ' && (length == 2 || thirdLast != ' ');
+
+        private void DrawSpaceDot(int position, object lineTag)
         {
             ITextSnapshot snapshot = _view.TextSnapshot;
             SnapshotSpan charSpan = new(snapshot, position, 1);
@@ -158,22 +180,29 @@ namespace MarkdownEditor2022
             }
 
             System.Windows.Rect bounds = geometry.Bounds;
-            double fontSize = _view.FormattedLineSource?.DefaultTextProperties?.FontRenderingEmSize ?? 12;
-
             TextBlock textBlock = GetOrCreateTextBlock();
             textBlock.FontFamily = _typeface.FontFamily;
-            textBlock.FontSize = fontSize;
+            textBlock.FontStyle = _typeface.Style;
+            textBlock.FontWeight = _typeface.Weight;
+            textBlock.FontStretch = _typeface.Stretch;
+            textBlock.FontSize = _fontSize;
             textBlock.Width = bounds.Width;
 
             Canvas.SetLeft(textBlock, bounds.Left);
             Canvas.SetTop(textBlock, bounds.Top);
 
-            _layer.AddAdornment(
+            if (!_layer.AddAdornment(
                 AdornmentPositioningBehavior.TextRelative,
                 charSpan,
-                null,
+                lineTag,
                 textBlock,
-                null);
+                OnAdornmentRemoved))
+            {
+                _textBlockPool.Push(textBlock);
+            }
         }
+
+        private void OnAdornmentRemoved(object tag, System.Windows.UIElement adornment)
+            => _textBlockPool.Push((TextBlock)adornment);
     }
 }

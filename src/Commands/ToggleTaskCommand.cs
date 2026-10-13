@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Text;
 
@@ -6,7 +6,9 @@ namespace MarkdownEditor2022
 {
     public class ToggleTaskCommand
     {
-        private static readonly Regex _regex = new(@"\* \[( |x|X)\]", RegexOptions.Compiled);
+        private static readonly Regex _regex = new(
+            @"^(?<indent>\s*)(?<bullet>[*+-])(?<spacing>\s+)\[(?<state> |x|X)\]",
+            RegexOptions.Compiled);
 
         public static async Task InitializeAsync()
         {
@@ -29,26 +31,36 @@ namespace MarkdownEditor2022
                 ITextSnapshotLine line = docView.TextView.TextBuffer.CurrentSnapshot.GetLineFromPosition(position);
 
                 string lineText = line.GetText();
-                Match match = _regex.Match(lineText);
 
-                if (match.Success)
+                if (TryToggleLine(lineText, out string replacement, out int matchIndex, out int matchLength))
                 {
-                    Span span = new(line.Start + match.Index, match.Length);
-
-                    if (match.Value.Contains("[ ]"))
-                    {
-                        line.Snapshot.TextBuffer.Replace(span, "* [x]");
-                    }
-                    else
-                    {
-                        line.Snapshot.TextBuffer.Replace(span, "* [ ]");
-                    }
-
+                    Span span = new(line.Start + matchIndex, matchLength);
+                    line.Snapshot.TextBuffer.Replace(span, replacement);
                     return CommandProgression.Stop;
                 }
 
                 return CommandProgression.Continue;
             });
+        }
+
+        internal static bool TryToggleLine(string lineText, out string replacement, out int matchIndex, out int matchLength)
+        {
+            replacement = null;
+            matchIndex = 0;
+            matchLength = 0;
+
+            Match match = _regex.Match(lineText ?? string.Empty);
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            string state = match.Groups["state"].Value == " " ? "x" : " ";
+            int stateOffset = match.Groups["state"].Index - match.Index;
+            replacement = match.Value.Substring(0, stateOffset) + state + match.Value.Substring(stateOffset + 1);
+            matchIndex = match.Index;
+            matchLength = match.Length;
+            return true;
         }
     }
 }

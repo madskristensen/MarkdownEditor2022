@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using MarkdownEditor2022;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace MarkdownEditor2022.UnitTests
 {
     /// <summary>
@@ -252,7 +247,7 @@ namespace MarkdownEditor2022.UnitTests
         /// Mirrors the ResolveRelativePathsToAbsoluteUrls method from Browser.cs for testing root-relative paths.
         /// This simplified version only tests the root-relative path resolution logic.
         /// </summary>
-        private static string ResolveRootRelativePath(string rootRelativePath, string rootPath, string driveRoot)
+        private static string? ResolveRootRelativePath(string rootRelativePath, string rootPath, string driveRoot)
         {
             try
             {
@@ -290,7 +285,7 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Projects\blog";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Projects/blog/images/test.png", result);
         }
@@ -302,7 +297,7 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Users\Dev\website";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Users/Dev/website/assets/img/photo.jpg", result);
         }
@@ -314,7 +309,7 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Projects";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Projects/readme.md", result);
         }
@@ -326,9 +321,303 @@ namespace MarkdownEditor2022.UnitTests
             string rootPath = @"C:\Projects\Site";
             string driveRoot = @"C:\";
 
-            string result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
+            string? result = ResolveRootRelativePath(rootRelativePath, rootPath, driveRoot);
 
             Assert.AreEqual("http://browsing-file-host/Projects/Site/my docs/test file.md", result);
+        }
+
+        [TestMethod]
+        public void BrowserResolveRelativePath_ParentDirectory_PreservesParentTraversal()
+        {
+            string result = Browser.ResolveRelativePath(
+                "src", "../images/diagram.png", @"C:\Projects\Docs", @"C:\");
+
+            Assert.AreEqual("src=\"http://browsing-file-host/Projects/images/diagram.png\"", result);
+        }
+
+        [TestMethod]
+        public void BrowserGetDocumentDirectory_ValidPath_ReturnsDirectory()
+        {
+            Assert.AreEqual(@"C:\Projects\Docs", Browser.GetDocumentDirectory(@"C:\Projects\Docs\readme.md"));
+        }
+
+        [TestMethod]
+        public void BrowserGetDocumentDirectory_EmptyPath_ReturnsNull()
+        {
+            Assert.IsNull(Browser.GetDocumentDirectory(string.Empty));
+        }
+
+        [TestMethod]
+        public void BrowserGetDocumentDirectory_InvalidPath_ReturnsNull()
+        {
+            Assert.IsNull(Browser.GetDocumentDirectory("invalid\0path.md"));
+        }
+
+        [TestMethod]
+        public void BrowserGetPreviewRoot_OpenFolder_AllowsSiblingAssetDirectory()
+        {
+            string result = Browser.GetPreviewRoot(
+                @"C:\What's New\18.12\content", configuredRoot: null, @"C:\What's New\18.12");
+
+            Assert.AreEqual(@"C:\What's New\18.12", result);
+            Assert.AreEqual(
+                "src=\"http://browsing-file-host/media/copy-commit-id.png\"",
+                Browser.ResolveRelativePath(
+                    "src", "../media/copy-commit-id.png", @"C:\What's New\18.12\content", result));
+        }
+
+        [TestMethod]
+        public void BrowserGetPreviewRoot_WorkspaceAllowsDeepParentTraversalWithinRoot()
+        {
+            string result = Browser.GetPreviewRoot(
+                @"C:\Solution\docs\release\content", configuredRoot: null, @"C:\Solution");
+
+            Assert.AreEqual(@"C:\Solution", result);
+            Assert.AreEqual(
+                "src=\"http://browsing-file-host/shared/image.png\"",
+                Browser.ResolveRelativePath(
+                    "src", "../../../shared/image.png", @"C:\Solution\docs\release\content", result));
+        }
+
+        [TestMethod]
+        public void BrowserGetPreviewRoot_DocumentAtWorkspaceRoot_UsesWorkspaceRoot()
+        {
+            string result = Browser.GetPreviewRoot(
+                @"C:\Solution", configuredRoot: null, @"C:\Solution");
+
+            Assert.AreEqual(@"C:\Solution", result);
+        }
+
+        [TestMethod]
+        public void BrowserGetPreviewRoot_MiscellaneousFile_AllowsSiblingAssetDirectory()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "MarkdownPreviewRoot", Guid.NewGuid().ToString("N"));
+            string content = Path.Combine(root, "content");
+            Directory.CreateDirectory(content);
+            Directory.CreateDirectory(Path.Combine(root, "media"));
+            try
+            {
+                string result = Browser.GetPreviewRoot(content, configuredRoot: null);
+
+                Assert.AreEqual(root, result);
+                Assert.AreEqual(
+                    "src=\"http://browsing-file-host/media/copy-commit-id.png\"",
+                    Browser.ResolveRelativePath("src", "../media/copy-commit-id.png", content, result));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserGetPreviewRoot_IgnoresOpenFolderThatDoesNotContainDocument()
+        {
+            string documentDirectory = AppContext.BaseDirectory;
+            string unrelatedOpenFolder = Path.GetTempPath();
+            string result = Browser.GetPreviewRoot(
+                documentDirectory, configuredRoot: null, unrelatedOpenFolder);
+
+            Assert.AreNotEqual(Path.GetFullPath(unrelatedOpenFolder), result);
+            Assert.IsTrue(Browser.IsPathWithinPreviewRoot(documentDirectory, result));
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_UsesConfiguredRootPath()
+        {
+            string result = Browser.ResolveRootRelativePath(
+                "href", "/.attachments/image.png", @"C:\Projects\Wiki", @"C:\");
+
+            Assert.AreEqual("href=\"http://browsing-file-host/Projects/Wiki/.attachments/image.png\"", result);
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_DiscoversNearestMatchingAncestor()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewRoot", Guid.NewGuid().ToString("N"));
+            string siteRoot = Path.Combine(workspaceRoot, "docs");
+            string documentDirectory = Path.Combine(siteRoot, "automation", "climate");
+            string imageDirectory = Path.Combine(siteRoot, "assets", "img");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(imageDirectory);
+            File.WriteAllText(Path.Combine(imageDirectory, "purifier.svg"), "<svg />");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<img src=\"/assets/img/purifier.svg\">",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    siteRoot,
+                    Browser.FindRootPath("/assets/img/purifier.svg", documentDirectory, workspaceRoot));
+                Assert.AreEqual(
+                    "<img src=\"http://browsing-file-host/docs/assets/img/purifier.svg\">",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_WithQueryString_DiscoversRootAndPreservesQuery()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewQuery", Guid.NewGuid().ToString("N"));
+            string siteRoot = Path.Combine(workspaceRoot, "docs");
+            string documentDirectory = Path.Combine(siteRoot, "_articles");
+            string imageDirectory = Path.Combine(siteRoot, "assets", "img");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(imageDirectory);
+            File.WriteAllText(Path.Combine(imageDirectory, "comparison.svg"), "<svg />");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<img src=\"/assets/img/comparison.svg?whatever\">",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    siteRoot,
+                    Browser.FindRootPath("/assets/img/comparison.svg?whatever", documentDirectory, workspaceRoot));
+                Assert.AreEqual(
+                    "<img src=\"http://browsing-file-host/docs/assets/img/comparison.svg?whatever\">",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_JekyllCollectionInOpenFolder_RewritesToMarkdownSource()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewJekyll", Guid.NewGuid().ToString("N"));
+            string documentDirectory = Path.Combine(workspaceRoot, "_posts");
+            string collectionDirectory = Path.Combine(workspaceRoot, "_articles");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(collectionDirectory);
+            File.WriteAllText(Path.Combine(collectionDirectory, "family-house.md"), "# Family house");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<a href=\"/articles/family-house.html?view=full#comparison\">Article</a>",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    "<a href=\"http://browsing-file-host/_articles/family-house.md?view=full#comparison\">Article</a>",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_MissingHtmlInOpenFolder_RewritesToMarkdownSibling()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewSibling", Guid.NewGuid().ToString("N"));
+            string documentDirectory = Path.Combine(workspaceRoot, "docs", "platforms");
+            string sourceDirectory = Path.Combine(workspaceRoot, "docs", "automation", "lighting");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(sourceDirectory);
+            File.WriteAllText(Path.Combine(sourceDirectory, "lights-on-motion.md"), "# Lights on motion");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<a href=\"/automation/lighting/lights-on-motion.html\">Motion-triggered lights</a>",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    "<a href=\"http://browsing-file-host/docs/automation/lighting/lights-on-motion.md\">Motion-triggered lights</a>",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRootRelativePath_ExistingNormalPathTakesPrecedenceOverJekyllCollection()
+        {
+            string workspaceRoot = Path.Combine(Path.GetTempPath(), "MarkdownPreviewPrecedence", Guid.NewGuid().ToString("N"));
+            string documentDirectory = Path.Combine(workspaceRoot, "_posts");
+            string normalDirectory = Path.Combine(workspaceRoot, "articles");
+            string collectionDirectory = Path.Combine(workspaceRoot, "_articles");
+            Directory.CreateDirectory(documentDirectory);
+            Directory.CreateDirectory(normalDirectory);
+            Directory.CreateDirectory(collectionDirectory);
+            File.WriteAllText(Path.Combine(normalDirectory, "family-house.html"), "Generated");
+            File.WriteAllText(Path.Combine(collectionDirectory, "family-house.md"), "# Source");
+
+            try
+            {
+                string html = Browser.ResolveRelativePathsToAbsoluteUrls(
+                    "<a href=\"/articles/family-house.html\">Article</a>",
+                    documentDirectory,
+                    previewRoot: workspaceRoot);
+
+                Assert.AreEqual(
+                    "<a href=\"http://browsing-file-host/articles/family-house.html\">Article</a>",
+                    html);
+            }
+            finally
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        [TestMethod]
+        public void BrowserResolveRelativePath_WithQueryAndFragment_PreservesUrlSuffix()
+        {
+            string result = Browser.ResolveRelativePath(
+                "src", "images/diagram.svg?theme=dark#icon", @"C:\Projects\Docs", @"C:\");
+
+            Assert.AreEqual(
+                "src=\"http://browsing-file-host/Projects/Docs/images/diagram.svg?theme=dark#icon\"",
+                result);
+        }
+
+        [TestMethod]
+        public void BrowserTryResolveVirtualHostPath_RejectsTraversalOutsidePreviewRoot()
+        {
+            bool resolved = Browser.TryResolveVirtualHostPath(
+                "/..%2FSecrets\u002Fcredentials.txt", @"C:\Projects\Wiki", out _);
+
+            Assert.IsFalse(resolved);
+        }
+
+        [DataRow(@"C:\Projects\Wiki\docs\page.md", true)]
+        [DataRow(@"C:\Projects\Wiki", true)]
+        [DataRow(@"C:\Projects\Wiki2\secret.md", false)]
+        [DataRow(@"C:\Secrets\credentials.txt", false)]
+        [TestMethod]
+        public void BrowserIsPathWithinPreviewRoot_EnforcesBoundary(string filePath, bool expected)
+        {
+            Assert.AreEqual(expected, Browser.IsPathWithinPreviewRoot(filePath, @"C:\Projects\Wiki"));
+        }
+
+        [DataRow("Edit.GoToAll", true)]
+        [DataRow("View.SolutionExplorer", true)]
+        [DataRow("Build.BuildSolution", true)]
+        [DataRow("File.Delete", false)]
+        [DataRow("C:\\Windows\\System32", false)]
+        [DataRow("Edit/FormatDocument", false)]
+        [DataRow("", false)]
+        [TestMethod]
+        public void IsSafeVisualStudioCommand_ValidatesCommandShape(string command, bool expected)
+        {
+            Assert.AreEqual(expected, Browser.IsSafeVisualStudioCommand(command));
         }
 
         #endregion
@@ -343,6 +632,16 @@ namespace MarkdownEditor2022.UnitTests
             Assert.IsTrue(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.mermaid"));
             Assert.IsTrue(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.mmd"));
             Assert.IsFalse(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\file.txt"));
+        }
+
+        [DataRow(".mermaid")]
+        [DataRow(".MERMAID")]
+        [DataRow(".mmd")]
+        [DataRow(".MMD")]
+        [TestMethod]
+        public void IsMarkdownFile_StandaloneMermaidExtensions_AreSupported(string extension)
+        {
+            Assert.IsTrue(HtmlGenerationService.IsMarkdownFile(@"C:\Docs\diagram" + extension));
         }
 
         [TestMethod]
@@ -511,7 +810,7 @@ namespace MarkdownEditor2022.UnitTests
             string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string profileTemplate = Path.Combine(userProfile, "md-template.html");
             bool hadExistingProfileTemplate = File.Exists(profileTemplate);
-            string originalProfileTemplateContent = hadExistingProfileTemplate ? File.ReadAllText(profileTemplate) : null;
+            string? originalProfileTemplateContent = hadExistingProfileTemplate ? File.ReadAllText(profileTemplate) : null;
 
             try
             {
@@ -541,31 +840,129 @@ namespace MarkdownEditor2022.UnitTests
             }
         }
 
+        #endregion
+
+        #region HTML Link Rewrite Tests
+
         [TestMethod]
-        public void HtmlGenerationEnabled_WhenHtmlSiblingExists_ReturnsTrue()
+        public void RewriteRelativeExtensionlessAnchorHrefs_RelativeNoExtension_AddsHtml()
         {
-            string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDir);
+            string html = "<p><a href=\"aboutpage\">About</a></p>";
 
-            try
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual("<p><a href=\"aboutpage.html\">About</a></p>", result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_RelativeNoExtensionWithFragment_PreservesFragment()
+        {
+            string html = "<p><a href=\"aboutpage#team\">Team</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual("<p><a href=\"aboutpage.html#team\">Team</a></p>", result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_RelativeNoExtensionWithQuery_PreservesQuery()
+        {
+            string html = "<p><a href=\"aboutpage?lang=en\">About</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual("<p><a href=\"aboutpage.html?lang=en\">About</a></p>", result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_AbsoluteOrRootOrScheme_Unchanged()
+        {
+            string html = "<p><a href=\"/aboutpage\">Root</a> <a href=\"https://example.com/about\">Web</a> <a href=\"#team\">Anchor</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual(html, result);
+        }
+
+        [TestMethod]
+        public void RewriteRelativeExtensionlessAnchorHrefs_AlreadyHasExtension_Unchanged()
+        {
+            string html = "<p><a href=\"aboutpage.md\">MD</a> <a href=\"aboutpage.html\">HTML</a></p>";
+
+            string result = HtmlGenerationService.RewriteRelativeExtensionlessAnchorHrefs(html);
+
+            Assert.AreEqual(html, result);
+        }
+
+        #endregion
+
+        #region URI Scheme Path Resolution Tests
+
+        /// <summary>
+        /// Exercises the relative-path resolution logic from Browser.cs WITHOUT the catch block,
+        /// so that guard omissions (e.g. missing URI-scheme check) surface as test failures
+        /// rather than being silently swallowed.
+        /// </summary>
+        private static string ResolveRelativePaths(string html, string baseDirectory)
+        {
+            string driveRoot = Path.GetPathRoot(baseDirectory);
+
+            return Browser._relativePathRegex.Replace(html, match =>
             {
-                string markdownFile = Path.Combine(tempDir, "readme.md");
-                string htmlFile = Path.Combine(tempDir, "readme.html");
+                string attr = match.Groups["attr"].Value;
+                string relativePath = match.Groups["path"].Value;
 
-                File.WriteAllText(markdownFile, "# Title");
-                File.WriteAllText(htmlFile, "<html></html>");
+                if (string.IsNullOrEmpty(relativePath) || relativePath.StartsWith("#") || relativePath.IndexOf(':') >= 0)
+                    return match.Value;
 
-                bool result = HtmlGenerationService.HtmlGenerationEnabled(markdownFile);
+                return Browser.ResolveRelativePath(attr, relativePath, baseDirectory, driveRoot);
+            });
+        }
 
-                Assert.IsTrue(result);
-            }
-            finally
-            {
-                if (Directory.Exists(tempDir))
-                {
-                    Directory.Delete(tempDir, true);
-                }
-            }
+        [TestMethod]
+        public void ResolveRelativePaths_MailtoLink_IsNotModified()
+        {
+            // Regression: href="mail:user@example.com" caused NotSupportedException
+            // because "mail:user@example.com" looks like a drive path on Windows.
+            string html = @"<a href=""mail:user@example.com"">Contact</a>";
+            string baseDir = @"C:\Projects\docs";
+
+            string result = ResolveRelativePaths(html, baseDir);
+
+            Assert.AreEqual(html, result, "mailto-style URI scheme links must not be modified.");
+        }
+
+        [TestMethod]
+        public void ResolveRelativePaths_TelLink_IsNotModified()
+        {
+            string html = @"<a href=""tel:+15551234567"">Call us</a>";
+            string baseDir = @"C:\Projects\docs";
+
+            string result = ResolveRelativePaths(html, baseDir);
+
+            Assert.AreEqual(html, result, "tel: URI scheme links must not be modified.");
+        }
+
+        [TestMethod]
+        public void ResolveRelativePaths_MailtoLink_IsNotModified2()
+        {
+            string html = @"<a href=""mailto:user@example.com"">Email</a>";
+            string baseDir = @"C:\Projects\docs";
+
+            string result = ResolveRelativePaths(html, baseDir);
+
+            Assert.AreEqual(html, result, "mailto: URI scheme links must not be modified.");
+        }
+
+        [TestMethod]
+        public void ResolveRelativePaths_NormalRelativePath_IsResolved()
+        {
+            string html = @"<img src=""images/photo.png"">";
+            string baseDir = @"C:\Projects\docs";
+
+            string result = ResolveRelativePaths(html, baseDir);
+
+            StringAssert.StartsWith(result, @"<img src=""http://browsing-file-host/");
         }
 
         #endregion

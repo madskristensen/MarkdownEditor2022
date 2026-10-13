@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
@@ -10,8 +11,6 @@ namespace MarkdownEditor2022
     [Guid(PackageGuids.EditorFactoryString)]
     internal sealed class MarkdownEditorV2(object site) : LanguageBase(site)
     {
-        private DropdownBars _dropdownBars;
-
         /// <summary>
         /// Creates a custom CodeWindowManager that implements IVsDocOutlineProvider
         /// to provide document outline support for the Document Outline tool window.
@@ -38,7 +37,13 @@ namespace MarkdownEditor2022
 
         public override string Name => Constants.LanguageName;
 
-        public override string[] FileExtensions { get; } = [Constants.FileExtensionMd, Constants.FileExtensionRmd];
+        public override string[] FileExtensions { get; } =
+            [Constants.FileExtensionMd, Constants.FileExtensionRmd, Constants.FileExtensionMermaid, Constants.FileExtensionMmd];
+
+        public override ViewFilter CreateViewFilter(CodeWindowManager manager, IVsTextView newView)
+        {
+            return new MarkdownViewFilter(manager, newView);
+        }
 
         public override void SetDefaultPreferences(LanguagePreferences preferences)
         {
@@ -74,17 +79,36 @@ namespace MarkdownEditor2022
                 return null;
             }
 
-            _dropdownBars?.Dispose();
-            _dropdownBars = new DropdownBars(textView, this);
+            return view.Properties.GetOrCreateSingletonProperty(() => new DropdownBars(textView, this));
+        }
+    }
 
-            return _dropdownBars;
+    internal sealed class MarkdownViewFilter(CodeWindowManager manager, IVsTextView textView)
+        : ViewFilter(manager, textView)
+    {
+        protected override int QueryCommandStatus(ref Guid guidCmdGroup, uint commandId)
+        {
+            return IsGoToDefinition(guidCmdGroup, commandId)
+                ? VSConstants.E_FAIL
+                : base.QueryCommandStatus(ref guidCmdGroup, commandId);
         }
 
-        public override void Dispose()
+        public override bool HandlePreExec(
+            ref Guid guidCmdGroup,
+            uint commandId,
+            uint commandExecOptions,
+            IntPtr inputVariant,
+            IntPtr outputVariant)
         {
-            _dropdownBars?.Dispose();
-            _dropdownBars = null;
-            base.Dispose();
+            return !IsGoToDefinition(guidCmdGroup, commandId) &&
+                   base.HandlePreExec(
+                       ref guidCmdGroup, commandId, commandExecOptions, inputVariant, outputVariant);
+        }
+
+        private static bool IsGoToDefinition(Guid commandGroup, uint commandId)
+        {
+            return commandGroup == VSConstants.GUID_VSStandardCommandSet97 &&
+                   commandId == (uint)VSConstants.VSStd97CmdID.GotoDefn;
         }
     }
 }

@@ -27,7 +27,9 @@ namespace MarkdownEditor2022
             }
 
             await HtmlGenerationService.GenerateAndNestHtmlFileAsync(markdownFile);
-            await VS.StatusBar.ShowMessageAsync("HTML generation enabled");
+            await VS.StatusBar.ShowMessageAsync(HtmlGenerationService.HtmlGenerationEnabled(markdownFile)
+                ? "HTML generation enabled"
+                : "HTML file generated once. Automatic updates require a project supporting DependentUpon nesting.");
         }
     }
 }

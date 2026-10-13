@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Markdig.Syntax;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 
@@ -23,8 +25,10 @@ namespace MarkdownEditor2022
         private IWpfTextView _textView;
         private IVsTextView _vsTextView;
         private bool _isNavigating;
+        private readonly PendingUiRefresh _refresh = new();
+        private readonly HeadingOutline _outline = new();
 
-        public ObservableCollection<HeadingItem> Headings { get; } = [];
+        public ObservableCollection<HeadingItem> Headings => _outline.Headings;
 
         public DocumentOutlineControl()
         {
@@ -39,11 +43,7 @@ namespace MarkdownEditor2022
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            // Unsubscribe from previous document if any
-            if (_document != null)
-            {
-                _document.Parsed -= OnDocumentParsed;
-            }
+            Cleanup();
 
             _document = document;
             _textView = textView;
@@ -57,6 +57,7 @@ namespace MarkdownEditor2022
                 if (_textView != null)
                 {
                     _textView.Caret.PositionChanged += OnCaretPositionChanged;
+                    _textView.Closed += OnTextViewClosed;
                 }
 
                 // Initial population
@@ -69,6 +70,8 @@ namespace MarkdownEditor2022
         /// </summary>
         public void Cleanup()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _refresh.Reset();
             if (_document != null)
             {
                 _document.Parsed -= OnDocumentParsed;
@@ -77,23 +80,37 @@ namespace MarkdownEditor2022
             if (_textView != null)
             {
                 _textView.Caret.PositionChanged -= OnCaretPositionChanged;
+                _textView.Closed -= OnTextViewClosed;
             }
 
             _document = null;
             _textView = null;
             _vsTextView = null;
-            Headings.Clear();
+            _outline.Clear();
+            EmptyMessage.Visibility = Visibility.Visible;
+        }
+
+        private void OnTextViewClosed(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Cleanup();
         }
 
         private void OnDocumentParsed(Document document)
         {
-#pragma warning disable VSSDK007 // ThreadHelper.JoinableTaskFactory.RunAsync fire-and-forget is intentional for event-driven refresh
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            if (!ReferenceEquals(document, _document) || !_refresh.TryQueue(out int generation))
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                RefreshHeadings();
-            }).FireAndForget();
-#pragma warning restore VSSDK007
+                return;
+            }
+
+            ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (_refresh.TryStart(generation) && ReferenceEquals(document, _document) && _textView?.IsClosed == false)
+                {
+                    RefreshHeadings();
+                }
+            }).Task.FireAndForget();
         }
 
         private void OnCaretPositionChanged(object sender, CaretPositionChangedEventArgs e)
@@ -152,78 +169,39 @@ namespace MarkdownEditor2022
         private void RefreshHeadings()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            Headings.Clear();
-
-            if (_document?.Markdown == null)
+            if (_document == null || _textView == null || _textView.IsClosed)
             {
                 EmptyMessage.Visibility = Visibility.Visible;
                 return;
             }
 
-            List<HeadingBlock> headingBlocks = [.. _document.Markdown.Descendants<HeadingBlock>()];
-
-            if (headingBlocks.Count == 0)
+            DocumentAnalysis analysis = _document.GetAnalysis(out ITextSnapshot snapshot);
+            if (analysis == null)
             {
                 EmptyMessage.Visibility = Visibility.Visible;
                 return;
             }
 
-            EmptyMessage.Visibility = Visibility.Collapsed;
-
-            // Build hierarchical structure
-            BuildHeadingTree(headingBlocks);
-
-            // Expand all items
-            ExpandAllTreeViewItems();
-        }
-
-        private void BuildHeadingTree(List<HeadingBlock> headingBlocks)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            Stack<HeadingItem> parentStack = new();
-
-            foreach (HeadingBlock block in headingBlocks)
+            ITextSnapshot currentSnapshot = _textView.TextSnapshot;
+            bool rebuilt = _outline.Update(analysis.Headings, (item, block) =>
             {
-                string text = GetHeadingText(block);
-                int lineNumber = GetLineNumber(block);
+                SnapshotSpan span = new SnapshotSpan(snapshot, block.ToSpan())
+                    .TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive);
+                item.Text = GetHeadingText(block, snapshot);
+                item.LineNumber = span.Start.GetContainingLine().LineNumber;
+                item.Span = new SourceSpan(span.Start.Position, span.End.Position - 1);
+            });
 
-                HeadingItem item = new()
-                {
-                    Text = text,
-                    Level = block.Level,
-                    LineNumber = lineNumber,
-                    Span = block.Span
-                };
-
-                // Find the appropriate parent
-                while (parentStack.Count > 0 && parentStack.Peek().Level >= block.Level)
-                {
-                    parentStack.Pop();
-                }
-
-                if (parentStack.Count == 0)
-                {
-                    // Top-level heading
-                    Headings.Add(item);
-                }
-                else
-                {
-                    // Child of the current parent
-                    parentStack.Peek().Children.Add(item);
-                }
-
-                parentStack.Push(item);
+            EmptyMessage.Visibility = Headings.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (rebuilt)
+            {
+                ExpandAllTreeViewItems();
             }
         }
 
-        private string GetHeadingText(HeadingBlock block)
+        private static string GetHeadingText(HeadingBlock block, ITextSnapshot snapshot)
         {
-            if (_textView?.TextBuffer == null)
-            {
-                return string.Empty;
-            }
-
-            string text = _textView.TextBuffer.CurrentSnapshot.GetText(block.ToSpan());
+            string text = snapshot.GetText(block.ToSpan());
 
             if (text.Contains('\n'))
             {
@@ -249,18 +227,6 @@ namespace MarkdownEditor2022
             }
 
             return text.Trim();
-        }
-
-        private int GetLineNumber(HeadingBlock block)
-        {
-            if (_vsTextView == null)
-            {
-                return 0;
-            }
-
-            ThreadHelper.ThrowIfNotOnUIThread();
-            _vsTextView.GetLineAndColumn(block.Span.Start, out int line, out int _);
-            return line;
         }
 
         private void NavigateToHeading(HeadingItem item)
@@ -369,9 +335,24 @@ namespace MarkdownEditor2022
     /// <summary>
     /// Represents a heading item in the document outline tree.
     /// </summary>
-    public class HeadingItem
+    public class HeadingItem : INotifyPropertyChanged
     {
-        public string Text { get; set; }
+        private string _text;
+
+        public string Text
+        {
+            get => _text;
+            set
+            {
+                if (_text != value)
+                {
+                    _text = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Text)));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
         public int Level { get; set; }
         public int LineNumber { get; set; }
         public SourceSpan Span { get; set; }

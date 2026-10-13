@@ -6,6 +6,7 @@ using Markdig.Syntax;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Package;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 
@@ -17,7 +18,8 @@ namespace MarkdownEditor2022
         private readonly IWpfTextView _textView;
         private readonly Document _document;
         private bool _disposed;
-        private bool _hasBufferChanged;
+        private readonly PendingUiRefresh _refresh = new();
+        private DocumentAnalysis _membersAnalysis;
         private static readonly Regex _stripHtml = new(@"</?\w+((\s+\w+(\s*=\s*(?:"".*?""|'.*?'|[^'"">\s]+))?)+\s*|\s*)/?>", RegexOptions.Compiled);
 
         public DropdownBars(IVsTextView textView, LanguageService languageService) : base(languageService)
@@ -26,6 +28,7 @@ namespace MarkdownEditor2022
             _textView = textView.ToIWpfTextView();
             _document = _textView.TextBuffer.GetDocument();
             _document.Parsed += OnDocumentParsed;
+            _textView.Closed += TextViewClosed;
 
             InitializeAsync(textView).FireAndForget();
         }
@@ -35,7 +38,18 @@ namespace MarkdownEditor2022
         {
             return ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
+                if (IsUnavailable)
+                {
+                    return;
+                }
+
                 textView.SendExplicitFocus();
+
+                if (IsUnavailable)
+                {
+                    return;
+                }
+
                 _textView.Caret.MoveToNextCaretPosition();
                 _textView.Caret.PositionChanged += CaretPositionChanged;
                 _textView.Caret.MoveToPreviousCaretPosition();
@@ -43,36 +57,55 @@ namespace MarkdownEditor2022
         }
 
         private void CaretPositionChanged(object sender, CaretPositionChangedEventArgs e) => SynchronizeDropdowns();
+
+        private bool IsUnavailable => _disposed || _textView.IsClosed;
+
+        private void TextViewClosed(object sender, EventArgs e) => Dispose();
+
         private void OnDocumentParsed(Document document)
         {
-            _hasBufferChanged = true;
+            if (IsUnavailable)
+            {
+                return;
+            }
+
             SynchronizeDropdowns();
         }
 
         private void SynchronizeDropdowns()
         {
-            if (_document.IsParsing)
+            if (IsUnavailable || _document.IsParsing || !_refresh.TryQueue(out int generation))
             {
                 return;
             }
 
-            _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
+            ThreadHelper.JoinableTaskFactory.StartOnIdle(() =>
             {
-                _languageService.SynchronizeDropdowns();
-            }, VsTaskRunContext.UIThreadIdlePriority);
+                if (_refresh.TryStart(generation) && !IsUnavailable)
+                {
+                    _languageService.SynchronizeDropdowns();
+                }
+            }, VsTaskRunContext.UIThreadIdlePriority).Task.FireAndForget();
         }
 
         public override bool OnSynchronizeDropdowns(LanguageService languageService, IVsTextView oldView, int line, int col, ArrayList dropDownTypes, ArrayList dropDownMembers, ref int selectedType, ref int selectedMember)
         {
-            if (_hasBufferChanged || dropDownMembers.Count == 0)
+            if (IsUnavailable)
+            {
+                return false;
+            }
+
+            DocumentAnalysis analysis = _document.GetAnalysis(out ITextSnapshot snapshot);
+            if (analysis != null && (!ReferenceEquals(_membersAnalysis, analysis) ||
+                (dropDownMembers.Count == 0 && analysis.Headings.Count > 0)))
             {
                 dropDownMembers.Clear();
-                IWpfTextView view = oldView.ToIWpfTextView();
+                foreach (HeadingBlock heading in analysis.Headings)
+                {
+                    dropDownMembers.Add(CreateDropDownMember(heading, snapshot, _textView.TextSnapshot));
+                }
 
-                _document.Markdown.Descendants<HeadingBlock>()
-                    .Select(headingBlock => CreateDropDownMember(headingBlock, oldView, view))
-                    .ToList()
-                    .ForEach(ddm => dropDownMembers.Add(ddm));
+                _membersAnalysis = analysis;
             }
 
             if (dropDownTypes.Count == 0)
@@ -90,14 +123,25 @@ namespace MarkdownEditor2022
 
             selectedMember = dropDownMembers.IndexOf(currentDropDown);
             selectedType = 0;
-            _hasBufferChanged = false;
 
             return true;
         }
 
-        private static DropDownMember CreateDropDownMember(HeadingBlock headingBlock, IVsTextView oldView, IWpfTextView textView)
+        public override int OnItemChosen(int combo, int entry)
         {
-            string headingText = textView.TextBuffer.CurrentSnapshot.GetText(headingBlock.ToSpan());
+            return IsUnavailable
+                ? Microsoft.VisualStudio.VSConstants.S_FALSE
+                : base.OnItemChosen(combo, entry);
+        }
+
+        public override int SetDropdownBar(IVsDropdownBar bar)
+        {
+            return base.SetDropdownBar(bar);
+        }
+
+        private static DropDownMember CreateDropDownMember(HeadingBlock headingBlock, ITextSnapshot snapshot, ITextSnapshot currentSnapshot)
+        {
+            string headingText = snapshot.GetText(headingBlock.ToSpan());
 
             if (headingText.Contains('\n'))
             {
@@ -108,19 +152,24 @@ namespace MarkdownEditor2022
             headingText = _stripHtml.Replace(headingText, "");
 
             DROPDOWNFONTATTR fontAttr = headingBlock.Level == 1 ? DROPDOWNFONTATTR.FONTATTR_BOLD : DROPDOWNFONTATTR.FONTATTR_PLAIN;
-            TextSpan textSpan = GetTextSpan(headingBlock, oldView);
+            SnapshotSpan span = new SnapshotSpan(snapshot, headingBlock.ToSpan())
+                .TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive);
+            TextSpan textSpan = GetTextSpan(span);
             
             return new DropDownMember(headingText, textSpan, 0, fontAttr);
         }
 
-        private static TextSpan GetTextSpan(HeadingBlock headingBlock, IVsTextView textView)
+        private static TextSpan GetTextSpan(SnapshotSpan span)
         {
-            TextSpan textSpan = new();
-
-            textView.GetLineAndColumn(headingBlock.Span.Start, out textSpan.iStartLine, out textSpan.iStartIndex);
-            textView.GetLineAndColumn(headingBlock.Span.End + 1, out textSpan.iEndLine, out textSpan.iEndIndex);
-
-            return textSpan;
+            ITextSnapshotLine startLine = span.Start.GetContainingLine();
+            ITextSnapshotLine endLine = span.End.GetContainingLine();
+            return new TextSpan
+            {
+                iStartLine = startLine.LineNumber,
+                iStartIndex = span.Start.Position - startLine.Start.Position,
+                iEndLine = endLine.LineNumber,
+                iEndIndex = span.End.Position - endLine.Start.Position
+            };
         }
 
         /// <summary>
@@ -149,7 +198,10 @@ namespace MarkdownEditor2022
             }
 
             _disposed = true;
+            _refresh.Reset();
+            _membersAnalysis = null;
             _textView.Caret.PositionChanged -= CaretPositionChanged;
+            _textView.Closed -= TextViewClosed;
             _document.Parsed -= OnDocumentParsed;
         }
 

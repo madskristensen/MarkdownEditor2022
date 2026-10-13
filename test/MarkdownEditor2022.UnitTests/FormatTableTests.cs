@@ -1,5 +1,3 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace MarkdownEditor2022.UnitTests
 {
     [TestClass]

@@ -1,25 +1,17 @@
 using Markdig;
-using Markdig.Extensions.AutoIdentifiers;
 using Markdig.Renderers.Html;
 using Markdig.Syntax;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Linq;
 
 namespace MarkdownEditor2022.UnitTests
 {
     /// <summary>
-    /// Tests for Markdig's AutoIdentifier extension with GitHub option which is used for 
+    /// Tests for Markdig's AutoIdentifier extension with GitHub option which is used for
     /// heading ID generation. These tests verify the behavior matches GitHub's anchor link format.
     /// </summary>
     [TestClass]
     public class SlugGeneratorTests
     {
-        // Pipeline matching the app configuration in Document.cs
-        // UseAutoIdentifiers(GitHub) must come BEFORE UseAdvancedExtensions
-        private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
-            .UseAutoIdentifiers(AutoIdentifierOptions.GitHub)
-            .UseAdvancedExtensions()
-            .Build();
+        private static readonly MarkdownPipeline _pipeline = Document.PipelineToGenerateHtml;
 
         /// <summary>
         /// Parses markdown and returns the generated heading ID.
@@ -29,7 +21,11 @@ namespace MarkdownEditor2022.UnitTests
         {
             MarkdownDocument doc = Markdown.Parse(headingMarkdown, _pipeline);
             HeadingBlock heading = doc.Descendants<HeadingBlock>().FirstOrDefault();
-            return heading?.GetAttributes().Id ?? string.Empty;
+            string id = heading?.GetAttributes().Id ?? string.Empty;
+            string previewId = Markdown.Parse(headingMarkdown, Document.Pipeline)
+                .Descendants<HeadingBlock>().FirstOrDefault()?.GetAttributes().Id ?? string.Empty;
+            Assert.AreEqual(id, previewId, "Preview and HTML export must use identical heading IDs.");
+            return id;
         }
 
         [TestMethod]
@@ -171,6 +167,140 @@ namespace MarkdownEditor2022.UnitTests
             string result = GetHeadingId("## Heading{#custom}");
 
             Assert.AreEqual("custom", result);
+        }
+
+        // Regression cases inspired by Matthieu Penant (@Thieum)'s PR #229.
+        [TestMethod]
+        [DataRow("### Flyout (<u>&#xF035C;</u>)", "flyout")]
+        [DataRow("### Use (<u>&#xF02FA;</u>)", "use")]
+        [DataRow("### Add (<u>&#xF0419;</u>)", "add")]
+        [DataRow("### Release-", "release-")]
+        [DataRow("### <u>Release-</u>", "release-")]
+        [DataRow("### Release-- (<u>&#xF035C;</u>)", "release--")]
+        [DataRow("### **Release-** (<u>&#xF035C;</u>)", "release-")]
+        [DataRow("### Release (<u>-</u>)", "release--")]
+        [DataRow("### Release (<u>&#45;</u>)", "release--")]
+        [DataRow("### Release (<u>&#xF035C;</u>) {#release-}", "release-")]
+        [DataRow("### <u>Foo & bar</u>", "foo--bar")]
+        [DataRow("### <u>Foo & bar</u> (<u>&#xF035C;</u>)", "foo--bar")]
+        [DataRow("### <u>Release </u>", "release")]
+        [DataRow("### **Use** (<u>&#xF02FA;</u>)", "use")]
+        [DataRow("### `Add` (<u>&#xF0419;</u>)", "add")]
+        [DataRow("### [Flyout](https://example.test) (<u>&#xF035C;</u>)", "flyout")]
+        [DataRow("### <u>Été_2</u> (<u>&#xF035C;</u>)", "été_2")]
+        [DataRow("### Release (<u>&#xF035C;</u>){#release-}", "release-")]
+        [DataRow("Flyout (<u>&#xF035C;</u>)\n---", "flyout")]
+        public void GetHeadingId_NormalizesOnlyIgnoredHtmlSuffixSpaces(string markdown, string expected)
+        {
+            Assert.AreEqual(expected, GetHeadingId(markdown));
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Parse_NormalizedHeadingsReserveUnchangedAndExplicitIdentifiers(bool preview)
+        {
+            const string markdown = """
+                ### Flyout-
+
+                ### Flyout (<u>&#xF035C;</u>)
+
+                ### Flyout (<u>&#xF035C;</u>)
+
+                ### Flyout
+
+                ### Custom (<u>&#xF035C;</u>) {#flyout-1}
+
+                ### Flyout (<u>&#xF035C;</u>)
+                """;
+            MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
+            string[] ids = Markdown.Parse(markdown, pipeline).Descendants<HeadingBlock>()
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
+
+            CollectionAssert.AreEqual(
+                new[] { "flyout-", "flyout-2", "flyout-3", "flyout", "flyout-1", "flyout-4" },
+                ids);
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Parse_DuplicateNormalizedHeadingsHaveUniqueIdsAndMatchingToc(bool preview)
+        {
+            const string markdown = """
+                [[_TOC_]]
+
+                ### Flyout (<u>&#xF035C;</u>)
+
+                ### Flyout (<u>&#xF035C;</u>)
+
+                ### Use (<u>&#xF02FA;</u>)
+
+                ### Add (<u>&#xF0419;</u>)
+                """;
+            MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
+            MarkdownDocument document = Markdown.Parse(markdown, pipeline);
+            string[] ids = document.Descendants<HeadingBlock>()
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
+
+            CollectionAssert.AreEqual(new[] { "flyout", "flyout-1", "use", "add" }, ids);
+            string html = document.ToHtml(pipeline);
+            foreach (string id in ids)
+            {
+                StringAssert.Contains(html, $"id=\"{id}\"");
+                StringAssert.Contains(html, $"href=\"#{id}\"");
+            }
+
+            StringAssert.Contains(html, "<u>");
+            Assert.AreEqual(html, document.ToHtml(pipeline), "Repeated rendering must not change heading IDs.");
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Parse_IconOnlyHeadingsNeverReceiveEmptyIds(bool preview)
+        {
+            const string markdown = """
+                ### (<u>&#xF035C;</u>)
+
+                ### (<u>&#xF035C;</u>)
+
+                ### <u> </u>
+
+                ### <u> </u>
+                """;
+            MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
+            string[] ids = Markdown.Parse(markdown, pipeline).Descendants<HeadingBlock>()
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
+
+            Assert.IsTrue(ids.All(id => !string.IsNullOrEmpty(id)));
+            Assert.AreEqual(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Parse_NormalizedHeadingDoesNotCollideWithExplicitParagraphId(bool preview)
+        {
+            const string markdown = "### Flyout (<u>&#xF035C;</u>)\n\nParagraph {#flyout}";
+            MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
+            MarkdownDocument document = Markdown.Parse(markdown, pipeline);
+
+            Assert.AreEqual("flyout-1", document.Descendants<HeadingBlock>().Single().GetAttributes().Id);
+            StringAssert.Contains(document.ToHtml(pipeline), "<p id=\"flyout\">");
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Parse_DuplicateLiteralHtmlHyphensAreNotMistakenForGeneratedSuffixes(bool preview)
+        {
+            const string markdown = "### <u>Release--</u>\n\n### <u>Release--</u>";
+            MarkdownPipeline pipeline = preview ? Document.Pipeline : Document.PipelineToGenerateHtml;
+            string[] ids = Markdown.Parse(markdown, pipeline).Descendants<HeadingBlock>()
+                .Select(heading => heading.GetAttributes().Id!).ToArray();
+
+            CollectionAssert.AreEqual(new[] { "release--", "release---1" }, ids);
         }
     }
 }

@@ -211,18 +211,51 @@ namespace MarkdownEditor2022
             ITextSnapshotLine line = triggerLocation.GetContainingLine();
             string textBefore = line.GetText().Substring(0, triggerLocation - line.Start);
 
-            // Must match [text]( or ![text]( pattern
-            if (!Regex.IsMatch(textBefore, @"!?\[[^\]]*\]\([^)]*$"))
+            // Must match [text](, ![text](, or [!INCLUDE patterns
+            if (!Regex.IsMatch(textBefore, @"(!?\[[^\]]*\]\([^)]*$|\[!INCLUDE\s*\[?\s*[^\]]*$)"))
                 return CompletionStartData.DoesNotParticipateInCompletion;
 
-            // Find the ( position
-            int openParen = textBefore.LastIndexOf('(');
-            if (openParen < 0)
-                return CompletionStartData.DoesNotParticipateInCompletion;
+            // Find the path start position - either after ( for links or after INCLUDE for includes
+            int pathStartPos;
+            bool isInclude = textBefore.Contains("[!INCLUDE");
 
-            // Span only covers the current segment (after last / or # or from ()
+            if (isInclude)
+            {
+                // For INCLUDE statements, find where the path part starts
+                // Look for the last [!INCLUDE
+                int includePos = textBefore.LastIndexOf("[!INCLUDE");
+                if (includePos >= 0)
+                {
+                    // Find the first [ or ( after [!INCLUDE that indicates the path part, or space
+                    // pathStartPos should point to the delimiter itself (like '(' for regular links)
+                    int bracketPos = textBefore.IndexOf('[', includePos + 9);
+                    int parenPos = textBefore.IndexOf('(', includePos + 9);
+                    int spacePos = textBefore.IndexOf(' ', includePos + 9);
+                    // Don't increment spacePos - keep it pointing to the space itself for consistency
+
+                    // Use the smallest valid position
+                    int[] candidates = new[] { bracketPos, parenPos, spacePos }.Where(p => p >= 0).ToArray();
+                    pathStartPos = candidates.Length > 0 ? candidates.Min() : -1;
+
+                    if (pathStartPos < 0 || pathStartPos >= textBefore.Length)
+                        return CompletionStartData.DoesNotParticipateInCompletion;
+                }
+                else
+                {
+                    return CompletionStartData.DoesNotParticipateInCompletion;
+                }
+            }
+            else
+            {
+                // For regular links, find the ( position
+                pathStartPos = textBefore.LastIndexOf('(');
+                if (pathStartPos < 0)
+                    return CompletionStartData.DoesNotParticipateInCompletion;
+            }
+
+            // Span only covers the current segment (after last / or # or from path start)
             // This allows VS to show items when caret is right after / or #
-            string pathInLink = textBefore.Substring(openParen + 1);
+            string pathInLink = textBefore.Substring(pathStartPos + 1);
             int lastHash = pathInLink.LastIndexOf('#');
             int lastSlash = pathInLink.LastIndexOf('/');
 
@@ -230,17 +263,21 @@ namespace MarkdownEditor2022
             if (lastHash >= 0)
             {
                 // For anchor completions, span starts after #
-                spanStart = line.Start + openParen + 1 + lastHash + 1;
+                // But if we're right after the #, don't go beyond the cursor
+                int hashPos = line.Start + pathStartPos + 1 + lastHash;
+                spanStart = Math.Min(hashPos + 1, triggerLocation.Position);
             }
             else if (lastSlash >= 0)
             {
                 // For file completions, span starts after last /
-                spanStart = line.Start + openParen + 1 + lastSlash + 1;
+                // But if we're right after the /, don't go beyond the cursor
+                int slashPos = line.Start + pathStartPos + 1 + lastSlash;
+                spanStart = Math.Min(slashPos + 1, triggerLocation.Position);
             }
             else
             {
-                // Start right after (
-                spanStart = line.Start + openParen + 1;
+                // Start at the path start (after the delimiter)
+                spanStart = line.Start + pathStartPos + 1; // +1 to skip delimiter
             }
 
             SnapshotSpan span = new(triggerLocation.Snapshot, spanStart, triggerLocation - spanStart);
@@ -254,14 +291,48 @@ namespace MarkdownEditor2022
             if (!AdvancedOptions.Instance.EnableFilePathIntelliSense)
                 return CompletionContext.Empty;
 
-            // Get full path context (from ( to caret), not just the span
+            // Get full path context (from path start to caret), not just the span
             ITextSnapshotLine line = triggerLocation.GetContainingLine();
             string lineText = line.GetText();
-            int openParen = lineText.LastIndexOf('(', triggerLocation - line.Start - 1);
-            if (openParen < 0)
-                return CompletionContext.Empty;
+            bool isInclude = lineText.Contains("[!INCLUDE");
 
-            string fullPath = lineText.Substring(openParen + 1, triggerLocation - line.Start - openParen - 1);
+            int pathStartPos;
+            if (isInclude)
+            {
+                // For INCLUDE statements, find where the path part starts
+                int includePos = lineText.LastIndexOf("[!INCLUDE", triggerLocation - line.Start - 1);
+                if (includePos >= 0)
+                {
+                    // Find the first [ or ( after [!INCLUDE that indicates the path part, or space
+                    // pathStartPos should point to the delimiter itself (like '(' for regular links)
+                    int bracketPos = lineText.IndexOf('[', includePos + 9);
+                    int parenPos = lineText.IndexOf('(', includePos + 9);
+                    int spacePos = lineText.IndexOf(' ', includePos + 9);
+                    // Don't increment spacePos - keep it pointing to the space itself for consistency
+
+                    // Use the smallest valid position
+                    int[] candidates = new[] { bracketPos, parenPos, spacePos }.Where(p => p >= 0).ToArray();
+                    pathStartPos = candidates.Length > 0 ? candidates.Min() : -1;
+
+                    if (pathStartPos < 0 || pathStartPos >= lineText.Length)
+                        return CompletionContext.Empty;
+                }
+                else
+                {
+                    return CompletionContext.Empty;
+                }
+            }
+            else
+            {
+                // For regular links, find the ( position
+                pathStartPos = lineText.LastIndexOf('(', triggerLocation - line.Start - 1);
+                if (pathStartPos < 0)
+                    return CompletionContext.Empty;
+            }
+
+            int pathLength = triggerLocation - line.Start - pathStartPos - 1; // -1 to skip delimiter
+            if (pathLength < 0) pathLength = 0;
+            string fullPath = lineText.Substring(pathStartPos + 1, pathLength); // +1 to skip delimiter
 
             // If starts with #, show anchor completions (current document headings)
             if (fullPath.StartsWith("#"))
@@ -410,13 +481,13 @@ namespace MarkdownEditor2022
             if (string.IsNullOrWhiteSpace(relativePath))
                 return null;
 
-            // Handle root-relative paths (starting with /)
-            if (relativePath.StartsWith("/"))
+            // Handle root-relative paths (starting with / or ~)
+            if (relativePath.StartsWith("/") || relativePath.StartsWith("~"))
             {
                 string rootPath = GetEffectiveRootPath();
                 if (!string.IsNullOrEmpty(rootPath) && Directory.Exists(rootPath))
                 {
-                    relativePath = relativePath.TrimStart('/');
+                    relativePath = relativePath.TrimStart('/', '~');
                     string absolutePath = Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
                     return TryResolveMarkdownFile(absolutePath);
                 }
@@ -481,19 +552,19 @@ namespace MarkdownEditor2022
 
             // Strip quotes and other illegal path characters that might be typed in markdown links
             // e.g., ![]("path") - the quotes are illegal in Windows paths
-            pathPart = pathPart.Trim('"', '\'', '<', '>', '|');
+            pathPart = pathPart.Trim('"', '\'', '<', '>', '|').Trim();
             if (string.IsNullOrWhiteSpace(pathPart))
                 return CompletionContext.Empty;
 
-            // Handle root-relative paths (starting with /)
-            bool isRootRelative = pathPart.StartsWith("/");
+            // Handle root-relative paths (starting with / or ~)
+            bool isRootRelative = pathPart.StartsWith("/") || pathPart.StartsWith("~");
             if (isRootRelative)
             {
                 string rootPath = GetEffectiveRootPath();
                 if (!string.IsNullOrEmpty(rootPath) && Directory.Exists(rootPath))
                 {
                     searchDir = rootPath;
-                    pathPart = pathPart.TrimStart('/');
+                    pathPart = pathPart.TrimStart('/', '~');
                 }
                 else
                 {
@@ -598,7 +669,24 @@ namespace MarkdownEditor2022
         private string GetEffectiveRootPath()
         {
             Document doc = textView.TextBuffer.GetDocument();
-            return RootPathResolver.GetEffectiveRootPath(doc?.Markdown, textView);
+
+            // First try the standard root path resolution
+            string rootPath = RootPathResolver.GetEffectiveRootPath(doc?.Markdown, textView);
+            if (!string.IsNullOrEmpty(rootPath))
+                return rootPath;
+
+            // Fallback for folder view: use the document's directory as root
+            // This helps when editing in folder view without explicit root configuration
+            if (doc?.FileName != null)
+            {
+                string docDir = Path.GetDirectoryName(doc.FileName);
+                if (!string.IsNullOrEmpty(docDir) && Directory.Exists(docDir))
+                {
+                    return docDir;
+                }
+            }
+
+            return null;
         }
     }
 
@@ -640,8 +728,8 @@ namespace MarkdownEditor2022
                 ITextSnapshotLine line = caret.GetContainingLine();
                 string textBefore = line.GetText().Substring(0, caret - line.Start);
 
-                // Only trigger if we're in a link context: [text](path/ or [text](#
-                if (Regex.IsMatch(textBefore, @"!?\[[^\]]*\]\([^)]*(/|#)$"))
+                // Only trigger if we're in a link context: [text](path/, [text](#, or [!INCLUDE path/
+                if (Regex.IsMatch(textBefore, @"(!?\[[^\]]*\]\([^)]*(/|#)$|\[!INCLUDE\s*[^\]]*(/|#)$)"))
                 {
                     IAsyncCompletionSession session = CompletionBroker.GetSession(textView);
                     if (session != null)

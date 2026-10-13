@@ -2,13 +2,12 @@
 name: "Build"
 permissions:
   actions: write
-  checks: write
   contents: write
 
 on:
   push:
     branches: [master]
-  pull_request_target:
+  pull_request:
     branches: [master]
   workflow_dispatch:
 
@@ -21,20 +20,52 @@ jobs:
     env:
       Configuration: Release
       DeployExtension: False
+      Solution: MarkdownEditor2022.slnx
+      TestProject: test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj
+      TestResultsDirectory: ${{ github.workspace }}\TestResults
+      CoverageSettings: test\coverage.runsettings
       VsixManifestPath: src\source.extension.vsixmanifest
       VsixManifestSourcePath: src\source.extension.cs
 
     steps:
-    - uses: actions/checkout@v5
-      with:
-        ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
-        persist-credentials: false
+    - uses: actions/checkout@v6
 
     - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+      uses: microsoft/setup-msbuild@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Setup Node for preview tests
+      uses: actions/setup-node@v7
+      with:
+        node-version: '22'
+
+    - name: Ensure WebView2 Runtime for integration tests
+      shell: pwsh
+      run: |
+        $runtimeKeys = @(
+          'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+          'HKCU:\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+        )
+        foreach ($key in $runtimeKeys) {
+          if (Test-Path $key) {
+            $version = (Get-Item $key).GetValue('pv')
+            if ($version -and [version]$version -gt [version]'0.0.0.0') {
+              Write-Host "WebView2 Runtime $version is already installed."
+              return
+            }
+          }
+        }
+        $installer = Join-Path $env:RUNNER_TEMP 'MicrosoftEdgeWebview2Setup.exe'
+        Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $installer
+        $process = Start-Process $installer -ArgumentList '/silent', '/install' -Wait -PassThru
+        if ($process.ExitCode -ne 0) { throw "WebView2 installation failed with exit code $($process.ExitCode)." }
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.slnx', '**/*.sln', '**/*.csproj', '**/packages.config', '**/packages.lock.json', '**/nuget.config') }}
@@ -43,30 +74,76 @@ jobs:
 
     - name: Increment VSIX version
       id: vsix_version
-      uses: timheuer/vsix-version-stamp@v2
+      uses: madskristensen/vsix-version-stamp@v2
       with:
         manifest-file: ${{ env.VsixManifestPath }}
         vsix-token-source-file: ${{ env.VsixManifestSourcePath }}
 
+    - name: Restore NuGet packages
+      run: msbuild ${{ env.Solution }} /v:m -restore /t:Restore
+
     - name: Build
-      run: msbuild /v:m -restore /p:OutDir=\_built
+      run: msbuild ${{ env.Solution }} /v:m /m /p:Configuration=${{ env.Configuration }} /p:DeployExtension=${{ env.DeployExtension }}
 
     - name: Run tests
-      run: dotnet vstest /_built/MarkdownEditor2022.UnitTests.dll --logger "trx;LogFileName=test-results.trx"
+      run: >
+        dotnet test ${{ env.TestProject }}
+        --configuration ${{ env.Configuration }}
+        --no-build
+        --no-restore
+        --verbosity normal
+        --results-directory "${{ env.TestResultsDirectory }}"
+        --settings "${{ env.CoverageSettings }}"
+        --logger "trx;LogFileName=test-results.trx"
+        --collect "Code Coverage"
 
     - name: Report test results
-      uses: dorny/test-reporter@v2
-      if: ${{ always() && (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      uses: dorny/test-reporter@v3
+      if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
       with:
         name: Test Results
-        path: '**/test-results.trx'
+        path: TestResults/**/*.trx
         reporter: dotnet-trx
+        fail-on-error: true
+
+    - name: Add coverage summary
+      if: ${{ !cancelled() }}
+      shell: pwsh
+      run: |
+        $coverageFile = Get-ChildItem "${{ env.TestResultsDirectory }}" -Filter "*.cobertura.xml" -Recurse |
+          Select-Object -First 1
+        if (-not $coverageFile) {
+          throw "Cobertura coverage report was not produced."
+        }
+
+        [xml]$coverage = Get-Content $coverageFile.FullName
+        $productionCoverage = $coverage.coverage.packages.package |
+          Where-Object name -EQ 'MarkdownEditor2022' |
+          Select-Object -First 1
+        if (-not $productionCoverage) {
+          throw "Coverage for the MarkdownEditor2022 production assembly was not found."
+        }
+
+        $lineCoverage = [double]$productionCoverage.'line-rate'
+        $minimumLineCoverage = 0.24
+        "Production code coverage: **$($lineCoverage.ToString('P2'))**" >> $env:GITHUB_STEP_SUMMARY
+        if ($lineCoverage -lt $minimumLineCoverage) {
+          throw "Production line coverage $($lineCoverage.ToString('P2')) is below the $($minimumLineCoverage.ToString('P0')) baseline."
+        }
+
+    - name: Upload coverage report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: code-coverage
+        path: TestResults/**/*.cobertura.xml
+        if-no-files-found: error
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ github.event.repository.name }}.vsix
-        path: /_built/**/*.vsix
+        path: src\bin\${{ env.Configuration }}\net48\MarkdownEditor2022.vsix
 
   publish:
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
@@ -74,32 +151,34 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
 
       - name: Download Package artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: ${{ github.event.repository.name }}.vsix
 
       - name: Upload to Open VSIX
-        uses: timheuer/openvsixpublish@v1
+        uses: madskristensen/publish-vsixgallery@v1
         with:
           vsix-file: ${{ github.event.repository.name }}.vsix
 
       - name: Publish extension to Marketplace
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]') }}
-        uses: cezarypiatek/VsixPublisherAction@1.0
+        uses: madskristensen/publish-marketplace@v2
         with:
           extension-file: '${{ github.event.repository.name }}.vsix'
           publish-manifest-file: 'vs-publish.json'
           personal-access-code: ${{ secrets.VS_PUBLISHER_ACCESS_TOKEN }}
 
-      - name: Tag and Release
+      - name: Tag and release
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]') }}
         id: tag_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
-          body: Release ${{ needs.build.outputs.version }}
+          body: release ${{ needs.build.outputs.version }}
           generate_release_notes: true
           tag_name: ${{ needs.build.outputs.version }}
           files: |

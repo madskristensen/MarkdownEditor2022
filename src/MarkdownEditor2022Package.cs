@@ -4,6 +4,8 @@ global using Microsoft.VisualStudio.Shell;
 global using Task = System.Threading.Tasks.Task;
 using System.ComponentModel.Design;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using EnvDTE;
@@ -46,8 +48,16 @@ namespace MarkdownEditor2022
     {
         private static DTE _dte;
 
+        /// <summary>
+        /// Public singleton instance so components can access the package instance (and its JoinableTaskFactory)
+        /// </summary>
+        public static MarkdownEditor2022Package Instance { get; private set; }
+
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
+            // Ensure we have the package instance set early so other components can use its JoinableTaskFactory
+            Instance = this;
+
             await JoinableTaskFactory.SwitchToMainThreadAsync();
 
             _dte = await VS.GetRequiredServiceAsync<DTE, DTE>();
@@ -56,7 +66,19 @@ namespace MarkdownEditor2022
             RegisterEditorFactory(language);
             ((IServiceContainer)this).AddService(typeof(MarkdownEditorV2), language, true);
 
-            await this.RegisterCommandsAsync();
+            try
+            {
+                await this.RegisterCommandsAsync();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                await ex.LogAsync();
+                await this.RegisterCommandsFromTypesAsync(ex.Types.Where(t => t != null));
+            }
+            catch (Exception ex)
+            {
+                await ex.LogAsync();
+            }
             await Commenting.InitializeAsync();
             await ToggleTaskCommand.InitializeAsync();
             await FormatTableCommand.InitializeAsync();
@@ -68,9 +90,8 @@ namespace MarkdownEditor2022
 
             if (disposing)
             {
-                // Dispose the auto-hide window monitor singleton to stop event processing during shutdown
-                // and clear the static instance to prevent memory leaks
-                AutoHideWindowMonitor.DisposeInstance();
+                // Clear the static instance when disposing
+                Instance = null;
             }
 
             base.Dispose(disposing);

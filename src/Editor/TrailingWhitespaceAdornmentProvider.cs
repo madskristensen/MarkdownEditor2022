@@ -1,4 +1,5 @@
 using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 
@@ -10,11 +11,16 @@ namespace MarkdownEditor2022
     /// </summary>
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType(Constants.LanguageName)]
-    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     internal sealed class TrailingWhitespaceAdornmentProvider : IWpfTextViewCreationListener
     {
         public void TextViewCreated(IWpfTextView textView)
         {
+            if (textView.Roles.Contains(DifferenceViewerRoles.DiffTextViewRole))
+            {
+                return;
+            }
+
             textView.Properties.GetOrCreateSingletonProperty(() => new TrailingWhitespaceAdornment(textView));
         }
     }

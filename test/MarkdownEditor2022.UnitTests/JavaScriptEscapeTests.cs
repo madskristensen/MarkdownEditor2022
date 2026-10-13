@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MarkdownEditor2022.UnitTests
 {
@@ -15,7 +14,7 @@ namespace MarkdownEditor2022.UnitTests
         /// <summary>
         /// Mirrors the EscapeForJavaScript method from Browser.cs for testing.
         /// </summary>
-        private static string EscapeForJavaScript(string input)
+        private static string? EscapeForJavaScript(string? input)
         {
             if (string.IsNullOrEmpty(input))
             {
@@ -26,11 +25,16 @@ namespace MarkdownEditor2022.UnitTests
             {
                 switch (m.Value)
                 {
-                    case "\\": return "\\\\";
-                    case "\r": return "\\r";
-                    case "\n": return "\\n";
-                    case "\"": return "\\\"";
-                    default: return m.Value;
+                    case "\\":
+                        return "\\\\";
+                    case "\r":
+                        return "\\r";
+                    case "\n":
+                        return "\\n";
+                    case "\"":
+                        return "\\\"";
+                    default:
+                        return m.Value;
                 }
             });
         }
@@ -38,7 +42,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void EscapeForJavaScript_NullInput_ReturnsNull()
         {
-            string result = EscapeForJavaScript(null);
+            string? result = EscapeForJavaScript(null);
 
             Assert.IsNull(result);
         }
@@ -46,7 +50,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void EscapeForJavaScript_EmptyInput_ReturnsEmpty()
         {
-            string result = EscapeForJavaScript("");
+            string? result = EscapeForJavaScript("");
 
             Assert.AreEqual("", result);
         }
@@ -56,7 +60,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string input = "Hello World";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("Hello World", result);
         }
@@ -66,7 +70,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string input = @"path\to\file";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual(@"path\\to\\file", result);
         }
@@ -76,7 +80,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string input = "He said \"Hello\"";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("He said \\\"Hello\\\"", result);
         }
@@ -86,7 +90,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string input = "Line1\rLine2";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("Line1\\rLine2", result);
         }
@@ -96,7 +100,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string input = "Line1\nLine2";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("Line1\\nLine2", result);
         }
@@ -106,7 +110,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string input = "Line1\r\nLine2";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("Line1\\r\\nLine2", result);
         }
@@ -116,7 +120,7 @@ namespace MarkdownEditor2022.UnitTests
         {
             string input = "var x = \"C:\\path\\file\";\n";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("var x = \\\"C:\\\\path\\\\file\\\";\\n", result);
         }
@@ -127,7 +131,7 @@ namespace MarkdownEditor2022.UnitTests
             // This is used when scrolling to anchors in the preview
             string input = "heading-with-\"quotes\"";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("heading-with-\\\"quotes\\\"", result);
         }
@@ -138,7 +142,7 @@ namespace MarkdownEditor2022.UnitTests
             // Content that might appear in markdown rendering
             string input = "# Title\n\nParagraph with \"quotes\"\n";
 
-            string result = EscapeForJavaScript(input);
+            string? result = EscapeForJavaScript(input);
 
             Assert.AreEqual("# Title\\n\\nParagraph with \\\"quotes\\\"\\n", result);
         }

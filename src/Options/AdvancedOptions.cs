@@ -42,20 +42,14 @@ namespace MarkdownEditor2022
         public bool ShowTrailingWhitespace { get; set; } = true;
 
         [Category("Editor")]
-        [DisplayName("Enable floating toolbar")]
-        [Description("Shows a floating formatting toolbar when text is selected, providing quick access to bold, italic, strikethrough, code, links, and list formatting.")]
-        [DefaultValue(true)]
-        public bool EnableFloatingToolbar { get; set; } = true;
-
-        [Category("Editor")]
         [DisplayName("Format pasted URLs as links")]
         [Description("When enabled, pasting a URL from a browser will automatically format it as a markdown link [title](url). When disabled, only the raw URL is pasted.")]
         [DefaultValue(true)]
         public bool FormatPastedUrlsAsLinks { get; set; } = true;
 
         [Category("Preview Window")]
-        [DisplayName("Enable preview window")]
-        [Description("Determines if the preview window should be shown.")]
+        [DisplayName("Open documents with preview")]
+        [Description("Determines whether Markdown documents initially open in split view or source view. Use F7 to cycle the active document between source, split, and preview.")]
         [DefaultValue(true)]
         public bool EnablePreviewWindow { get; set; } = true;
 
@@ -83,12 +77,6 @@ namespace MarkdownEditor2022
         [Description("When enabled, clicking on an element in the preview window will navigate the editor to the corresponding line in the markdown source.")]
         [DefaultValue(true)]
         public bool EnablePreviewClickSync { get; set; } = true;
-
-        [Category("Preview Window")]
-        [DisplayName("Auto-hide for tool windows")]
-        [Description("Automatically hides the preview window when auto-hide tool windows slide into view. This works around a display issue where the preview overlaps tool windows.")]
-        [DefaultValue(false)]
-        public bool AutoHideOnFocusLoss { get; set; } = false;
 
         [Category("Preview Window")]
         [DisplayName("Dark theme support")]

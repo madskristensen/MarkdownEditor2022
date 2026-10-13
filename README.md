@@ -14,13 +14,13 @@ or get the [CI build][vsixgallery].
 
 This extension delivers a full featured Markdown editor with live preview, syntax-aware editing, and turnkey workflows for GitHub flavored Markdown.
 
-> **💡 Tip:** For the best experience, pair this extension with [Markdown Lint](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownLint) for linting/validation and [Image Optimizer](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ImageOptimizer64bit) for automatic image compression.
+> **💡 Recommended pairing:** Use Markdown Editor v2 for syntax-aware editing, live preview, navigation, and Markdown workflows. Pair it with [Markdown Lint](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.MarkdownLint) for validation, diagnostics, and automatic fixes. The two extensions are designed to work together.
 
 ## Getting Started
 
 1. Install the extension from the [Visual Studio Marketplace][marketplace] or grab the latest [CI build][vsixgallery].
 2. Open any `.md` file in Visual Studio to enable the Markdown editor.
-3. Press `F7` to show or hide the synchronized preview window while you edit.
+3. Press `F7` to cycle through Source, Split, and Preview views. Press `Shift+F7` to cycle in reverse.
 4. Visit **Tools -> Options -> Text Editor -> Markdown** to tune fonts, preview behavior, and custom assets.
 
 ## Feature Highlights
@@ -36,6 +36,7 @@ This extension delivers a full featured Markdown editor with live preview, synta
 ### Live preview
 
 - Live preview window with scroll sync and dark theme support.
+- Source, Split, and read-only Preview views for editing or focused reading.
 - Switch between vertical and horizontal layouts depending on the workspace.
 - Automatically updates on each keystroke and tracks the editor caret.
 - Honors custom CSS and HTML templates so the preview matches your documentation brand.
@@ -45,6 +46,8 @@ This extension delivers a full featured Markdown editor with live preview, synta
 - Jump between headings from the NavigationBar, Document Outline, or generated table of contents.
 - Document Outline tool window shows a persistent hierarchical view of all headings.
 - Collapse or expand fenced code and HTML blocks to stay focused.
+- Press `F12` on a local link or image reference to open its source file and follow Markdown heading or line fragments.
+- Follow VS Code-style line links (`[link](./file.cs#L10)`) to open a file and jump to a specific line and column.
 
 ### Media workflows
 
@@ -61,7 +64,13 @@ The sections below dive deeper into each area and include screenshots for quick 
 
 ### Live Preview Window
 
-The preview window opens up on the right side of the document when it opens. Use `F7` to toggle the preview window on and off.
+Markdown documents can be viewed in three modes:
+
+- **Source** - Show only the Markdown editor.
+- **Split** - Show the Markdown editor and synchronized preview together.
+- **Preview** - Show only the rendered document for focused, read-only viewing.
+
+Use the document toolbar to select a mode directly. `F7` cycles from Source to Split to Preview, while `Shift+F7` cycles in reverse. Documents initially open in Source or Split mode according to the **Open documents with preview** setting.
 
 ![Preview window](art/preview-window.png)
 
@@ -73,11 +82,9 @@ The preview window is automatically scrolled to match the scroll position of the
 
 Live preview can be managed in the [settings](#settings).
 
-#### Auto-hide tool window support
-
-The preview window uses WebView2 which, due to its HWND-based rendering, can overlap Visual Studio's auto-hide tool windows (like Solution Explorer when pinned to auto-hide). To mitigate this, enable **Auto-hide for tool windows** in the settings.
-
-When enabled, the preview temporarily hides when you expand an auto-hide tool window, and automatically reappears when the tool window collapses back. This ensures you can always interact with your tool windows without the preview getting in the way.
+When preview click synchronization is enabled, a plain click updates the source
+position without taking keyboard focus away from the preview. Selecting text or
+double-clicking a word does not trigger an additional source navigation.
 
 ### Syntax highlighting
 
@@ -212,8 +219,19 @@ In these examples:
 - Supports Windows paths (`C:\Projects\blog`) and Unix paths (`/home/user/website`)
 - Case-insensitive (`root_path` or `ROOT_PATH` in front matter)
 - Can be quoted if the path contains spaces: `root_path: "C:\My Projects\Site"`
-- Regular relative paths (not starting with `/`) continue to work as before
+- Regular relative paths (not starting with `/`) can use `..` while remaining within the preview root
 - Paths starting with `<http://`,> `<https://`,> `data:`, or `#` are left unchanged
+
+#### Preview path boundaries
+
+For security, local images and links are rendered only when their resolved paths remain within the preview root. The preview root is selected in this order:
+
+1. The `root_path` front matter or `md_root_path` EditorConfig setting.
+2. The loaded solution directory or Open Folder root.
+3. The nearest ancestor containing `.git`, a solution file, or a project file.
+4. For a standalone file under **Miscellaneous Files**, the parent of the Markdown file's directory.
+
+Relative references can traverse any number of parent directories as long as they remain inside that root. For example, `../../../shared/image.png` works when `shared` is still within the loaded solution or Open Folder root. A standalone Miscellaneous File supports one parent level by default; configure `root_path` or `md_root_path` to allow references from a higher common root. References that escape the preview root are left unresolved.
 
 **Typical Jekyll structure:**
 
@@ -317,6 +335,11 @@ Type `#` inside a link to get completions for all headings in the current docume
 
 Headings are shown with their level indicator (H1, H2, etc.) and automatically generate GitHub-compatible anchor slugs. Duplicate headings are handled with `-1`, `-2` suffixes.
 
+Headings ending in inline HTML icons no longer acquire an incidental trailing
+hyphen (for example, `Flyout (<u>&#xF035C;</u>)` links to `#flyout`). Explicit
+`{#custom-id}` anchors and literal hyphens are preserved. Links using the previous
+incidental trailing-hyphen IDs should be updated; legacy aliases are not generated.
+
 **Cross-document anchors:** You can also get anchor completions for other markdown files by typing the file path followed by `#`:
 
 ```markdown
@@ -325,6 +348,17 @@ Headings are shown with their level indicator (H1, H2, etc.) and automatically g
 ```
 
 IntelliSense will parse the target markdown file and show all available headings.
+
+### Go to linked files
+
+Place the caret anywhere on a local Markdown link or image reference and press `F12`
+to open the referenced file. Inline and reference-style links are supported, along
+with relative paths, root-relative paths, local file URLs, generated `.html` links
+that map back to Markdown source files, and Jekyll collection paths.
+
+Markdown heading fragments navigate directly to the matching heading. VS Code-style
+line fragments such as `#L10`, `#L10,5`, and `#L10:5` navigate to the requested line
+and optional column. Remote URLs are left to Visual Studio's normal command handling.
 
 ### Heading-based navigation
 
@@ -347,6 +381,17 @@ The Document Outline tool window (**View -> Document Outline**) provides a persi
 The Document Outline complements the NavigationBar dropdown by providing an always-visible overview of your document structure.
 
 ![Document outline window](art/document-outline.png)
+
+### Line links to source files
+
+Links to local files in the preview can include a VS Code-style line fragment to jump straight to a specific location when the file is opened. This is especially useful when an AI assistant generates links into your codebase.
+
+**Syntax:**
+
+- `[link](./path/to/file.cs#L10)` &mdash; opens `file.cs` and places the caret on line 10.
+- `[link](./path/to/file.cs#L10,5)` &mdash; opens `file.cs` and places the caret on line 10, column 5. `#L10:5` is also accepted.
+
+Line and column numbers are 1-based and are clamped to the file's contents, so out-of-range values still open the file at the closest valid position. The targeted line is centered in the editor and focus is moved to the opened document.
 
 ### Drag 'n drop images
 
@@ -412,11 +457,9 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 
 **Ctrl+PgDown** moves caret to next heading-->
 
-### Floating toolbar
+### Markdown document toolbar
 
-When you select text in the markdown editor, a floating toolbar appears near the selection with quick access to common formatting commands:
-
-![Floating toolbar](art/floating-toolbar.png)
+Markdown documents include a native Visual Studio toolbar above the editor. Use **Source**, **Split**, and **Preview** to switch directly between document views. **F7** cycles forward through the views and **Shift+F7** cycles backward.
 
 **Available actions:**
 
@@ -424,15 +467,16 @@ When you select text in the markdown editor, a floating toolbar appears near the
 - **Bold** - Wrap selection with `**`
 - **Italic** - Wrap selection with `_`
 - **Strikethrough** - Wrap selection with `~~`
+- **Highlight** - Wrap selection with `==`
+- **Subscript** - Wrap selection with `~`
+- **Superscript** - Wrap selection with `^`
 - **Inline code** - Wrap selection with backticks
 - **Link** - Convert selection to a markdown link
 - **Bullet list** - Convert selected lines to a bulleted list
 - **Numbered list** - Convert selected lines to a numbered list
 - **Task list** - Convert selected lines to a task/checkbox list
 
-The toolbar automatically positions itself above the selected text, or below if there isn't enough room above. It stays within the visible editor area and follows horizontal scrolling.
-
-Enable or disable this feature in **Tools -> Options -> Text Editor -> Markdown -> Advanced -> Enable floating toolbar**.
+Formatting commands are disabled in Preview mode because the Markdown source is hidden.
 
 ## Automation
 
@@ -467,6 +511,13 @@ Right-click a markdown file in **Solution Explorer** and select **Generate HTML 
 - On subsequent saves of the markdown file, the `.html` file is regenerated automatically.
 - Run the command again to disable this behavior and remove the generated file.
 
+Automatic regeneration requires a project that supports nesting the generated HTML
+under the markdown file using `DependentUpon` metadata. Files in solution folders,
+loose files, and Open Folder workspaces do not enable regeneration merely by having
+a sibling `.html` file. Add the markdown file to a supported project (including a
+shared project) and run **Generate HTML file** there. For unsupported items, the
+command can generate a one-time HTML snapshot, but saves will not update it.
+
 ## Context menu
 
 Right-click anywhere in the markdown document to access the **Markdown** submenu with common tasks, such as toggling the preview window scroll sync, see Markdown references, and getting to the settings dialog.
@@ -482,11 +533,10 @@ Control the settings for this extension under
 
 | Setting                     | Description                                                                                      |
 | --------------------------- | ------------------------------------------------------------------------------------------------ |
-| Enable preview window       | Shows the live preview pane when opening markdown files                                          |
+| Open documents with preview | Opens Markdown documents in Split mode when enabled, or Source mode when disabled                 |
 | Enable scroll sync          | Synchronizes scrolling between the editor and preview                                            |
 | Preview window position     | Choose between right-side or bottom placement                                                    |
 | Preview window width/height | Set the size of the preview pane                                                                 |
-| Auto-hide for tool windows  | Temporarily hides the preview when auto-hide tool windows expand, preventing overlap issues      |
 | Enable table sorting        | Allows double-clicking table headers to sort columns (underlines headers when enabled)           |
 | Optimize images on paste    | Automatically optimizes pasted images using Image Optimizer (requires Image Optimizer extension) |
 | Show trailing whitespace    | Displays dots for trailing double-spaces (soft line breaks) in the editor                        |
@@ -511,3 +561,32 @@ Should you encounter bugs or if you have feature requests, head on over to the [
 Pull requests are also very welcome, since I can't always get around to fixing all bugs myself. This is a personal passion project, so my time is limited.
 
 Another way to help out is to [sponsor me on GitHub](https://github.com/sponsors/madskristensen).
+
+### Running tests
+
+Build the solution on Windows using Visual Studio with the extension development tools
+and .NET Framework 4.8 targeting pack installed. Tests also require Node.js 22 or newer
+on `PATH` and the Microsoft Edge WebView2 Evergreen Runtime.
+
+Run the tests from Test Explorer, or from the repository root after building:
+
+```powershell
+dotnet test test\MarkdownEditor2022.UnitTests\MarkdownEditor2022.UnitTests.csproj -c Debug --no-build
+```
+
+The normal MSTest run also executes `test\preview-content-script.test.cjs` through
+`node --test`; no npm install is needed. These behavioral tests use the production
+`src\Margin\preview-content.js` asset. Real WebView2 tests exercise the same script
+with the bundled Prism, Mermaid, and MathJax libraries, covering lazy startup,
+unchanged-node reuse, superseded updates/undo, and MathJax cleanup. Each browser
+test uses an isolated profile and disposes its browser before removing that profile.
+Missing prerequisites fail the tests rather than silently skipping them. CI provisions
+Node.js and WebView2 and runs these tests through the same `dotnet test` command.
+
+Browser test output includes render timings and retained MathItem counts. Timings
+include browser IPC and test polling, not Visual Studio typing-to-paint latency.
+These tests do not replace profiling the installed extension during a long editing
+session: verify colorization while typing, edits and undo in a large mixed-content
+document, and retained managed/native memory after repeatedly opening and closing
+editors. DOM reuse currently matches exact block markup, so changes to line-marker
+IDs can recreate otherwise unchanged blocks.
