@@ -82,6 +82,13 @@ jobs:
     - name: Restore NuGet packages
       run: msbuild ${{ env.Solution }} /v:m -restore /t:Restore
 
+    - name: Validate formatting
+      run: >
+        dotnet format ${{ env.Solution }}
+        --verify-no-changes
+        --no-restore
+        --verbosity normal
+
     - name: Build
       run: msbuild ${{ env.Solution }} /v:m /m /p:Configuration=${{ env.Configuration }} /p:DeployExtension=${{ env.DeployExtension }}
 

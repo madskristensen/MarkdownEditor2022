@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "Running dotnet format..."
+
+dotnet format --verify-no-changes
+
+if [ $? -ne 0 ]; then
+    echo "Formatting errors found."
+    exit 1
+fi
+
+exit 0
+``

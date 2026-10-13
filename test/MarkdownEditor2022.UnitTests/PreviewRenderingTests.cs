@@ -53,7 +53,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public async Task PreviewContentScript_NodeBehaviorTestsPass()
+        public async Task PreviewContentScript_NodeBehaviorTestsPassAsync()
         {
             string outputDirectory = AppContext.BaseDirectory;
             string harnessPath = Path.Combine(outputDirectory, "preview-content-script.test.cjs");
@@ -132,7 +132,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public async Task RenderHtmlDocument_OnWorkerPreservesPreviewFeatures()
+        public async Task RenderHtmlDocument_OnWorkerPreservesPreviewFeaturesAsync()
         {
             MarkdownDocument markdown = Markdown.Parse(
                 "# Heading\n\n```js\nconst value = 1;\n```\n\n```mermaid\ngraph TD; A-->B;\n```\n\n$x + y$\n",
@@ -148,7 +148,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public async Task RenderHtmlDocument_ConcurrentDocumentsDoNotMixOutput()
+        public async Task RenderHtmlDocument_ConcurrentDocumentsDoNotMixOutputAsync()
         {
             Task<string>[] renders = Enumerable.Range(0, 16)
                 .Select(index => Task.Run(() => Browser.RenderHtmlDocument(
@@ -164,7 +164,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public async Task RenderHtmlDocument_ReusingParsedDocumentIsStable()
+        public async Task RenderHtmlDocument_ReusingParsedDocumentIsStableAsync()
         {
             MarkdownDocument markdown = Markdown.Parse(
                 "# Contents\n\n[[_TOC_]]\n\n## One\n\nText\n\n## Two\n\nMore text",

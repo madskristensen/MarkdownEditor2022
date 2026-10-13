@@ -6,15 +6,15 @@ namespace MarkdownEditor2022.UnitTests
     public class ColonSyntaxTests
     {
         // Mirrors the regex from Document.cs for testing
-        private static readonly Regex ColonFixRegex = new Regex(@"^(:::) ?(\w*)", RegexOptions.Multiline | RegexOptions.Compiled);
-        private static readonly HashSet<string> AlertKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Regex _colonFixRegex = new Regex(@"^(:::) ?(\w*)", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly HashSet<string> _alertKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "note", "tip", "important", "caution", "warning"
         };
 
         private static string ConvertColonSyntax(string input)
         {
-            return ColonFixRegex.Replace(input, ColonFixEvaluator);
+            return _colonFixRegex.Replace(input, ColonFixEvaluator);
         }
 
         private static string ColonFixEvaluator(Match match)
@@ -22,7 +22,7 @@ namespace MarkdownEditor2022.UnitTests
             string keyword = match.Groups[2].Value;
 
             // If keyword is an alert type, preserve original text
-            if (AlertKeywords.Contains(keyword))
+            if (_alertKeywords.Contains(keyword))
             {
                 return match.Value;
             }

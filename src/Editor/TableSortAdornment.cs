@@ -37,8 +37,8 @@ namespace MarkdownEditor2022
     /// </summary>
     internal sealed class TableSortHandler
     {
-        private const double DoubleClickTimeMilliseconds = 500;
-        private const double DoubleClickDistanceThreshold = 4;
+        private const double _doubleClickTimeMilliseconds = 500;
+        private const double _doubleClickDistanceThreshold = 4;
 
         private readonly IWpfTextView _view;
         private Cursor _originalCursor;
@@ -161,14 +161,14 @@ namespace MarkdownEditor2022
         private bool IsDoubleClick(System.Windows.Point currentPosition)
         {
             DateTime now = DateTime.UtcNow;
-            bool isWithinTime = _lastClickTimeUtc != default && (now - _lastClickTimeUtc).TotalMilliseconds <= DoubleClickTimeMilliseconds;
+            bool isWithinTime = _lastClickTimeUtc != default && (now - _lastClickTimeUtc).TotalMilliseconds <= _doubleClickTimeMilliseconds;
 
             bool isWithinDistance = false;
             if (_lastClickPosition.HasValue)
             {
                 double dx = currentPosition.X - _lastClickPosition.Value.X;
                 double dy = currentPosition.Y - _lastClickPosition.Value.Y;
-                isWithinDistance = (dx * dx) + (dy * dy) <= DoubleClickDistanceThreshold * DoubleClickDistanceThreshold;
+                isWithinDistance = (dx * dx) + (dy * dy) <= _doubleClickDistanceThreshold * _doubleClickDistanceThreshold;
             }
 
             _lastClickTimeUtc = now;

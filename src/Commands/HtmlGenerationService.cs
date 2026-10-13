@@ -11,8 +11,8 @@ namespace MarkdownEditor2022
 {
     internal static class HtmlGenerationService
     {
-        private const string HtmlTemplateFileName = "md-template.html";
-        private const string HtmlExtension = ".html";
+        private const string _htmlTemplateFileName = "md-template.html";
+        private const string _htmlExtension = ".html";
         private static readonly Regex _anchorHrefRegex = new(
             @"(?<prefix><a\b[^>]*\bhref\s*=\s*"")(?<url>[^""]+)(?<suffix>"")",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -129,7 +129,7 @@ namespace MarkdownEditor2022
                 throw new ArgumentException("Markdown file path cannot be null or empty.", nameof(markdownFile));
             }
 
-            return Path.ChangeExtension(markdownFile, HtmlExtension);
+            return Path.ChangeExtension(markdownFile, _htmlExtension);
         }
 
         internal static string BuildHtmlDocument(string markdownFile)
@@ -190,7 +190,7 @@ namespace MarkdownEditor2022
                 return href;
             }
 
-            return pathPart + HtmlExtension + suffix;
+            return pathPart + _htmlExtension + suffix;
         }
 
         internal static string CreateFromHtmlTemplate(string markdownFile, string title, string htmlContent)
@@ -264,21 +264,21 @@ namespace MarkdownEditor2022
         private static string GetHtmlTemplateFile(string markdownFile)
         {
             string folder = Path.GetDirectoryName(markdownFile);
-            string templatePath = FindFileRecursively(folder, HtmlTemplateFileName);
+            string templatePath = FindFileRecursively(folder, _htmlTemplateFileName);
 
             if (!string.IsNullOrWhiteSpace(templatePath))
             {
                 return templatePath;
             }
 
-            string profileTemplate = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), HtmlTemplateFileName);
+            string profileTemplate = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _htmlTemplateFileName);
             if (File.Exists(profileTemplate))
             {
                 return profileTemplate;
             }
 
             string extensionFolder = Path.GetDirectoryName(typeof(MarkdownEditor2022Package).Assembly.Location);
-            return Path.Combine(extensionFolder, "Margin", HtmlTemplateFileName);
+            return Path.Combine(extensionFolder, "Margin", _htmlTemplateFileName);
         }
 
         private static string FindFileRecursively(string folder, string fileName)

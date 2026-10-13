@@ -562,6 +562,14 @@ Pull requests are also very welcome, since I can't always get around to fixing a
 
 Another way to help out is to [sponsor me on GitHub](https://github.com/sponsors/madskristensen).
 
+### Development
+
+To enable the repository's pre-commit validation hook, configure Git to use the local `.githooks` folder:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
 ### Running tests
 
 Build the solution on Windows using Visual Studio with the extension development tools

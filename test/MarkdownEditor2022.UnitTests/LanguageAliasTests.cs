@@ -6,9 +6,9 @@ namespace MarkdownEditor2022.UnitTests
     public class LanguageAliasTests
     {
         // Mirrors the regex and alias map from Browser.cs for testing
-        private static readonly Regex LanguageRegex = new Regex("\"language-([^\"]+)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex _languageRegex = new Regex("\"language-([^\"]+)\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-        private static readonly Dictionary<string, string> LanguageAliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, string> _languageAliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             // C# aliases
             ["c#"] = "csharp",
@@ -37,11 +37,11 @@ namespace MarkdownEditor2022.UnitTests
 
         private static string ReplaceLanguageAliases(string html)
         {
-            return LanguageRegex.Replace(html, match =>
+            return _languageRegex.Replace(html, match =>
             {
                 string lang = match.Groups[1].Value;
 
-                if (LanguageAliasMap.TryGetValue(lang, out string canonicalLang))
+                if (_languageAliasMap.TryGetValue(lang, out string canonicalLang))
                 {
                     return $"\"language-{canonicalLang}\"";
                 }
