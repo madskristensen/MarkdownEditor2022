@@ -23,14 +23,6 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="WindowsBase" />
-      <Version>17.0.32112.339</Version>
-    </PackageReference>
-    <PackageReference Include="MSTest.TestAdapter">
-      <Version>4.0.2</Version>
-    </PackageReference>
-    <PackageReference Include="MSTest.TestFramework">
-      <Version>4.0.2</Version>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\preview-content-script.test.cjs" Link="preview-content-script.test.cjs" CopyToOutputDirectory="PreserveNewest" />
