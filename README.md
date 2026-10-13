@@ -461,6 +461,8 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 
 Markdown documents include a native Visual Studio toolbar above the editor. Use **Source**, **Split**, and **Preview** to switch directly between document views. **F7** cycles forward through the views and **Shift+F7** cycles backward.
 
+The toolbar is initialized when the document tab becomes visible, so opening a Markdown file in a background tab does not initialize its native controls until that tab is selected.
+
 **Available actions:**
 
 - **Paragraph/Heading dropdown** - Convert selected lines to paragraph or heading levels 1-6

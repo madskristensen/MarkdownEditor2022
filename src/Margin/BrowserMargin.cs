@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
@@ -70,7 +71,7 @@ namespace MarkdownEditor2022
             _viewModeController.ModeChanged += OnViewModeChanged;
 
             // Defer adding the WebView2CompositionControl to the visual tree until this margin
-            // is fully parented under a Window. WebView2CompositionControl.Loaded calls
+            // is fully parented under a Window with a native host. WebView2CompositionControl.Loaded calls
             // Window.GetWindow(this) which returns null if the control loads before the VS
             // tool window is parented, causing a NullReferenceException.
             CreateMarginControls();
@@ -105,7 +106,9 @@ namespace MarkdownEditor2022
         {
             try
             {
-                if (_isDisposed || _browserAttached || _browserHost == null || !_viewModeController.ShowsPreview || Window.GetWindow(this) == null)
+                if (_isDisposed || _browserAttached || _browserHost == null || !_viewModeController.ShowsPreview ||
+                    !IsLoaded || Window.GetWindow(this) == null ||
+                    PresentationSource.FromVisual(this) is not HwndSource source || source.Handle == IntPtr.Zero)
                 {
                     return;
                 }
