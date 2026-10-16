@@ -68,7 +68,7 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.slnx', '**/*.sln', '**/*.csproj', '**/packages.config', '**/packages.lock.json', '**/nuget.config') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.slnx', '**/*.sln', '**/*.csproj', '**/Directory.Packages.props', '**/packages.config', '**/packages.lock.json', '**/nuget.config') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
@@ -81,6 +81,13 @@ jobs:
 
     - name: Restore NuGet packages
       run: msbuild ${{ env.Solution }} /v:m -restore /t:Restore
+
+    - name: Validate formatting
+      run: >
+        dotnet format ${{ env.Solution }}
+        --verify-no-changes
+        --no-restore
+        --verbosity normal
 
     - name: Build
       run: msbuild ${{ env.Solution }} /v:m /m /p:Configuration=${{ env.Configuration }} /p:DeployExtension=${{ env.DeployExtension }}

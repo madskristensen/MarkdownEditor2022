@@ -9,7 +9,7 @@ namespace MarkdownEditor2022.UnitTests
     {
         [TestMethod]
         [Timeout(15000)]
-        public async Task HeaderTyping_PublishesEachEditWithoutAQuietPeriod()
+        public async Task HeaderTyping_PublishesEachEditWithoutAQuietPeriodAsync()
         {
             string text = "# ";
             List<string> parsed = [];
@@ -35,7 +35,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [TestMethod]
         [Timeout(15000)]
-        public async Task EditsDuringParse_CoalesceWithoutOverlappingParses()
+        public async Task EditsDuringParse_CoalesceWithoutOverlappingParsesAsync()
         {
             TaskCompletionSource<bool> started = NewCompletion();
             TaskCompletionSource<bool> release = NewCompletion();
@@ -69,7 +69,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public async Task DisposeBeforeFirstRequest_DoesNotStartWorker()
+        public async Task DisposeBeforeFirstRequest_DoesNotStartWorkerAsync()
         {
             int parses = 0;
             ParseScheduler scheduler = new(_ => { parses++; return Task.CompletedTask; });
@@ -82,7 +82,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [TestMethod]
         [Timeout(15000)]
-        public async Task DisposeDuringParse_CancelsWithoutStartingPendingParse()
+        public async Task DisposeDuringParse_CancelsWithoutStartingPendingParseAsync()
         {
             TaskCompletionSource<bool> started = NewCompletion();
             TaskCompletionSource<bool> release = NewCompletion();

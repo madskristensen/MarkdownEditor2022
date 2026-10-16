@@ -7,7 +7,7 @@ namespace MarkdownEditor2022.UnitTests
     public class ParserCompletionTests
     {
         [TestMethod]
-        public async Task PipelineParse_ComplexMarkdown_CompletesAndProducesHtml()
+        public async Task PipelineParse_ComplexMarkdown_CompletesAndProducesHtmlAsync()
         {
             string markdown = "# Heading\n\n";
             for (int i = 0; i < 1000; i++)

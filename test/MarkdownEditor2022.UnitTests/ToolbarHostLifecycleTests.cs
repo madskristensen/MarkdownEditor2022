@@ -2,8 +2,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using FormsPanel = System.Windows.Forms.Panel;
 using static MarkdownEditor2022.UnitTests.HostLifecycleWpfFixture;
+using FormsPanel = System.Windows.Forms.Panel;
 
 namespace MarkdownEditor2022.UnitTests
 {
@@ -93,7 +93,8 @@ namespace MarkdownEditor2022.UnitTests
             {
                 creations++;
                 return new FormsPanel();
-            }) { Visibility = Visibility.Collapsed };
+            })
+            { Visibility = Visibility.Collapsed };
             Window window = fixture.CreateWindow(host);
             await fixture.TransitionAsync(host, true, window.Show);
             Assert.AreEqual(0, creations);

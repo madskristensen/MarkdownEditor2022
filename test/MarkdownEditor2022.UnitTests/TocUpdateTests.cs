@@ -6,7 +6,7 @@ namespace MarkdownEditor2022.UnitTests
     [TestClass]
     public class TocUpdateTests
     {
-        private const string Placeholder = "<!-- TOC-->\r\nold\r\n<!-- TOC -->";
+        private const string _placeholder = "<!-- TOC-->\r\nold\r\n<!-- TOC -->";
 
         [TestMethod]
         public void GetUpdates_NoMarkers_DoesNotChangeDocument()
@@ -17,12 +17,12 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void GetUpdates_ChangedToc_ProducesExactReplacementAndThenNoFurtherEdits()
         {
-            string source = Placeholder + "\r\n\r\n# First\r\n\r\n## Second";
+            string source = _placeholder + "\r\n\r\n# First\r\n\r\n## Second";
             IReadOnlyList<(Microsoft.VisualStudio.Text.Span span, string text)> updates = GenerateTocCommand.GetUpdates(source);
 
             Assert.AreEqual(1, updates.Count);
             Assert.AreEqual(0, updates[0].span.Start);
-            Assert.AreEqual(Placeholder.Length, updates[0].span.Length);
+            Assert.AreEqual(_placeholder.Length, updates[0].span.Length);
             Assert.AreEqual("<!-- TOC-->\r\n- [First](#first)\r\n  - [Second](#second)\r\n<!-- TOC -->", updates[0].text);
 
             string updated = ApplyUpdates(source, updates);
@@ -33,14 +33,14 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void GetUpdates_MultipleTocs_UsesOriginalSnapshotSpansAndSharedHeadings()
         {
-            string source = Placeholder + "\r\n# First\r\n" + Placeholder + "\r\n## Second {#custom}";
+            string source = _placeholder + "\r\n# First\r\n" + _placeholder + "\r\n## Second {#custom}";
             HeadingBlock[] headings = Markdown.Parse(source, Document.Pipeline).Descendants<HeadingBlock>().ToArray();
 
             IReadOnlyList<(Microsoft.VisualStudio.Text.Span span, string text)> updates = GenerateTocCommand.GetUpdates(source, headings);
 
             Assert.AreEqual(2, updates.Count);
             Assert.AreEqual(0, updates[0].span.Start);
-            Assert.AreEqual(source.LastIndexOf(Placeholder, StringComparison.Ordinal), updates[1].span.Start);
+            Assert.AreEqual(source.LastIndexOf(_placeholder, StringComparison.Ordinal), updates[1].span.Start);
             Assert.AreEqual("<!-- TOC-->\r\n- [First](#first)\r\n  - [Second](#custom)\r\n<!-- TOC -->", updates[0].text);
             Assert.AreEqual("<!-- TOC-->\r\n  - [Second](#custom)\r\n<!-- TOC -->", updates[1].text);
             Assert.AreEqual(0, GenerateTocCommand.GetUpdates(ApplyUpdates(source, updates)).Count);
@@ -49,7 +49,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void GetUpdates_DuplicateHeadings_PreservesGeneratedAnchorIds()
         {
-            string source = Placeholder + "\r\n# Repeat\r\n# Repeat";
+            string source = _placeholder + "\r\n# Repeat\r\n# Repeat";
 
             IReadOnlyList<(Microsoft.VisualStudio.Text.Span span, string text)> updates = GenerateTocCommand.GetUpdates(source);
 
@@ -62,7 +62,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void GetUpdates_ColonFences_UsesEditorParsingAndOriginalHeadingCoordinates(string newline)
         {
-            string source = Placeholder + newline + "::: mermaid" + newline + "# Hidden" + newline + ":::" + newline + "# Visible";
+            string source = _placeholder + newline + "::: mermaid" + newline + "# Hidden" + newline + ":::" + newline + "# Visible";
 
             IReadOnlyList<(Microsoft.VisualStudio.Text.Span span, string text)> updates = GenerateTocCommand.GetUpdates(source);
 
@@ -74,7 +74,7 @@ namespace MarkdownEditor2022.UnitTests
         [TestMethod]
         public void GetUpdates_CarriageReturnLines_UsesOriginalHeadingCoordinates()
         {
-            string source = Placeholder + "\r# First\r## Second";
+            string source = _placeholder + "\r# First\r## Second";
 
             IReadOnlyList<(Microsoft.VisualStudio.Text.Span span, string text)> updates = GenerateTocCommand.GetUpdates(source);
 

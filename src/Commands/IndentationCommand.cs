@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.Composition;
+using System.ComponentModel.Composition;
 using Markdig.Syntax;
 using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Text;

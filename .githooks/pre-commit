@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "Running dotnet format..."
+
+exec dotnet format MarkdownEditor2022.slnx --verify-no-changes --no-restore

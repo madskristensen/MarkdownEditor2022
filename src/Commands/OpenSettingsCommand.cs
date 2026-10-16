@@ -1,4 +1,4 @@
-﻿namespace MarkdownEditor2022
+namespace MarkdownEditor2022
 {
     [Command(PackageIds.OpenSettings)]
     internal sealed class OpenSettingsCommand : BaseCommand<OpenSettingsCommand>
@@ -8,7 +8,7 @@
             Command.Supported = false;
             return base.InitializeCompletedAsync();
         }
-        
+
         protected override void Execute(object sender, EventArgs e)
         {
             Package.ShowOptionPage(typeof(OptionsProvider.AdvancedOptions));

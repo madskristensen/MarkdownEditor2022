@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -155,7 +155,7 @@ namespace MarkdownEditor2022
             SnapshotSpan span = new SnapshotSpan(snapshot, headingBlock.ToSpan())
                 .TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive);
             TextSpan textSpan = GetTextSpan(span);
-            
+
             return new DropDownMember(headingText, textSpan, 0, fontAttr);
         }
 

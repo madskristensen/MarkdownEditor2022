@@ -15,7 +15,7 @@ namespace MarkdownEditor2022.UnitTests
     // No WebView2 environment, VS services, or null-document initialization is used here.
     internal sealed class HostLifecycleWpfFixture : IDisposable
     {
-        private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+        private const BindingFlags _privateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
         private readonly CancellationToken _deadline;
         private readonly List<Browser> _browsers = new();
         private readonly List<Window> _windows = new();
@@ -48,7 +48,8 @@ namespace MarkdownEditor2022.UnitTests
                 _ = Task.Factory.StartNew(ExecuteAsync, CancellationToken.None, TaskCreationOptions.None,
                     TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
                 Dispatcher.Run();
-            }) { IsBackground = true, Name = nameof(HostLifecycleWpfFixture) };
+            })
+            { IsBackground = true, Name = nameof(HostLifecycleWpfFixture) };
             thread.SetApartmentState(ApartmentState.STA);
             thread.Start();
             if (await Task.WhenAny(finished.Task, Task.Delay(TimeSpan.FromSeconds(82))) != finished.Task)
@@ -73,8 +74,14 @@ namespace MarkdownEditor2022.UnitTests
         {
             Window window = new()
             {
-                Width = 600, Height = 400, Left = -20000, Top = -20000,
-                ShowActivated = false, ShowInTaskbar = false, WindowStyle = WindowStyle.None, Content = content
+                Width = 600,
+                Height = 400,
+                Left = -20000,
+                Top = -20000,
+                ShowActivated = false,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None,
+                Content = content
             };
             _windows.Add(window);
             return window;
@@ -113,35 +120,35 @@ namespace MarkdownEditor2022.UnitTests
 
         internal static bool HasBrowserHost(Browser browser)
         {
-            PropertyInfo? property = typeof(Browser).GetProperty("HasBrowserHost", PrivateInstance);
+            PropertyInfo? property = typeof(Browser).GetProperty("HasBrowserHost", _privateInstance);
             Assert.IsNotNull(property, "Missing Browser.HasBrowserHost.");
             return Assert.IsInstanceOfType<bool>(property.GetValue(browser));
         }
 
         internal static T Get<T>(object target, string name)
         {
-            FieldInfo? field = target.GetType().GetField(name, PrivateInstance);
+            FieldInfo? field = target.GetType().GetField(name, _privateInstance);
             Assert.IsNotNull(field, $"Missing {target.GetType().Name}.{name}.");
             return Assert.IsInstanceOfType<T>(field.GetValue(target));
         }
 
         internal static object? GetValue(object target, string name)
         {
-            FieldInfo? field = target.GetType().GetField(name, PrivateInstance);
+            FieldInfo? field = target.GetType().GetField(name, _privateInstance);
             Assert.IsNotNull(field, $"Missing {target.GetType().Name}.{name}.");
             return field.GetValue(target);
         }
 
         internal static void Set(object target, string name, object? value)
         {
-            FieldInfo? field = target.GetType().GetField(name, PrivateInstance);
+            FieldInfo? field = target.GetType().GetField(name, _privateInstance);
             Assert.IsNotNull(field, $"Missing {target.GetType().Name}.{name}.");
             field.SetValue(target, value);
         }
 
         internal static void Call(object target, string name, params object[] arguments)
         {
-            MethodInfo? method = target.GetType().GetMethod(name, PrivateInstance);
+            MethodInfo? method = target.GetType().GetMethod(name, _privateInstance);
             Assert.IsNotNull(method, $"Missing {target.GetType().Name}.{name}.");
             try { method.Invoke(target, arguments); }
             catch (TargetInvocationException error) when (error.InnerException != null)
