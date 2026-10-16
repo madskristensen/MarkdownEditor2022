@@ -33,10 +33,11 @@ namespace MarkdownEditor2022
         private bool _browserAttached;
         private bool _browserAttachQueued;
         private bool _browserAttachPending;
+        private IntPtr _browserHostHwnd;
         private (bool enabled, bool spellCheck, bool clickSync, Theme theme) _previewSettings;
         private EventHandler _viewportWidthChanged;
         private EventHandler _viewportHeightChanged;
-        private System.Windows.Threading.DispatcherTimer _resizeTimer;
+        private DispatcherTimer _resizeTimer;
         private GridSplitter _splitter;
         private ColumnDefinition _splitterColumn;
         private RowDefinition _splitterRow;
@@ -72,6 +73,8 @@ namespace MarkdownEditor2022
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             VSColorTheme.ThemeChanged += OnThemeChange;
             _viewModeController.ModeChanged += OnViewModeChanged;
+            Loaded += OnMarginLoaded;
+            PresentationSource.AddSourceChangedHandler(this, OnPresentationSourceChanged);
 
             // Defer adding the WebView2CompositionControl to the visual tree until this margin
             // is fully parented under a Window with a native host. WebView2CompositionControl.Loaded calls
@@ -99,22 +102,41 @@ namespace MarkdownEditor2022
 
         private void QueueBrowserAttach()
         {
-            if (_isDisposed || _browserAttached || _browserAttachQueued || !_viewModeController.ShowsPreview)
+            if (_isDisposed || !_viewModeController.ShowsPreview)
+            {
+                return;
+            }
+
+            TryAttachBrowser();
+            if (_browserAttached || _browserAttachQueued)
             {
                 return;
             }
 
             _browserAttachQueued = true;
-            Loaded += OnMarginLoaded;
             LayoutUpdated += OnLayoutUpdatedUntilBrowserAttached;
+        }
+
+        private void OnPresentationSourceChanged(object sender, SourceChangedEventArgs e)
+        {
             TryAttachBrowser();
+        }
+
+        internal static bool RequiresBrowserRecreation(IntPtr previousHost, IntPtr currentHost)
+        {
+            return previousHost != IntPtr.Zero && currentHost != IntPtr.Zero && previousHost != currentHost;
         }
 
         private void TryAttachBrowser()
         {
-            if (_browserAttachPending || _isDisposed || _browserAttached || _browserHost == null ||
+            if (_browserAttachPending || _isDisposed || _browserHost == null ||
                 !_viewModeController.ShowsPreview || !IsLoaded || !IsVisible ||
                 Window.GetWindow(this) == null || PresentationSource.FromVisual(this) is not HwndSource source || source.Handle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            if (_browserAttached && !RequiresBrowserRecreation(_browserHostHwnd, source.Handle))
             {
                 return;
             }
@@ -125,7 +147,8 @@ namespace MarkdownEditor2022
 
         private async Task AttachBrowserOnIdleAsync()
         {
-            await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.ContextIdle);
+            // Reparenting and native input callbacks must finish before replacing WebView2.
+            await Dispatcher.Yield(DispatcherPriority.ContextIdle);
             _browserAttachPending = false;
             AttachBrowser();
         }
@@ -134,14 +157,24 @@ namespace MarkdownEditor2022
         {
             try
             {
-                if (_isDisposed || _browserAttached || _browserHost == null || !_viewModeController.ShowsPreview ||
+                if (_isDisposed || _browserHost == null || !_viewModeController.ShowsPreview ||
                     !IsLoaded || !IsVisible || Window.GetWindow(this) == null ||
                     PresentationSource.FromVisual(this) is not HwndSource source || source.Handle == IntPtr.Zero)
                 {
                     return;
                 }
 
-                Loaded -= OnMarginLoaded;
+                IntPtr hostHwnd = source.Handle;
+                if (RequiresBrowserRecreation(_browserHostHwnd, hostHwnd))
+                {
+                    RecreateBrowser();
+                }
+
+                if (_browserAttached)
+                {
+                    return;
+                }
+
                 LayoutUpdated -= OnLayoutUpdatedUntilBrowserAttached;
                 _browserAttachQueued = false;
 
@@ -159,6 +192,7 @@ namespace MarkdownEditor2022
 
                 Grid.SetColumn(view, _browserHostColumn);
                 Grid.SetRow(view, _browserHostRow);
+                _browserHostHwnd = hostHwnd;
                 _browserHost.Children.Add(view);
                 _browserAttached = true;
             }
@@ -168,7 +202,47 @@ namespace MarkdownEditor2022
             }
         }
 
-        private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        private void DisconnectBrowserEvents()
+        {
+            if (Browser != null)
+            {
+                Browser._browser.CoreWebView2InitializationCompleted -= OnBrowserInitCompleted;
+                Browser.LineNavigationRequested -= OnLineNavigationRequested;
+            }
+            _document.Parsed -= UpdateBrowser;
+            _textView.LayoutChanged -= UpdatePosition;
+            _textView.TextBuffer.Changed -= OnTextBufferChange;
+        }
+
+        private void RecreateBrowser()
+        {
+            // WebView2CompositionControl keeps its original controller HWND on reload.
+            // A fresh instance binds both the controller and composition surface to the
+            // new window, without relying on private SDK fields or stealing activation.
+            Browser previousBrowser = Browser;
+            previousBrowser.SuspendUpdates();
+            DisconnectBrowserEvents();
+            if (Browser._browser.Parent is Panel parent)
+            {
+                parent.Children.Remove(Browser._browser);
+            }
+
+            // Removing a control can leave a SizeChanged callback in WPF's layout queue.
+            // WebView2's callback still touches its capture surface after Dispose, so
+            // release the retired browser only after those layout callbacks have drained.
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                await Dispatcher.Yield(DispatcherPriority.ContextIdle);
+                previousBrowser.Dispose();
+            }).FireAndForget();
+            Browser = new Browser(_textView.TextBuffer.GetFileName(), _document, _textView, _formatMapService);
+            Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
+            _browserAttached = false;
+            _browserHostHwnd = IntPtr.Zero;
+        }
+
+        private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             if (!IsWebView2LoadedNullReference(e.Exception))
             {
@@ -210,18 +284,12 @@ namespace MarkdownEditor2022
             }
 
             _isDisposed = true;
+            DisconnectBrowserEvents();
             Dispatcher.UnhandledException -= OnDispatcherUnhandledException;
             IsVisibleChanged -= OnMarginIsVisibleChanged;
             Loaded -= OnMarginLoaded;
+            PresentationSource.RemoveSourceChangedHandler(this, OnPresentationSourceChanged);
             LayoutUpdated -= OnLayoutUpdatedUntilBrowserAttached;
-            if (Browser != null)
-            {
-                Browser._browser.CoreWebView2InitializationCompleted -= OnBrowserInitCompleted;
-                Browser.LineNavigationRequested -= OnLineNavigationRequested;
-            }
-            _document.Parsed -= UpdateBrowser;
-            _textView.LayoutChanged -= UpdatePosition;
-            _textView.TextBuffer.Changed -= OnTextBufferChange;
             VSColorTheme.ThemeChanged -= OnThemeChange;
             AdvancedOptions.Saved -= AdvancedOptions_Saved;
             _viewModeController.ModeChanged -= OnViewModeChanged;
@@ -244,7 +312,7 @@ namespace MarkdownEditor2022
 
         private void OnBrowserInitCompleted(object sender, CoreWebView2InitializationCompletedEventArgs e)
         {
-            if (_isDisposed)
+            if (_isDisposed || !ReferenceEquals(sender, Browser?._browser))
             {
                 return;
             }
@@ -273,7 +341,8 @@ namespace MarkdownEditor2022
 
         private void FocusPreview()
         {
-            if (!_isDisposed && IsLoaded && IsVisible && _viewModeController.Mode == MarkdownViewMode.Preview)
+            if (!_isDisposed && IsLoaded && IsVisible && _viewModeController.Mode == MarkdownViewMode.Preview &&
+                Window.GetWindow(this)?.IsActive == true)
             {
                 Browser?._browser.Focus();
             }
@@ -443,7 +512,7 @@ namespace MarkdownEditor2022
 
                     if (_resizeTimer == null)
                     {
-                        _resizeTimer = new System.Windows.Threading.DispatcherTimer
+                        _resizeTimer = new DispatcherTimer
                         {
                             Interval = TimeSpan.FromMilliseconds(50)
                         };
