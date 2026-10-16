@@ -9,6 +9,9 @@ indent_style = space
 end_of_line  = crlf
 # (Please don't specify an indent_size here; that has too many unintended consequences.)
 
+[.githooks/*]
+end_of_line = lf
+
 # Code files
 [*.{cs,csx,vb,vbx,xaml}]
 indent_size = 4

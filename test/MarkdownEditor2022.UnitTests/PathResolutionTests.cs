@@ -155,7 +155,7 @@ namespace MarkdownEditor2022.UnitTests
 
         #region Markdown Extension Detection Tests
 
-        private static readonly string[] MarkdownExtensions = { ".md", ".markdown", ".mdown", ".mkd" };
+        private static readonly string[] _markdownExtensions = { ".md", ".markdown", ".mdown", ".mkd" };
 
         private static bool IsMarkdownExtension(string extension)
         {
@@ -164,7 +164,7 @@ namespace MarkdownEditor2022.UnitTests
                 return false;
             }
 
-            return Array.IndexOf(MarkdownExtensions, extension.ToLowerInvariant()) >= 0;
+            return Array.IndexOf(_markdownExtensions, extension.ToLowerInvariant()) >= 0;
         }
 
         [DataRow(".md", true)]

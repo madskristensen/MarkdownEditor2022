@@ -8,14 +8,14 @@ namespace MarkdownEditor2022.UnitTests
     public class PdfExportServiceTests
     {
         [TestMethod]
-        public async Task WaitForCompletionAsync_CompletedTaskSucceeds()
+        public async Task WaitForCompletionAsync_CompletedTaskSucceedsAsync()
         {
             await PdfExportService.WaitForCompletionAsync(Task.CompletedTask, TimeSpan.FromSeconds(5), "Timed out.");
         }
 
         [TestMethod]
         [Timeout(5000)]
-        public async Task WaitForCompletionAsync_PendingTaskCanCompleteBeforeDeadline()
+        public async Task WaitForCompletionAsync_PendingTaskCanCompleteBeforeDeadlineAsync()
         {
             TaskCompletionSource<bool> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             Task wait = PdfExportService.WaitForCompletionAsync(completion.Task, TimeSpan.FromSeconds(30), "Timed out.");
@@ -28,7 +28,7 @@ namespace MarkdownEditor2022.UnitTests
 
         [TestMethod]
         [Timeout(5000)]
-        public async Task WaitForCompletionAsync_MissingCompletionSurfacesPhaseSpecificTimeout()
+        public async Task WaitForCompletionAsync_MissingCompletionSurfacesPhaseSpecificTimeoutAsync()
         {
             TaskCompletionSource<bool> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             const string message = "Timed out loading the HTML content for PDF export.";
@@ -42,7 +42,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public async Task WaitForCompletionAsync_OperationFailureIsNotReplaced()
+        public async Task WaitForCompletionAsync_OperationFailureIsNotReplacedAsync()
         {
             InvalidOperationException failure = new("Browser failed.");
 
@@ -53,7 +53,7 @@ namespace MarkdownEditor2022.UnitTests
         }
 
         [TestMethod]
-        public async Task WaitForCompletionAsync_OperationCancellationIsNotReportedAsTimeout()
+        public async Task WaitForCompletionAsync_OperationCancellationIsNotReportedAsTimeoutAsync()
         {
             using CancellationTokenSource cancellation = new();
             cancellation.Cancel();

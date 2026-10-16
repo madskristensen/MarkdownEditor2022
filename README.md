@@ -572,6 +572,23 @@ Pull requests are also very welcome, since I can't always get around to fixing a
 
 Another way to help out is to [sponsor me on GitHub](https://github.com/sponsors/madskristensen).
 
+### Development
+
+NuGet versions are maintained in `Directory.Packages.props`. Build the solution once
+to restore packages, then check formatting with the same command used in CI:
+
+```powershell
+dotnet format MarkdownEditor2022.slnx --verify-no-changes --no-restore
+```
+
+To run this formatting check before each commit, configure Git to use the local `.githooks` folder:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+The hook checks formatting only; run tests separately as described below.
+
 ### Running tests
 
 Build the solution on Windows using Visual Studio with the extension development tools
@@ -600,3 +617,9 @@ session: verify colorization while typing, edits and undo in a large mixed-conte
 document, and retained managed/native memory after repeatedly opening and closing
 editors. DOM reuse currently matches exact block markup, so changes to line-marker
 IDs can recreate otherwise unchanged blocks.
+
+For preview-host changes, also test the installed extension in Visual Studio:
+repeatedly detach and redock a Markdown document, switch between Source, Split,
+and Preview (including moving the window while in Source), and click between the
+floating preview and another document to verify activation. Close a document while
+its preview initializes and verify that inactive previews do not steal focus.

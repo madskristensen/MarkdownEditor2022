@@ -6,11 +6,11 @@ namespace MarkdownEditor2022.UnitTests
     public class MermaidClassConversionTests
     {
         // Mirrors the regex from Browser.cs for testing
-        private static readonly Regex MermaidRegex = new Regex("class=\"language-mermaid\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex _mermaidRegex = new Regex("class=\"language-mermaid\"", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private static string ConvertMermaidClass(string html)
         {
-            return MermaidRegex.Replace(html, "class=\"mermaid\"");
+            return _mermaidRegex.Replace(html, "class=\"mermaid\"");
         }
 
         [TestMethod]

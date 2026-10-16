@@ -1,8 +1,8 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
-using System.IO;
 using System.Windows.Threading;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
