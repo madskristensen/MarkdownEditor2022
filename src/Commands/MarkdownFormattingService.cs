@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Operations;
+using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
 {
@@ -18,9 +20,35 @@ namespace MarkdownEditor2022
     {
         private static readonly Regex _headingRegex = new(@"^(#{1,6})\s", RegexOptions.Compiled);
         private static readonly Regex _listRegex = new(@"^(\s*)(-|\*|\+|\d+\.|\d+\))\s*(\[[ xX]\])?\s*", RegexOptions.Compiled);
+        private static bool _updatingCommandStatus;
+        private static DocumentView _commandStatusView;
+
+        internal static void UpdateCommandStatus(Action update)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            DocumentView previousView = _commandStatusView;
+            bool wasUpdating = _updatingCommandStatus;
+            _commandStatusView = GetActiveMarkdownView();
+            _updatingCommandStatus = true;
+            try
+            {
+                update();
+            }
+            finally
+            {
+                _commandStatusView = previousView;
+                _updatingCommandStatus = wasUpdating;
+            }
+        }
 
         public static DocumentView GetActiveMarkdownView()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_updatingCommandStatus)
+            {
+                return _commandStatusView;
+            }
+
             DocumentView view = ThreadHelper.JoinableTaskFactory.Run(VS.Documents.GetActiveDocumentViewAsync);
             return view?.TextBuffer?.ContentType.IsOfType(Constants.LanguageName) == true ? view : null;
         }
@@ -38,10 +66,14 @@ namespace MarkdownEditor2022
                 return 0;
             }
 
-            SnapshotPoint point = GetSelectionOrCaretSpan(view).Start;
-            string lineText = point.GetContainingLine().GetText();
-            Match match = _headingRegex.Match(lineText);
-            return match.Success ? match.Groups[1].Length : 0;
+            FormattingState state = GetFormattingState(view);
+            if (state.HeadingLevel == null)
+            {
+                Match match = _headingRegex.Match(state.Selection.Start.GetContainingLine().GetText());
+                state.HeadingLevel = match.Success ? match.Groups[1].Length : 0;
+            }
+
+            return state.HeadingLevel.Value;
         }
 
         public static async Task SetHeadingLevelAsync(int level)
@@ -80,17 +112,16 @@ namespace MarkdownEditor2022
                 return false;
             }
 
-            SnapshotSpan selection = GetSelectionOrCaretSpan(view);
-            string text = selection.GetText();
-            if (HasSurroundingMarker(text, marker) || HasSurroundingMarker(text, alternateMarker))
+            FormattingState state = GetFormattingState(view);
+            SnapshotSpan selection = state.Selection;
+            if (HasSurroundingMarker(selection.Length, i => selection.Snapshot[selection.Start.Position + i], marker) ||
+                HasSurroundingMarker(selection.Length, i => selection.Snapshot[selection.Start.Position + i], alternateMarker))
             {
                 return true;
             }
 
-            MarkdownDocument markdown = view.TextBuffer.GetDocument()?.Markdown;
-            int selectionStart = selection.Start.Position;
-            int selectionEnd = selection.End.Position;
-            return IsEmphasisActive(markdown, selectionStart, selectionEnd, marker);
+            state.EmphasisMarkers ??= GetActiveEmphasisMarkers(state.Markdown, selection.Start.Position, selection.End.Position);
+            return state.EmphasisMarkers.Contains(NormalizeMarker(marker));
         }
 
         internal static bool IsEmphasisActive(
@@ -99,15 +130,24 @@ namespace MarkdownEditor2022
             int selectionEnd,
             string marker)
         {
-            if (markdown == null)
+            return GetActiveEmphasisMarkers(markdown, selectionStart, selectionEnd).Contains(NormalizeMarker(marker));
+        }
+
+        internal static HashSet<string> GetActiveEmphasisMarkers(MarkdownDocument markdown, int selectionStart, int selectionEnd)
+        {
+            HashSet<string> markers = new(StringComparer.Ordinal);
+            if (markdown != null)
             {
-                return false;
+                foreach (MarkdownObject item in markdown.Descendants())
+                {
+                    if (item.Span.Start <= selectionStart && item.Span.End >= selectionEnd && GetInlineMarker(item) is string marker)
+                    {
+                        markers.Add(marker);
+                    }
+                }
             }
 
-            return markdown.Descendants().Any(item =>
-                item.Span.Start <= selectionStart &&
-                item.Span.End >= selectionEnd &&
-                IsMatchingInline(item, marker));
+            return markers;
         }
 
         public static async Task ToggleEmphasisAsync(string marker, string alternateMarker = null)
@@ -160,15 +200,28 @@ namespace MarkdownEditor2022
                 return false;
             }
 
-            ITextSnapshot snapshot = view.TextBuffer.CurrentSnapshot;
-            SnapshotSpan span = GetSelectionOrCaretSpan(view);
-            ITextSnapshotLine startLine = snapshot.GetLineFromPosition(span.Start);
-            ITextSnapshotLine endLine = snapshot.GetLineFromPosition(span.End > span.Start ? span.End - 1 : span.End);
-            bool foundLine = false;
+            FormattingState state = GetFormattingState(view);
+            state.ListKinds ??= GetActiveListKinds(GetSelectedLines(state.Selection));
+            return state.ListKinds.Contains(kind);
+        }
 
-            for (int i = startLine.LineNumber; i <= endLine.LineNumber; i++)
+        private static IEnumerable<string> GetSelectedLines(SnapshotSpan selection)
+        {
+            ITextSnapshot snapshot = selection.Snapshot;
+            int startLine = selection.Start.GetContainingLine().LineNumber;
+            int endLine = snapshot.GetLineFromPosition(selection.IsEmpty ? selection.End : selection.End - 1).LineNumber;
+            for (int i = startLine; i <= endLine; i++)
             {
-                string text = snapshot.GetLineFromLineNumber(i).GetText();
+                yield return snapshot.GetLineFromLineNumber(i).GetText();
+            }
+        }
+
+        internal static HashSet<MarkdownListKind> GetActiveListKinds(IEnumerable<string> lines)
+        {
+            HashSet<MarkdownListKind> kinds = [MarkdownListKind.Bullet, MarkdownListKind.Numbered, MarkdownListKind.Task];
+            bool foundLine = false;
+            foreach (string text in lines)
+            {
                 if (string.IsNullOrWhiteSpace(text))
                 {
                     continue;
@@ -176,13 +229,19 @@ namespace MarkdownEditor2022
 
                 foundLine = true;
                 Match match = _listRegex.Match(text);
-                if (!match.Success || !MatchesListKind(match, kind))
+                kinds.RemoveWhere(kind => !match.Success || !MatchesListKind(match, kind));
+                if (kinds.Count == 0)
                 {
-                    return false;
+                    break;
                 }
             }
 
-            return foundLine;
+            if (!foundLine)
+            {
+                kinds.Clear();
+            }
+
+            return kinds;
         }
 
         public static async Task ToggleListAsync(MarkdownListKind kind)
@@ -316,34 +375,61 @@ namespace MarkdownEditor2022
 
         private static bool IsMatchingInline(MarkdownObject item, string marker)
         {
+            return GetInlineMarker(item) is string inlineMarker && inlineMarker == NormalizeMarker(marker);
+        }
+
+        private static string NormalizeMarker(string marker) => marker switch
+        {
+            "__" => "**",
+            "_" => "*",
+            _ => marker,
+        };
+
+        private static string GetInlineMarker(MarkdownObject item)
+        {
             if (item is CodeInline)
             {
-                return marker == "`";
+                return "`";
             }
 
             if (item is not EmphasisInline emphasis)
             {
+                return null;
+            }
+
+            return (emphasis.DelimiterChar, emphasis.DelimiterCount) switch
+            {
+                ('*' or '_', 2) => "**",
+                ('*' or '_', 1) => "*",
+                ('~', 2) => "~~",
+                ('=', 2) => "==",
+                ('~', 1) => "~",
+                ('^', 1) => "^",
+                _ => null,
+            };
+        }
+
+        internal static bool HasSurroundingMarker(int length, Func<int, char> characterAt, string marker)
+        {
+            if (string.IsNullOrEmpty(marker) || length < marker.Length * 2)
+            {
                 return false;
             }
 
-            return marker switch
+            for (int i = 0; i < marker.Length; i++)
             {
-                "**" or "__" => emphasis.DelimiterCount == 2 && (emphasis.DelimiterChar == '*' || emphasis.DelimiterChar == '_'),
-                "*" or "_" => emphasis.DelimiterCount == 1 && (emphasis.DelimiterChar == '*' || emphasis.DelimiterChar == '_'),
-                "~~" => emphasis.DelimiterCount == 2 && emphasis.DelimiterChar == '~',
-                "==" => emphasis.DelimiterCount == 2 && emphasis.DelimiterChar == '=',
-                "~" => emphasis.DelimiterCount == 1 && emphasis.DelimiterChar == '~',
-                "^" => emphasis.DelimiterCount == 1 && emphasis.DelimiterChar == '^',
-                _ => false,
-            };
+                if (characterAt(i) != marker[i] || characterAt(length - marker.Length + i) != marker[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool HasSurroundingMarker(string text, string marker)
         {
-            return !string.IsNullOrEmpty(marker) &&
-                   text.Length >= marker.Length * 2 &&
-                   text.StartsWith(marker, StringComparison.Ordinal) &&
-                   text.EndsWith(marker, StringComparison.Ordinal);
+            return HasSurroundingMarker(text.Length, i => text[i], marker);
         }
 
         internal static string RemoveSurroundingMarker(string text, string marker)
@@ -351,6 +437,34 @@ namespace MarkdownEditor2022
             return HasSurroundingMarker(text, marker)
                 ? text.Substring(marker.Length, text.Length - marker.Length * 2)
                 : null;
+        }
+
+        private static FormattingState GetFormattingState(DocumentView view)
+        {
+            SnapshotSpan selection = GetSelectionOrCaretSpan(view);
+            MarkdownDocument markdown = view.TextBuffer.GetDocument()?.Markdown;
+            return GetFormattingState(view.TextView.Properties, selection, markdown);
+        }
+
+        internal static FormattingState GetFormattingState(PropertyCollection properties, SnapshotSpan selection, MarkdownDocument markdown)
+        {
+            if (!properties.TryGetProperty(typeof(FormattingState), out FormattingState state) ||
+                state.Selection != selection || !ReferenceEquals(state.Markdown, markdown))
+            {
+                state = new FormattingState(selection, markdown);
+                properties[typeof(FormattingState)] = state;
+            }
+
+            return state;
+        }
+
+        internal sealed class FormattingState(SnapshotSpan selection, MarkdownDocument markdown)
+        {
+            internal SnapshotSpan Selection { get; } = selection;
+            internal MarkdownDocument Markdown { get; } = markdown;
+            internal int? HeadingLevel { get; set; }
+            internal HashSet<string> EmphasisMarkers { get; set; }
+            internal HashSet<MarkdownListKind> ListKinds { get; set; }
         }
 
         private static SnapshotSpan GetSelectionOrCaretSpan(DocumentView view)

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.IO;
+using System.Windows.Threading;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
@@ -19,6 +20,7 @@ namespace MarkdownEditor2022
         private readonly Document _document;
         private readonly IWpfTextViewHost _textViewHost;
         private readonly IWpfTextView _textView;
+        private readonly IEditorFormatMapService _formatMapService;
         private readonly MarkdownViewModeController _viewModeController;
         private readonly string _marginName;
         private bool _isDisposed;
@@ -30,6 +32,7 @@ namespace MarkdownEditor2022
         private int _browserHostRow;
         private bool _browserAttached;
         private bool _browserAttachQueued;
+        private bool _browserAttachPending;
         private (bool enabled, bool spellCheck, bool clickSync, Theme theme) _previewSettings;
         private EventHandler _viewportWidthChanged;
         private EventHandler _viewportHeightChanged;
@@ -54,6 +57,7 @@ namespace MarkdownEditor2022
         {
             _textViewHost = textViewHost;
             _textView = textViewHost.TextView;
+            _formatMapService = formatMapService;
             _marginName = marginName;
             _document = _textView.TextBuffer.GetDocument();
             _viewModeController = _textView.GetMarkdownViewModeController();
@@ -63,9 +67,8 @@ namespace MarkdownEditor2022
 
             SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
 
-            Browser = new Browser(_textView.TextBuffer.GetFileName(), _document, _textView, formatMapService);
-            Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
             Dispatcher.UnhandledException += OnDispatcherUnhandledException;
+            IsVisibleChanged += OnMarginIsVisibleChanged;
             AdvancedOptions.Saved += AdvancedOptions_Saved;
             VSColorTheme.ThemeChanged += OnThemeChange;
             _viewModeController.ModeChanged += OnViewModeChanged;
@@ -89,6 +92,11 @@ namespace MarkdownEditor2022
             TryAttachBrowser();
         }
 
+        private void OnMarginIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            TryAttachBrowser();
+        }
+
         private void QueueBrowserAttach()
         {
             if (_isDisposed || _browserAttached || _browserAttachQueued || !_viewModeController.ShowsPreview)
@@ -104,10 +112,30 @@ namespace MarkdownEditor2022
 
         private void TryAttachBrowser()
         {
+            if (_browserAttachPending || _isDisposed || _browserAttached || _browserHost == null ||
+                !_viewModeController.ShowsPreview || !IsLoaded || !IsVisible ||
+                Window.GetWindow(this) == null || PresentationSource.FromVisual(this) is not HwndSource source || source.Handle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            _browserAttachPending = true;
+            AttachBrowserOnIdleAsync().FireAndForget();
+        }
+
+        private async Task AttachBrowserOnIdleAsync()
+        {
+            await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.ContextIdle);
+            _browserAttachPending = false;
+            AttachBrowser();
+        }
+
+        private void AttachBrowser()
+        {
             try
             {
                 if (_isDisposed || _browserAttached || _browserHost == null || !_viewModeController.ShowsPreview ||
-                    !IsLoaded || Window.GetWindow(this) == null ||
+                    !IsLoaded || !IsVisible || Window.GetWindow(this) == null ||
                     PresentationSource.FromVisual(this) is not HwndSource source || source.Handle == IntPtr.Zero)
                 {
                     return;
@@ -117,6 +145,11 @@ namespace MarkdownEditor2022
                 LayoutUpdated -= OnLayoutUpdatedUntilBrowserAttached;
                 _browserAttachQueued = false;
 
+                if (Browser == null)
+                {
+                    Browser = new Browser(_textView.TextBuffer.GetFileName(), _document, _textView, _formatMapService);
+                    Browser._browser.CoreWebView2InitializationCompleted += OnBrowserInitCompleted;
+                }
                 WebView2CompositionControl view = Browser._browser;
 
                 if (view.Parent is Panel parent)
@@ -177,11 +210,15 @@ namespace MarkdownEditor2022
             }
 
             _isDisposed = true;
-            Browser._browser.CoreWebView2InitializationCompleted -= OnBrowserInitCompleted;
             Dispatcher.UnhandledException -= OnDispatcherUnhandledException;
+            IsVisibleChanged -= OnMarginIsVisibleChanged;
             Loaded -= OnMarginLoaded;
             LayoutUpdated -= OnLayoutUpdatedUntilBrowserAttached;
-            Browser.LineNavigationRequested -= OnLineNavigationRequested;
+            if (Browser != null)
+            {
+                Browser._browser.CoreWebView2InitializationCompleted -= OnBrowserInitCompleted;
+                Browser.LineNavigationRequested -= OnLineNavigationRequested;
+            }
             _document.Parsed -= UpdateBrowser;
             _textView.LayoutChanged -= UpdatePosition;
             _textView.TextBuffer.Changed -= OnTextBufferChange;
@@ -199,7 +236,7 @@ namespace MarkdownEditor2022
             _resizeTimer?.Stop();
             RestoreHostMargins();
 
-            Browser.Dispose();
+            Browser?.Dispose();
             _debouncer?.Dispose();
             _previewToolbar?.Dispose();
 
@@ -228,6 +265,18 @@ namespace MarkdownEditor2022
             _textView.LayoutChanged += UpdatePosition;
             _textView.TextBuffer.Changed += OnTextBufferChange;
             // Browser performs the initial render for both Markdown and Mermaid.
+            if (_viewModeController.Mode == MarkdownViewMode.Preview)
+            {
+                _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(FocusPreview);
+            }
+        }
+
+        private void FocusPreview()
+        {
+            if (!_isDisposed && IsLoaded && IsVisible && _viewModeController.Mode == MarkdownViewMode.Preview)
+            {
+                Browser?._browser.Focus();
+            }
         }
 
         private static bool IsStandaloneMermaidFile(string filePath)
@@ -330,13 +379,13 @@ namespace MarkdownEditor2022
                 _splitter.DragCompleted += (s, e) =>
                 {
                     // Save the new percentage
-                    if (!double.IsNaN(Browser._browser.ActualWidth))
+                    if (!double.IsNaN(_browserHost.ActualWidth))
                     {
-                        _splitPreviewWidth = Browser._browser.ActualWidth;
-                        double totalWidth = _textView.ViewportWidth + Browser._browser.ActualWidth;
+                        _splitPreviewWidth = _browserHost.ActualWidth;
+                        double totalWidth = _textView.ViewportWidth + _browserHost.ActualWidth;
                         if (totalWidth > 0)
                         {
-                            double percentage = Browser._browser.ActualWidth / totalWidth * 100;
+                            double percentage = _browserHost.ActualWidth / totalWidth * 100;
                             AdvancedOptions.Instance.PreviewWindowWidthPercentage = Math.Max(10, Math.Min(90, percentage));
                             AdvancedOptions.Instance.Save();
                         }
@@ -510,16 +559,19 @@ namespace MarkdownEditor2022
             ApplyViewModeLayout();
             if (!_viewModeController.ShowsPreview)
             {
-                Browser.SuspendUpdates();
+                Browser?.SuspendUpdates();
                 _textView.VisualElement.Focus();
                 return;
             }
 
             QueueBrowserAttach();
-            await Browser.RefreshAsync();
-            if (_viewModeController.Mode == MarkdownViewMode.Preview)
+            if (Browser != null)
             {
-                _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(() => Browser._browser.Focus());
+                await Browser.RefreshAsync();
+                if (_viewModeController.Mode == MarkdownViewMode.Preview)
+                {
+                    _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(FocusPreview);
+                }
             }
         }
 
@@ -669,12 +721,12 @@ namespace MarkdownEditor2022
             ApplyViewModeLayout();
             if (!_viewModeController.ShowsPreview)
             {
-                Browser.SuspendUpdates();
+                Browser?.SuspendUpdates();
                 return;
             }
 
             QueueBrowserAttach();
-            if (changed)
+            if (changed && Browser != null)
             {
                 Browser.InvalidateThemeCache();
                 await Browser.ForceFullRefreshAsync();
@@ -700,6 +752,11 @@ namespace MarkdownEditor2022
             {
                 Visibility = Visibility.Visible;
                 QueueBrowserAttach();
+                if (Browser == null)
+                {
+                    return;
+                }
+
                 await Browser.RefreshAsync();
 
                 // Only sync position on refresh if scroll sync is enabled
@@ -778,10 +835,10 @@ namespace MarkdownEditor2022
             // Only handle bottom margin here - vertical margin is handled in CreateRightMarginControls
             if (_viewModeController.Mode == MarkdownViewMode.Split &&
                 AdvancedOptions.Instance.PreviewWindowLocation == PreviewLocation.Horizontal &&
-                !double.IsNaN(Browser._browser.ActualHeight))
+                !double.IsNaN(_browserHost.ActualHeight))
             {
-                _splitPreviewHeight = Browser._browser.ActualHeight;
-                AdvancedOptions.Instance.PreviewWindowHeight = (int)Browser._browser.ActualHeight;
+                _splitPreviewHeight = _browserHost.ActualHeight;
+                AdvancedOptions.Instance.PreviewWindowHeight = (int)_browserHost.ActualHeight;
                 AdvancedOptions.Instance.Save();
             }
         }

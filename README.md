@@ -325,6 +325,8 @@ When typing links `[text](` or images `![alt](`, IntelliSense provides completio
 - Markdown files are prioritized when completing regular links `[]()`
 - Supports relative paths including `./` and `../` navigation
 
+Filesystem discovery runs in the background, and canceled or superseded completion requests are discarded so slow folders do not block typing.
+
 #### Anchor IntelliSense
 
 Type `#` inside a link to get completions for all headings in the current document:
@@ -461,7 +463,13 @@ Any fenced code and HTML blocks can be collapsed, so that this:
 
 Markdown documents include a native Visual Studio toolbar above the editor. Use **Source**, **Split**, and **Preview** to switch directly between document views. **F7** cycles forward through the views and **Shift+F7** cycles backward.
 
-The toolbar is initialized when the document tab becomes visible, so opening a Markdown file in a background tab does not initialize its native controls until that tab is selected.
+The toolbar is initialized after the document tab becomes visible and its initial layout and rendering have run. Opening a Markdown file in a background tab does not initialize its native controls until that tab is selected. Once created, the toolbar is retained across tab switches and released when the document closes, rather than being torn down and recreated on each activation.
+
+Preview browser controls are also created only for a visible preview, after initial layout and rendering. Source-only and background documents do not construct WebView2 controls on the initial file-opening path.
+
+Caret, selection, and typing updates are coalesced over 150 ms. Formatting buttons share analysis of the current snapshot and selection instead of rescanning the document separately for each button.
+
+Tables of contents enclosed in `<!-- TOC -->` markers are refreshed on save. Only changed contents are applied, in one buffer edit; an unchanged table of contents does not cause an additional save. Background TOC results are discarded if the document has been edited in the meantime.
 
 **Available actions:**
 

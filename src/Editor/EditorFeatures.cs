@@ -77,7 +77,6 @@ namespace MarkdownEditor2022
     public class HideMargins : WpfTextViewCreationListener
     {
         private static readonly Regex _taskRegex = new(@"(?<keyword>TODO|HACK|UNDONE):(?<phrase>.+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex _tocRegex = new(@"<!--\s*TOC\s*-->.+?<!--\s*/?TOC\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
         private static readonly string[] _matchingTextHighlightOptionNames =
         [
             "Enable Highlight References",
@@ -90,6 +89,7 @@ namespace MarkdownEditor2022
         private DocumentView _docView;
         private Document _document;
         private RatingPrompt _rating;
+        private bool _savingToc;
         private readonly DateTime _openedDate = DateTime.Now;
 
         [Import] internal IBufferTagAggregatorFactoryService _bufferTagAggregator = null;
@@ -139,35 +139,82 @@ namespace MarkdownEditor2022
 
         private void Document_FileActionOccurred(object sender, TextDocumentFileActionEventArgs e)
         {
-            if (e.FileActionType == FileActionTypes.ContentSavedToDisk)
+            if (e.FileActionType != FileActionTypes.ContentSavedToDisk || _savingToc)
             {
-                MatchCollection matches = _tocRegex.Matches(_docView.TextBuffer.CurrentSnapshot.GetText());
+                return;
+            }
 
-                if (matches.Count > 0)
+            UpdateAsync().FireAndForget();
+
+            async Task UpdateAsync()
+            {
+                try
                 {
-                    // Process matches in reverse order to avoid offset issues when replacing
-                    for (int i = matches.Count - 1; i >= 0; i--)
+                    await UpdateSavedDocumentAsync(e.FilePath);
+                }
+                catch (Exception ex)
+                {
+                    await ex.LogAsync();
+                }
+            }
+        }
+
+        private async Task UpdateSavedDocumentAsync(string filePath)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            ITextSnapshot snapshot = _docView.TextBuffer.CurrentSnapshot;
+            DocumentAnalysis analysis = _document.GetAnalysis(out ITextSnapshot parsedSnapshot);
+            IReadOnlyList<(Span span, string text)> updates = await Task.Run(() =>
+                GenerateTocCommand.GetUpdates(snapshot.GetText(), parsedSnapshot == snapshot ? analysis?.Headings : null));
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (_docView.TextView.IsClosed || !string.Equals(_docView.Document.FilePath, filePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (updates.Count > 0 && _docView.TextBuffer.CurrentSnapshot == snapshot)
+            {
+                ITextSnapshot updatedSnapshot;
+                using (ITextEdit edit = _docView.TextBuffer.CreateEdit())
+                {
+                    foreach ((Span span, string text) in updates)
                     {
-                        Match match = matches[i];
-                        string toc = GenerateTocCommand.Generate(_docView, _document, match.Index + match.Length);
-                        Span span = new(match.Index, match.Length);
-                        _docView.TextBuffer.Replace(span, toc);
+                        if (!edit.Replace(span, text))
+                        {
+                            throw new InvalidOperationException("Could not update the saved Markdown table of contents.");
+                        }
                     }
 
-                    _docView.Document.SaveCopy(e.FilePath, true);
-
-                    ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+                    updatedSnapshot = edit.Apply();
+                    if (edit.Canceled)
                     {
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                        _docView.Document.UpdateDirtyState(false, System.IO.File.GetLastWriteTime(e.FilePath));
-
-                    }, VsTaskRunContext.UIThreadIdlePriority).FireAndForget();
+                        throw new InvalidOperationException("The Markdown table of contents edit was canceled.");
+                    }
                 }
 
-                if (HtmlGenerationService.IsMarkdownFile(e.FilePath) && HtmlGenerationService.HtmlGenerationEnabled(e.FilePath))
+                _savingToc = true;
+                try
                 {
-                    HtmlGenerationService.GenerateAndNestHtmlFileAsync(e.FilePath).FireAndForget();
+                    _docView.Document.SaveCopy(filePath, true);
                 }
+                finally
+                {
+                    _savingToc = false;
+                }
+
+                DateTime lastWriteTime = await Task.Run(() => System.IO.File.GetLastWriteTime(filePath));
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (!_docView.TextView.IsClosed && _docView.TextBuffer.CurrentSnapshot == updatedSnapshot &&
+                    string.Equals(_docView.Document.FilePath, filePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    _docView.Document.UpdateDirtyState(false, lastWriteTime);
+                }
+            }
+
+            if (!_docView.TextView.IsClosed && HtmlGenerationService.IsMarkdownFile(filePath) && HtmlGenerationService.HtmlGenerationEnabled(filePath))
+            {
+                await HtmlGenerationService.GenerateAndNestHtmlFileAsync(filePath);
             }
         }
 

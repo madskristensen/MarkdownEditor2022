@@ -124,10 +124,7 @@ namespace MarkdownEditor2022
 
                 string text = snapshot.GetText();
 
-                // This fixes this bug: https://github.com/madskristensen/MarkdownEditor2022/issues/128
-                // Also supports ::: mermaid syntax (with space): https://github.com/madskristensen/MarkdownEditor2022/issues/170
-                text = _colonFixRegex.Replace(text, ColonFixEvaluator);
-                MarkdownDocument md = Markdig.Markdown.Parse(text, Pipeline);
+                MarkdownDocument md = Parse(text);
 
                 if (cancellationToken.IsCancellationRequested ||
                     _buffer.CurrentSnapshot.Version.VersionNumber != snapshotVersion)
@@ -172,6 +169,12 @@ namespace MarkdownEditor2022
                     }
                 }
             }
+        }
+
+        internal static MarkdownDocument Parse(string text)
+        {
+            // Use the same Azure DevOps fence normalization for background save processing.
+            return Markdig.Markdown.Parse(_colonFixRegex.Replace(text, ColonFixEvaluator), Pipeline);
         }
 
         private static DocumentAnalysis BuildAnalysis(MarkdownDocument md)

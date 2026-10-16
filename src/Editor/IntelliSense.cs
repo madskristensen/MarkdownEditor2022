@@ -20,6 +20,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
+using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
 
 namespace MarkdownEditor2022
@@ -201,6 +202,8 @@ namespace MarkdownEditor2022
         private static readonly ImageElement _folderIcon = new(KnownMonikers.FolderOpened.ToImageId(), "Folder");
         private static readonly ImageElement _anchorIcon = new(KnownMonikers.Link.ToImageId(), "Anchor");
         private IVsImageService2 _imageService;
+        private readonly BoundedCache<string, ImageMoniker> _fileIcons = new(128);
+        private int _requestVersion;
 
         public CompletionStartData InitializeCompletion(CompletionTrigger trigger, SnapshotPoint triggerLocation, CancellationToken token)
         {
@@ -288,6 +291,12 @@ namespace MarkdownEditor2022
             IAsyncCompletionSession session, CompletionTrigger trigger, SnapshotPoint triggerLocation,
             SnapshotSpan applicableToSpan, CancellationToken token)
         {
+            int requestVersion = Interlocked.Increment(ref _requestVersion);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
+            token.ThrowIfCancellationRequested();
+            if (textView.IsClosed)
+                return CompletionContext.Empty;
+
             if (!AdvancedOptions.Instance.EnableFilePathIntelliSense)
                 return CompletionContext.Empty;
 
@@ -334,34 +343,45 @@ namespace MarkdownEditor2022
             if (pathLength < 0) pathLength = 0;
             string fullPath = lineText.Substring(pathStartPos + 1, pathLength); // +1 to skip delimiter
 
-            // If starts with #, show anchor completions (current document headings)
+            CompletionContext context;
             if (fullPath.StartsWith("#"))
-                return GetAnchorCompletions();
-
-            // Check for cross-document anchor pattern: file.md# or path/to/file.md#
-            int hashIndex = fullPath.LastIndexOf('#');
-            if (hashIndex > 0)
             {
-                string filePath = fullPath.Substring(0, hashIndex);
-                return await GetCrossDocumentAnchorCompletionsAsync(filePath, triggerLocation);
+                context = await GetAnchorCompletionsAsync(token);
+            }
+            else
+            {
+                int hashIndex = fullPath.LastIndexOf('#');
+                context = hashIndex > 0
+                    ? await GetCrossDocumentAnchorCompletionsAsync(fullPath.Substring(0, hashIndex), triggerLocation, token)
+                    : await GetFileCompletionsAsync(fullPath, triggerLocation, requestVersion, token);
             }
 
-            // Otherwise, show file/folder completions
-            return await GetFileCompletionsAsync(fullPath, triggerLocation);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
+            return IsCurrentRequest(requestVersion, token) && triggerLocation.Snapshot == textView.TextBuffer.CurrentSnapshot
+                ? context : CompletionContext.Empty;
         }
 
-        private CompletionContext GetAnchorCompletions()
+        private bool IsCurrentRequest(int requestVersion, CancellationToken token)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            token.ThrowIfCancellationRequested();
+            return !textView.IsClosed && requestVersion == Volatile.Read(ref _requestVersion);
+        }
+
+        private async Task<CompletionContext> GetAnchorCompletionsAsync(CancellationToken token)
         {
             Document doc = textView.TextBuffer.GetDocument();
-            if (doc?.Markdown == null)
+            DocumentAnalysis analysis = doc.GetAnalysis(out ITextSnapshot snapshot);
+            if (analysis == null)
                 return CompletionContext.Empty;
 
+            await TaskScheduler.Default;
             List<CompletionItem> items = [];
-            ITextSnapshot snapshot = textView.TextBuffer.CurrentSnapshot;
             Dictionary<string, int> slugCounts = new(StringComparer.OrdinalIgnoreCase);
 
-            foreach (HeadingBlock heading in doc.Markdown.Descendants<HeadingBlock>())
+            foreach (HeadingBlock heading in analysis.Headings)
             {
+                token.ThrowIfCancellationRequested();
                 string text = snapshot.GetText(heading.ToSpan()).TrimStart('#').Trim();
 
                 // Strip {#custom-id} attribute syntax from display text
@@ -399,10 +419,10 @@ namespace MarkdownEditor2022
             return new CompletionContext(items.ToImmutableArray());
         }
 
-        private async Task<CompletionContext> GetCrossDocumentAnchorCompletionsAsync(string relativePath, SnapshotPoint triggerLocation)
+        private async Task<CompletionContext> GetCrossDocumentAnchorCompletionsAsync(string relativePath, SnapshotPoint triggerLocation, CancellationToken token)
         {
             // Get document directory to resolve relative path
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
             ITextBuffer buffer = triggerLocation.Snapshot.TextBuffer;
             if (!buffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument textDoc))
                 return CompletionContext.Empty;
@@ -411,23 +431,24 @@ namespace MarkdownEditor2022
             if (string.IsNullOrEmpty(docDir))
                 return CompletionContext.Empty;
 
-            // Resolve the target file path
-            string targetPath = ResolveTargetFilePath(relativePath, docDir);
-            if (string.IsNullOrEmpty(targetPath) || !File.Exists(targetPath))
-                return CompletionContext.Empty;
+            string rootPath = GetEffectiveRootPath();
+            await TaskScheduler.Default;
+            token.ThrowIfCancellationRequested();
 
-            // Parse the target markdown file on a background thread to avoid blocking the UI
             (MarkdownDocument markdown, string content) result;
             try
             {
-                result = await Task.Run(() =>
-                {
-                    string text = File.ReadAllText(targetPath);
-                    return (Markdig.Markdown.Parse(text, Document.Pipeline), text);
-                });
+                string targetPath = ResolveTargetFilePath(relativePath, docDir, rootPath, token);
+                if (string.IsNullOrEmpty(targetPath))
+                    return CompletionContext.Empty;
+
+                string text = File.ReadAllText(targetPath);
+                token.ThrowIfCancellationRequested();
+                result = (Markdig.Markdown.Parse(text, Document.Pipeline), text);
             }
-            catch
+            catch (Exception ex) when (IsFileSystemException(ex))
             {
+                await ex.LogAsync();
                 return CompletionContext.Empty;
             }
 
@@ -436,6 +457,7 @@ namespace MarkdownEditor2022
 
             foreach (HeadingBlock heading in result.markdown.Descendants<HeadingBlock>())
             {
+                token.ThrowIfCancellationRequested();
                 // Get heading text from the source content
                 string text = result.content.Substring(heading.Span.Start, heading.Span.Length).TrimStart('#').Trim();
 
@@ -474,8 +496,9 @@ namespace MarkdownEditor2022
             return new CompletionContext(items.ToImmutableArray());
         }
 
-        private string ResolveTargetFilePath(string relativePath, string docDir)
+        internal static string ResolveTargetFilePath(string relativePath, string docDir, string rootPath, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             // Strip quotes and other illegal path characters
             relativePath = relativePath.Trim('"', '\'', '<', '>', '|');
             if (string.IsNullOrWhiteSpace(relativePath))
@@ -484,12 +507,11 @@ namespace MarkdownEditor2022
             // Handle root-relative paths (starting with / or ~)
             if (relativePath.StartsWith("/") || relativePath.StartsWith("~"))
             {
-                string rootPath = GetEffectiveRootPath();
                 if (!string.IsNullOrEmpty(rootPath) && Directory.Exists(rootPath))
                 {
                     relativePath = relativePath.TrimStart('/', '~');
                     string absolutePath = Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
-                    return TryResolveMarkdownFile(absolutePath);
+                    return TryResolveMarkdownFile(absolutePath, token);
                 }
                 return null;
             }
@@ -502,16 +524,18 @@ namespace MarkdownEditor2022
             }
             while (relativePath.StartsWith("../"))
             {
+                token.ThrowIfCancellationRequested();
                 searchDir = Path.GetDirectoryName(searchDir) ?? searchDir;
                 relativePath = relativePath.Substring(3);
             }
 
             string fullPath = Path.Combine(searchDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
-            return TryResolveMarkdownFile(fullPath);
+            return TryResolveMarkdownFile(fullPath, token);
         }
 
-        private static string TryResolveMarkdownFile(string path)
+        private static string TryResolveMarkdownFile(string path, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             if (File.Exists(path))
                 return path;
 
@@ -522,6 +546,7 @@ namespace MarkdownEditor2022
                 string[] markdownExtensions = [".md", ".markdown", ".mdown", ".mkd", ".mdx"];
                 foreach (string ext in markdownExtensions)
                 {
+                    token.ThrowIfCancellationRequested();
                     string withExt = path + ext;
                     if (File.Exists(withExt))
                         return withExt;
@@ -531,10 +556,10 @@ namespace MarkdownEditor2022
             return null;
         }
 
-        private async Task<CompletionContext> GetFileCompletionsAsync(string fullTypedPath, SnapshotPoint triggerLocation)
+        private async Task<CompletionContext> GetFileCompletionsAsync(string fullTypedPath, SnapshotPoint triggerLocation, int requestVersion, CancellationToken token)
         {
             // Get document directory
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
             ITextBuffer buffer = triggerLocation.Snapshot.TextBuffer;
             if (!buffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument textDoc))
                 return CompletionContext.Empty;
@@ -545,7 +570,65 @@ namespace MarkdownEditor2022
 
             // Get image service for file icons
             _imageService ??= await VS.GetServiceAsync<SVsImageService, IVsImageService2>();
+            string rootPath = GetEffectiveRootPath();
+            bool isImageLink = triggerLocation.GetContainingLine().GetText().Contains("![");
+            IReadOnlyList<(string name, bool isDirectory, bool isParent)> entries;
+            try
+            {
+                entries = await Task.Run(() => GetFileEntries(fullTypedPath, docDir, rootPath, token), token);
+            }
+            catch (Exception ex) when (IsFileSystemException(ex))
+            {
+                await ex.LogAsync();
+                return CompletionContext.Empty;
+            }
 
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
+            List<CompletionItem> items = [];
+            foreach ((string name, bool isDirectory, bool isParent) in entries)
+            {
+                if (!IsCurrentRequest(requestVersion, token))
+                    return CompletionContext.Empty;
+
+                if (isDirectory)
+                {
+                    string displayName = isParent ? "../" : name + "/";
+                    items.Add(new CompletionItem(displayName, this, _folderIcon, ImmutableArray<CompletionFilter>.Empty,
+                        suffix: isParent ? "(parent)" : "", insertText: displayName,
+                        sortText: isParent ? "0" : "0" + name, filterText: isParent ? ".." : name,
+                        attributeIcons: ImmutableArray<ImageElement>.Empty));
+                }
+                else
+                {
+                    // Cache by filename rather than extension: VS can assign filename-specific icons.
+                    if (!_fileIcons.TryGetValue(name, out ImageMoniker moniker))
+                    {
+                        moniker = _imageService?.GetImageMonikerForFile(name) ?? KnownMonikers.Document;
+                        _fileIcons.Set(name, moniker);
+                    }
+
+                    string ext = Path.GetExtension(name).ToLowerInvariant();
+                    bool isImage = ext is ".png" or ".jpg" or ".jpeg" or ".gif" or ".svg" or ".webp";
+                    string sort = (isImageLink == isImage ? "1" : "2") + name;
+                    items.Add(new CompletionItem(name, this, new ImageElement(moniker.ToImageId(), name), ImmutableArray<CompletionFilter>.Empty,
+                        suffix: "", insertText: name, sortText: sort, filterText: name,
+                        attributeIcons: ImmutableArray<ImageElement>.Empty));
+                }
+
+                if (items.Count % 32 == 0)
+                    await Task.Yield();
+            }
+
+            return new CompletionContext(items.ToImmutableArray());
+        }
+
+        private static bool IsFileSystemException(Exception exception) =>
+            exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException;
+
+        internal static IReadOnlyList<(string name, bool isDirectory, bool isParent)> GetFileEntries(
+            string fullTypedPath, string docDir, string rootPath, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
             // Resolve the directory to search based on typed path
             string searchDir = docDir;
             string pathPart = fullTypedPath;
@@ -554,13 +637,12 @@ namespace MarkdownEditor2022
             // e.g., ![]("path") - the quotes are illegal in Windows paths
             pathPart = pathPart.Trim('"', '\'', '<', '>', '|').Trim();
             if (string.IsNullOrWhiteSpace(pathPart))
-                return CompletionContext.Empty;
+                return [];
 
             // Handle root-relative paths (starting with / or ~)
             bool isRootRelative = pathPart.StartsWith("/") || pathPart.StartsWith("~");
             if (isRootRelative)
             {
-                string rootPath = GetEffectiveRootPath();
                 if (!string.IsNullOrEmpty(rootPath) && Directory.Exists(rootPath))
                 {
                     searchDir = rootPath;
@@ -569,7 +651,7 @@ namespace MarkdownEditor2022
                 else
                 {
                     // No root path configured, can't complete root-relative paths
-                    return CompletionContext.Empty;
+                    return [];
                 }
             }
             else
@@ -578,6 +660,7 @@ namespace MarkdownEditor2022
                 if (pathPart.StartsWith("./")) pathPart = pathPart.Substring(2);
                 while (pathPart.StartsWith("../"))
                 {
+                    token.ThrowIfCancellationRequested();
                     searchDir = Path.GetDirectoryName(searchDir) ?? searchDir;
                     pathPart = pathPart.Substring(3);
                 }
@@ -593,10 +676,7 @@ namespace MarkdownEditor2022
             }
 
             if (!Directory.Exists(searchDir))
-                return CompletionContext.Empty;
-
-            // Determine if this is an image link
-            bool isImageLink = triggerLocation.GetContainingLine().GetText().Contains("![");
+                return [];
 
             // Check if we're at the beginning of the path (not inside a subfolder)
             bool atPathStart = string.IsNullOrEmpty(fullTypedPath)
@@ -605,58 +685,35 @@ namespace MarkdownEditor2022
                 || fullTypedPath == "/"
                 || fullTypedPath.All(c => c == '.' || c == '/');
 
-            List<CompletionItem> items = [];
+            List<(string name, bool isDirectory, bool isParent)> entries = [];
 
-            try
+            if (atPathStart && !isRootRelative && !string.IsNullOrEmpty(Path.GetDirectoryName(searchDir)))
             {
-                // Add ../ to navigate up (only at path start, and if not at root, and not for root-relative paths)
-                if (atPathStart && !isRootRelative)
+                entries.Add(("..", true, true));
+            }
+
+            foreach (string dir in Directory.EnumerateDirectories(searchDir))
+            {
+                token.ThrowIfCancellationRequested();
+                string name = Path.GetFileName(dir);
+                if (!name.StartsWith("."))
                 {
-                    string parentDir = Path.GetDirectoryName(searchDir);
-                    if (!string.IsNullOrEmpty(parentDir))
-                    {
-                        items.Add(new CompletionItem("../", this, _folderIcon, ImmutableArray<CompletionFilter>.Empty,
-                            suffix: "(parent)", insertText: "../", sortText: "0", filterText: "..",
-                            attributeIcons: ImmutableArray<ImageElement>.Empty));
-                    }
-                }
-
-                // Add folders (sorted before files)
-                // Note: insertText and filterText are just the name because the span only covers current segment
-                foreach (string dir in Directory.GetDirectories(searchDir))
-                {
-                    string name = Path.GetFileName(dir);
-                    if (name.StartsWith(".")) continue;
-
-                    items.Add(new CompletionItem(name + "/", this, _folderIcon, ImmutableArray<CompletionFilter>.Empty,
-                        suffix: "", insertText: name + "/", sortText: "0" + name, filterText: name,
-                        attributeIcons: ImmutableArray<ImageElement>.Empty));
-                }
-
-                // Add files
-                foreach (string file in Directory.GetFiles(searchDir))
-                {
-                    string name = Path.GetFileName(file);
-                    if (name.StartsWith(".")) continue;
-
-                    string ext = Path.GetExtension(file).ToLowerInvariant();
-                    bool isImage = ext is ".png" or ".jpg" or ".jpeg" or ".gif" or ".svg" or ".webp";
-
-                    // Get file-specific icon from the image service
-                    ImageMoniker moniker = _imageService?.GetImageMonikerForFile(name) ?? KnownMonikers.Document;
-                    ImageElement icon = new(moniker.ToImageId(), name);
-
-                    // Sort images first for image links, other files first for regular links
-                    string sort = (isImageLink == isImage ? "1" : "2") + name;
-
-                    items.Add(new CompletionItem(name, this, icon, ImmutableArray<CompletionFilter>.Empty,
-                        suffix: "", insertText: name, sortText: sort, filterText: name,
-                        attributeIcons: ImmutableArray<ImageElement>.Empty));
+                    entries.Add((name, true, false));
                 }
             }
-            catch { /* Ignore file system errors */ }
 
-            return new CompletionContext(items.ToImmutableArray());
+            foreach (string file in Directory.EnumerateFiles(searchDir))
+            {
+                token.ThrowIfCancellationRequested();
+                string name = Path.GetFileName(file);
+                if (!name.StartsWith("."))
+                {
+                    entries.Add((name, false, false));
+                }
+            }
+
+            token.ThrowIfCancellationRequested();
+            return entries;
         }
 
         public Task<object> GetDescriptionAsync(IAsyncCompletionSession session, CompletionItem item, CancellationToken token)
@@ -680,7 +737,7 @@ namespace MarkdownEditor2022
             if (doc?.FileName != null)
             {
                 string docDir = Path.GetDirectoryName(doc.FileName);
-                if (!string.IsNullOrEmpty(docDir) && Directory.Exists(docDir))
+                if (!string.IsNullOrEmpty(docDir))
                 {
                     return docDir;
                 }

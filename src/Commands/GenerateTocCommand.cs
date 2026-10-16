@@ -12,6 +12,7 @@ namespace MarkdownEditor2022
     internal sealed class GenerateTocCommand : BaseCommand<GenerateTocCommand>
     {
         private static readonly Regex _regex = new(@"#* (<a(.*)\sname=(?:""(?<url>[^""]+)""|'([^']+)').*?>(?<title>.*?)</a>|(?<title>[^\{]+)(\{#(?<url>[^\s]+)\}))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _tocRegex = new(@"<!--\s*TOC\s*-->.+?<!--\s*/?TOC\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
         protected override Task InitializeCompletedAsync()
         {
@@ -38,15 +39,72 @@ namespace MarkdownEditor2022
 
         public static string Generate(DocumentView docView, Document doc, int position)
         {
+            IReadOnlyList<HeadingBlock> headings = doc.Analysis?.Headings ?? doc.Markdown.Descendants<HeadingBlock>().ToList();
+            string source = docView.TextBuffer.CurrentSnapshot.GetText();
+            return Generate(source, GetLineStarts(source), headings, position);
+        }
+
+        internal static IReadOnlyList<(Span span, string text)> GetUpdates(string source, IReadOnlyList<HeadingBlock> headings = null)
+        {
+            MatchCollection matches = _tocRegex.Matches(source);
+            List<(Span span, string text)> updates = [];
+            if (matches.Count == 0)
+            {
+                return updates;
+            }
+
+            headings ??= Document.Parse(source).Descendants<HeadingBlock>().ToList();
+            IReadOnlyList<int> lineStarts = GetLineStarts(source);
+            foreach (Match match in matches)
+            {
+                string toc = Generate(source, lineStarts, headings, match.Index + match.Length);
+                if (toc.Length != match.Length || string.CompareOrdinal(source, match.Index, toc, 0, toc.Length) != 0)
+                {
+                    updates.Add((new Span(match.Index, match.Length), toc));
+                }
+            }
+
+            return updates;
+        }
+
+        private static IReadOnlyList<int> GetLineStarts(string source)
+        {
+            List<int> starts = [0];
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] == '\r')
+                {
+                    if (i + 1 < source.Length && source[i + 1] == '\n')
+                    {
+                        i++;
+                    }
+
+                    starts.Add(i + 1);
+                }
+                else if (source[i] == '\n')
+                {
+                    starts.Add(i + 1);
+                }
+            }
+
+            return starts;
+        }
+
+        private static string Generate(string source, IReadOnlyList<int> lineStarts, IReadOnlyList<HeadingBlock> headings, int position)
+        {
             StringBuilder sb = new();
             sb.AppendLine("<!-- TOC-->");
 
-            IEnumerable<HeadingBlock> headers = doc.Markdown.Descendants<HeadingBlock>().Where(h => h.Span.Start > position);
             Dictionary<string, int> headerCounts = new(StringComparer.OrdinalIgnoreCase);
 
-            foreach (HeadingBlock header in headers)
+            foreach (HeadingBlock header in headings)
             {
-                GetHeader(docView.TextBuffer.CurrentSnapshot, header, out string title, out string url);
+                if (lineStarts[header.Line] + header.Column <= position)
+                {
+                    continue;
+                }
+
+                GetHeader(source, lineStarts, header, out string title, out string url);
 
                 // Track duplicate headers and append suffix (GitHub-style)
                 if (headerCounts.TryGetValue(url, out int count))
@@ -69,10 +127,11 @@ namespace MarkdownEditor2022
             return sb.ToString().Trim();
         }
 
-        private static void GetHeader(ITextSnapshot snapshot, HeadingBlock heading, out string title, out string url)
+        private static void GetHeader(string source, IReadOnlyList<int> lineStarts, HeadingBlock heading, out string title, out string url)
         {
-            ITextSnapshotLine line = snapshot.GetLineFromLineNumber(heading.Line);
-            string lineText = line.Extent.GetText();
+            int lineStart = lineStarts[heading.Line];
+            int lineEnd = heading.Line + 1 < lineStarts.Count ? lineStarts[heading.Line + 1] : source.Length;
+            string lineText = source.Substring(lineStart, lineEnd - lineStart).TrimEnd('\r', '\n');
             Match match = _regex.Match(lineText);
 
             if (match.Success)
@@ -82,7 +141,7 @@ namespace MarkdownEditor2022
             }
             else
             {
-                title = snapshot.GetText(heading.ToSpan()).TrimStart('#');
+                title = source.Substring(lineStart + heading.Column, heading.Span.Length).TrimStart('#');
 
                 // Strip {#custom-id} attribute syntax from title
                 int attrIndex = title.LastIndexOf("{#", StringComparison.Ordinal);

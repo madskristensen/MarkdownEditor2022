@@ -7,6 +7,7 @@ namespace MarkdownEditor2022
 
         protected override void BeforeQueryStatus(EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             DocumentView view = MarkdownFormattingService.GetActiveMarkdownView();
             Command.Visible = view != null;
             Command.Enabled = view != null;
