@@ -2687,6 +2687,14 @@ namespace MarkdownEditor2022
 
         internal sealed class PreviewWebView : WebView2CompositionControl
         {
+            protected override Size MeasureOverride(Size constraint)
+            {
+                base.MeasureOverride(constraint);
+                // The captured image is output, not a size request. Its device-pixel size
+                // must not grow the editor margin when WPF measures an unconstrained axis.
+                return new Size(0, 0);
+            }
+
             protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
             {
                 // WebView2 1.0.3485.44 forwards both MouseDown and MouseDoubleClick as native

@@ -82,6 +82,10 @@ The preview window is automatically scrolled to match the scroll position of the
 
 Live preview can be managed in the [settings](#settings).
 
+The preview follows the document host's available size, including on high-DPI
+displays. Switching to Preview view and resizing the window preserves the saved
+split size for when you return to Split view.
+
 When preview click synchronization is enabled, a plain click updates the source
 position without taking keyboard focus away from the preview. Selecting text or
 double-clicking a word does not trigger an additional source navigation.

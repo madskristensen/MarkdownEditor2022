@@ -81,8 +81,17 @@ namespace MarkdownEditor2022
             // Window.GetWindow(this) which returns null if the control loads before the VS
             // tool window is parented, causing a NullReferenceException.
             CreateMarginControls();
+            _textViewHost.HostControl.SizeChanged += OnHostSizeChanged;
             ApplyViewModeLayout();
             QueueBrowserAttach();
+        }
+
+        private void OnHostSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_viewModeController.Mode == MarkdownViewMode.Preview)
+            {
+                ApplyViewModeLayout();
+            }
         }
 
         private void OnMarginLoaded(object sender, RoutedEventArgs e)
@@ -293,6 +302,7 @@ namespace MarkdownEditor2022
             VSColorTheme.ThemeChanged -= OnThemeChange;
             AdvancedOptions.Saved -= AdvancedOptions_Saved;
             _viewModeController.ModeChanged -= OnViewModeChanged;
+            _textViewHost.HostControl.SizeChanged -= OnHostSizeChanged;
             if (_viewportWidthChanged != null)
             {
                 _textView.ViewportWidthChanged -= _viewportWidthChanged;
@@ -673,7 +683,7 @@ namespace MarkdownEditor2022
             if (layout.Mode == MarkdownViewMode.Split)
             {
                 double savedExtent = _previewColumn != null ? _splitPreviewWidth : _splitPreviewHeight;
-                double previewExtent = layout.GetPreviewExtent(savedExtent, 0, 0);
+                double previewExtent = layout.GetPreviewExtent(savedExtent, 0);
                 if (_previewColumn != null && previewExtent > 0)
                 {
                     _previewColumn.Width = new GridLength(previewExtent, GridUnitType.Pixel);
@@ -691,12 +701,12 @@ namespace MarkdownEditor2022
 
             if (_previewColumn != null)
             {
-                double width = layout.GetPreviewExtent(_splitPreviewWidth, _textView.ViewportWidth, ActualWidth);
+                double width = layout.GetPreviewExtent(_splitPreviewWidth, _textViewHost.HostControl.ActualWidth);
                 _previewColumn.Width = new GridLength(width, GridUnitType.Pixel);
             }
             else if (_previewRow != null)
             {
-                double height = layout.GetPreviewExtent(_splitPreviewHeight, _textView.ViewportHeight, ActualHeight);
+                double height = layout.GetPreviewExtent(_splitPreviewHeight, _textViewHost.HostControl.ActualHeight);
                 _previewRow.Height = new GridLength(height, GridUnitType.Pixel);
             }
         }

@@ -46,10 +46,10 @@ namespace MarkdownEditor2022.UnitTests
             const double savedSplitExtent = 360;
 
             MarkdownViewLayout preview = new(MarkdownViewMode.Preview);
-            Assert.AreEqual(900, preview.GetPreviewExtent(savedSplitExtent, 700, 200));
+            Assert.AreEqual(900, preview.GetPreviewExtent(savedSplitExtent, 900));
 
             MarkdownViewLayout split = new(MarkdownViewMode.Split);
-            Assert.AreEqual(savedSplitExtent, split.GetPreviewExtent(savedSplitExtent, 900, 0));
+            Assert.AreEqual(savedSplitExtent, split.GetPreviewExtent(savedSplitExtent, 900));
         }
 
         [TestMethod]
@@ -57,8 +57,9 @@ namespace MarkdownEditor2022.UnitTests
         {
             MarkdownViewLayout layout = new(MarkdownViewMode.Preview);
 
-            Assert.AreEqual(150, layout.GetPreviewExtent(300, 75, 25));
-            Assert.AreEqual(600, layout.GetPreviewExtent(300, 450, 150));
+            Assert.AreEqual(150, layout.GetPreviewExtent(300, 100));
+            Assert.AreEqual(150, layout.GetPreviewExtent(300, 0));
+            Assert.AreEqual(600, layout.GetPreviewExtent(300, 600));
         }
 
         [TestMethod]
@@ -66,7 +67,24 @@ namespace MarkdownEditor2022.UnitTests
         {
             MarkdownViewLayout layout = new(MarkdownViewMode.Source);
 
-            Assert.AreEqual(0, layout.GetPreviewExtent(300, 450, 150));
+            Assert.AreEqual(0, layout.GetPreviewExtent(300, 600));
+        }
+
+        [TestMethod]
+        [DataRow(3840, 1.75)]
+        [DataRow(2160, 1.75)]
+        public void PreviewExtent_RepeatedResize_DoesNotGrowBeyondHost(int pixels, double dpiScale)
+        {
+            MarkdownViewLayout layout = new(MarkdownViewMode.Preview);
+            double hostExtent = pixels / dpiScale;
+            for (int pass = 0; pass < 400; pass++)
+            {
+                double resizedHostExtent = pass % 2 == 0 ? hostExtent : hostExtent / 2;
+                double previewExtent = layout.GetPreviewExtent(300, resizedHostExtent);
+                Assert.AreEqual(resizedHostExtent, previewExtent, 0.001);
+                Assert.IsTrue(previewExtent * dpiScale <= pixels + 1,
+                    "The native preview must stay within the monitor's pixel extent.");
+            }
         }
 
         [TestMethod]
@@ -81,7 +99,7 @@ namespace MarkdownEditor2022.UnitTests
                 MarkdownViewLayout layout = new(controller.Mode);
                 if (layout.Mode == MarkdownViewMode.Split)
                 {
-                    Assert.AreEqual(savedSplitExtent, layout.GetPreviewExtent(savedSplitExtent, 1200, 0));
+                    Assert.AreEqual(savedSplitExtent, layout.GetPreviewExtent(savedSplitExtent, 1200));
                 }
             }
         }

@@ -28,13 +28,13 @@ namespace MarkdownEditor2022
             PredefinedMarginNames.ZoomControl,
         ];
 
-        public double GetPreviewExtent(double savedSplitExtent, double viewportExtent, double marginExtent)
+        public double GetPreviewExtent(double savedSplitExtent, double hostExtent)
         {
             return Mode switch
             {
                 MarkdownViewMode.Source => 0,
                 MarkdownViewMode.Split => savedSplitExtent,
-                _ => Math.Max(_minimumPreviewExtent, viewportExtent + marginExtent),
+                _ => Math.Max(_minimumPreviewExtent, hostExtent),
             };
         }
     }
