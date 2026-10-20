@@ -113,6 +113,12 @@ namespace MarkdownEditor2022
             _pendingCreation = null;
         }
 
+        internal void InvalidateControlMeasure()
+        {
+            _formsHost?.InvalidateMeasure();
+            InvalidateMeasure();
+        }
+
         public void Dispose()
         {
             if (_isDisposed)

@@ -47,9 +47,10 @@ namespace MarkdownEditor2022
             _textView = textView;
             _document = textView.TextBuffer.GetDocument();
             _viewModeController = textView.GetMarkdownViewModeController();
-            Height = 26;
+            MinHeight = 26;
             _retainedHost = new RetainedToolbarHost(() =>
-                _toolbarHost = new VsctToolbarHost(PackageGuids.MarkdownEditor2022, PackageIds.MarkdownDocumentToolbar));
+                _toolbarHost = new VsctToolbarHost(PackageGuids.MarkdownEditor2022, PackageIds.MarkdownDocumentToolbar,
+                    () => _retainedHost.InvalidateControlMeasure()));
             Children.Add(_retainedHost);
             _refreshTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
             {
@@ -205,15 +206,24 @@ namespace MarkdownEditor2022
     {
         private readonly Guid _commandSet;
         private readonly uint _toolbarId;
+        private readonly Action _sizeChanged;
+        private int _toolbarHeight = 26;
         private IVsToolWindowToolbarHost _toolbarHost;
 
-        public VsctToolbarHost(Guid commandSet, uint toolbarId)
+        public VsctToolbarHost(Guid commandSet, uint toolbarId, Action sizeChanged)
         {
             _commandSet = commandSet;
             _toolbarId = toolbarId;
+            _sizeChanged = sizeChanged;
             Dock = DockStyle.Fill;
             Margin = Padding.Empty;
             Height = 26;
+        }
+
+        public override Size GetPreferredSize(Size proposedSize)
+        {
+            // WPF allocates the width; the shell reports the toolbar height in native pixels.
+            return new Size(0, _toolbarHeight);
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -295,9 +305,12 @@ namespace MarkdownEditor2022
 
         public int SetBorderSpace(RECT[] borders)
         {
-            int height = Math.Abs(borders[0].top - borders[0].bottom);
-            Height = height;
-            MinimumSize = new Size(0, height);
+            int height = borders[0].top + borders[0].bottom;
+            if (_toolbarHeight != height)
+            {
+                _toolbarHeight = height;
+                _sizeChanged();
+            }
             return VSConstants.S_OK;
         }
     }

@@ -86,6 +86,9 @@ The preview follows the document host's available size, including on high-DPI
 displays. Switching to Preview view and resizing the window preserves the saved
 split size for when you return to Split view.
 
+The document toolbar fills the available width and adapts to the native Visual
+Studio toolbar height rather than clipping it to a fixed height.
+
 When preview click synchronization is enabled, a plain click updates the source
 position without taking keyboard focus away from the preview. Selecting text or
 double-clicking a word does not trigger an additional source navigation.

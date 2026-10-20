@@ -12,6 +12,43 @@ namespace MarkdownEditor2022.UnitTests
     public class ToolbarHostLifecycleTests
     {
         [TestMethod, Timeout(90000)]
+        public Task NativeToolbarSize_FillsWidth_AndRemeasuresHeightWithoutClipping() => RunAsync(async fixture =>
+        {
+            SizedToolbarPanel control = new();
+            using RetainedToolbarHost host = new(() => control);
+            DockPanel margin = new() { MinHeight = 26 };
+            margin.Children.Add(host);
+            Grid content = new();
+            content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            content.RowDefinitions.Add(new RowDefinition());
+            content.Children.Add(margin);
+            Window window = fixture.CreateWindow(content);
+            await fixture.TransitionAsync(host, true, window.Show);
+
+            foreach (int height in new[] { 42, 56, 30 })
+            {
+                control.ToolbarHeight = height;
+                host.InvalidateControlMeasure();
+                window.UpdateLayout();
+                await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+                Assert.AreEqual(height, control.ClientSize.Height,
+                    "The native toolbar must get all of its requested height.");
+                Assert.AreEqual(content.ActualWidth, margin.ActualWidth, 1,
+                    "The toolbar margin must fill the editor width.");
+                Assert.AreEqual(content.ActualWidth * System.Windows.Media.VisualTreeHelper.GetDpi(host).DpiScaleX,
+                    control.ClientSize.Width, 1, "The native toolbar must fill the margin, not its preferred content width.");
+                window.Width += 100;
+            }
+        });
+
+        private sealed class SizedToolbarPanel : FormsPanel
+        {
+            internal int ToolbarHeight { get; set; } = 26;
+
+            public override System.Drawing.Size GetPreferredSize(System.Drawing.Size proposedSize) => new(0, ToolbarHeight);
+        }
+
+        [TestMethod, Timeout(90000)]
         public Task TabSwitches_RetainControlAndNativeHandle_UntilDocumentDisposal() => RunAsync(async fixture =>
         {
             int creations = 0;
