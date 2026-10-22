@@ -12,7 +12,6 @@ namespace MarkdownEditor2022
     {
         private readonly Func<Control> _createControl;
         private WindowsFormsHost _formsHost;
-        private Control _control;
         private CancellationTokenSource _pendingCreation;
         private bool _isDisposed;
 
@@ -89,20 +88,22 @@ namespace MarkdownEditor2022
 
             LayoutUpdated -= OnLayoutUpdated;
             Control control = _createControl();
-            WindowsFormsHost host = new();
+            WindowsFormsHost host = new LayoutSafeWindowsFormsHost();
             try
             {
                 host.Child = control;
                 Children.Add(host);
-                _control = control;
                 _formsHost = host;
             }
             catch
             {
                 Children.Remove(host);
-                host.Child = null;
                 host.Dispose();
-                control.Dispose();
+                if (!control.IsDisposed)
+                {
+                    control.Dispose();
+                }
+
                 throw;
             }
         }
@@ -134,14 +135,89 @@ namespace MarkdownEditor2022
             CancelCreation();
             if (_formsHost != null)
             {
-                Children.Remove(_formsHost);
-                _formsHost.Child = null;
-                _formsHost.Dispose();
+                WindowsFormsHost host = _formsHost;
                 _formsHost = null;
+                Children.Remove(host);
+                host.Dispose();
+            }
+        }
+
+        private sealed class LayoutSafeWindowsFormsHost : WindowsFormsHost
+        {
+            private int _layoutDepth;
+            private bool _disposeRequested;
+            private bool _isDisposed;
+
+            protected override Size MeasureOverride(Size constraint)
+            {
+                if (_disposeRequested)
+                {
+                    return new Size();
+                }
+
+                _layoutDepth++;
+                try
+                {
+                    return base.MeasureOverride(constraint);
+                }
+                finally
+                {
+                    CompleteLayout();
+                }
             }
 
-            _control?.Dispose();
-            _control = null;
+            protected override Size ArrangeOverride(Size finalSize)
+            {
+                if (_disposeRequested)
+                {
+                    return new Size();
+                }
+
+                _layoutDepth++;
+                try
+                {
+                    return base.ArrangeOverride(finalSize);
+                }
+                finally
+                {
+                    CompleteLayout();
+                }
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (!disposing)
+                {
+                    base.Dispose(false);
+                    return;
+                }
+
+                // Native resize/layout callbacks can close a document while WPF still uses Child.
+                _disposeRequested = true;
+                if (_layoutDepth == 0 && !_isDisposed)
+                {
+                    _isDisposed = true;
+                    Control control = Child;
+                    try
+                    {
+                        Child = null;
+                        base.Dispose(true);
+                    }
+                    finally
+                    {
+                        control?.Dispose();
+                    }
+                }
+            }
+
+            private void CompleteLayout()
+            {
+                _layoutDepth--;
+                if (_layoutDepth == 0 && _disposeRequested)
+                {
+                    Dispose();
+                }
+            }
         }
     }
 }

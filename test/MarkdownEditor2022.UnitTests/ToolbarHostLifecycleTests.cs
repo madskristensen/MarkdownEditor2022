@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -172,6 +173,91 @@ namespace MarkdownEditor2022.UnitTests
                 tabs.SelectedIndex = 1;
             }
         });
+
+        [TestMethod, Timeout(90000)]
+        public Task DisposalDuringNativeResize_CompletesArrangeBeforeDisposingChild() => RunAsync(async fixture =>
+        {
+            FormsPanel control = new();
+            using RetainedToolbarHost host = new(() => control);
+            Window window = fixture.CreateWindow(host);
+            await fixture.TransitionAsync(host, true, window.Show);
+            FrameworkElement nativeHost = (FrameworkElement)host.Children[0];
+            bool resized = false;
+            bool disposedDuringResize = false;
+            int disposals = 0;
+            control.Disposed += (_, _) => disposals++;
+            control.SizeChanged += (_, _) =>
+            {
+                resized = true;
+                host.Dispose();
+                host.Dispose();
+                disposedDuringResize = control.IsDisposed;
+            };
+
+            window.Width += 100;
+            window.UpdateLayout();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+
+            Assert.IsTrue(resized, "The test must dispose from inside the native resize callback.");
+            Assert.IsFalse(disposedDuringResize, "The child must survive until the active arrange pass returns.");
+            Assert.IsTrue(control.IsDisposed);
+            Assert.AreEqual(1, disposals);
+            Assert.AreEqual(0, host.Children.Count);
+            AssertLateLayoutIsEmpty(nativeHost);
+        });
+
+        [TestMethod, Timeout(90000)]
+        public Task DisposalDuringNativeMeasure_CompletesMeasureBeforeDisposingChild() => RunAsync(async fixture =>
+        {
+            MeasuringToolbarPanel control = new();
+            using RetainedToolbarHost host = new(() => control);
+            Window window = fixture.CreateWindow(host);
+            await fixture.TransitionAsync(host, true, window.Show);
+            FrameworkElement nativeHost = (FrameworkElement)host.Children[0];
+            bool measured = false;
+            bool disposedDuringMeasure = false;
+            int disposals = 0;
+            control.Disposed += (_, _) => disposals++;
+            control.Measure = () =>
+            {
+                measured = true;
+                host.Dispose();
+                disposedDuringMeasure = control.IsDisposed;
+            };
+
+            nativeHost.InvalidateMeasure();
+            nativeHost.Measure(new Size(300, 50));
+
+            Assert.IsTrue(measured, "The test must dispose from inside GetPreferredSize.");
+            Assert.IsFalse(disposedDuringMeasure, "The child must survive until the active measure pass returns.");
+            Assert.IsTrue(control.IsDisposed);
+            Assert.AreEqual(1, disposals);
+            Assert.AreEqual(0, host.Children.Count);
+            AssertLateLayoutIsEmpty(nativeHost);
+        });
+
+        private static void AssertLateLayoutIsEmpty(FrameworkElement nativeHost)
+        {
+            // Detached visuals suspend public Measure/Arrange calls and retain their cached sizes.
+            foreach (string methodName in new[] { "MeasureOverride", "ArrangeOverride" })
+            {
+                MethodInfo? method = nativeHost.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.IsNotNull(method);
+                Size result = Assert.IsInstanceOfType<Size>(method.Invoke(nativeHost, [new Size(400, 60)]));
+                Assert.AreEqual(new Size(), result);
+            }
+        }
+
+        private sealed class MeasuringToolbarPanel : FormsPanel
+        {
+            internal Action? Measure { get; set; }
+
+            public override System.Drawing.Size GetPreferredSize(System.Drawing.Size proposedSize)
+            {
+                Measure?.Invoke();
+                return new System.Drawing.Size(0, 26);
+            }
+        }
 
         [TestMethod, Timeout(90000)]
         public Task DisposalBeforeDeferredCreation_DoesNotCreateNativeControls() => RunAsync(async fixture =>
