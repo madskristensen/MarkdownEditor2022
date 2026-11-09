@@ -40,7 +40,7 @@ namespace MarkdownEditor2022
         }
 
         /// <summary>
-        /// Checks if the Image Optimizer extension is installed and available.
+        /// Checks if the Image Optimizer command is registered, independently of the current selection.
         /// </summary>
         /// <returns>True if Image Optimizer is available, false otherwise.</returns>
         public static async System.Threading.Tasks.Task<bool> IsAvailableAsync()
@@ -50,10 +50,15 @@ namespace MarkdownEditor2022
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 DTE2 dte = await VS.GetRequiredServiceAsync<DTE, DTE2>();
                 Command command = dte.Commands.Item(_optimizeLosslessCommand);
-                return command != null && command.IsAvailable;
+                return command != null;
             }
-            catch
+            catch (ArgumentException)
             {
+                return false;
+            }
+            catch (Exception ex)
+            {
+                await ex.LogAsync();
                 return false;
             }
         }
@@ -157,7 +162,8 @@ namespace MarkdownEditor2022
                     return false;
                 }
 
-                if (command != null && command.IsAvailable)
+                // Menu availability depends on Solution Explorer selection, not the explicit file path.
+                if (command != null)
                 {
                     object customIn = filePath;
                     object customOut = null;
@@ -166,7 +172,7 @@ namespace MarkdownEditor2022
                 }
                 else
                 {
-                    // Image Optimizer not available
+                    // Image Optimizer command is not registered
                     if (showMessageBox)
                     {
                         await ShowInstallMessageBoxAsync();
